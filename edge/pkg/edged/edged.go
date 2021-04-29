@@ -1,18 +1,14 @@
 /*
 Copyright 2016 The Kubernetes Authors.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
 @CHANGELOG
 KubeEdge Authors: To create mini-kubelet for edge deployment scenario,
 This file is derived from K8S Kubelet code with reduced set of methods
@@ -105,7 +101,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/edged/clcm"
 	edgedconfig "github.com/kubeedge/kubeedge/edge/pkg/edged/config"
 	fakekube "github.com/kubeedge/kubeedge/edge/pkg/edged/fake"
-	missionmanager "github.com/kubeedge/kubeedge/edge/pkg/edged/missionmanager"
 	"github.com/kubeedge/kubeedge/edge/pkg/edged/podmanager"
 	"github.com/kubeedge/kubeedge/edge/pkg/edged/server"
 	"github.com/kubeedge/kubeedge/edge/pkg/edged/status"
@@ -116,8 +111,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/client"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
 	"github.com/kubeedge/kubeedge/pkg/version"
-
-	missionsv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/missions/v1"
 )
 
 const (
@@ -221,7 +214,6 @@ type edged struct {
 	// cache for secret
 	secretStore    cache.Store
 	configMapStore cache.Store
-	missionManager *missionmanager.Manager
 	workQueue      queue.WorkQueue
 	clcm           clcm.ContainerLifecycleManager
 	// edged cgroup driver for container runtime
@@ -428,13 +420,6 @@ func newEdged(enable bool) (*edged, error) {
 
 	metaClient := client.New()
 
-	missionManager, err := missionmanager.NewMissionManager(edgedconfig.Config.EdgeCluster)
-	if err != nil {
-		klog.Infof("Error in initializing edge cluster: %v, moving on", err)
-	} else {
-		klog.Infof("Successfully initialized mission manager, edge cluster config: %#v ", edgedconfig.Config.EdgeCluster)
-	}
-
 	ed := &edged{
 		nodeName:                  edgedconfig.Config.HostnameOverride,
 		namespace:                 edgedconfig.Config.RegisterNodeNamespace,
@@ -457,14 +442,13 @@ func newEdged(enable bool) (*edged, error) {
 		rootDirectory:             DefaultRootDir,
 		secretStore:               cache.NewStore(cache.MetaNamespaceKeyFunc),
 		configMapStore:            cache.NewStore(cache.MetaNamespaceKeyFunc),
-		missionManager:            missionManager,
 		workQueue:                 queue.NewBasicWorkQueue(clock.RealClock{}),
 		nodeIP:                    net.ParseIP(edgedconfig.Config.NodeIP),
 		recorder:                  recorder,
 		enable:                    enable,
 	}
 	ed.runtimeClassManager = runtimeclass.NewManager(ed.kubeClient)
-	err = ed.makePodDir()
+	err := ed.makePodDir()
 	if err != nil {
 		klog.Errorf("create pod dir [%s] failed: %v", ed.getPodsDir(), err)
 		os.Exit(1)
@@ -1127,14 +1111,8 @@ func (e *edged) syncPod() {
 				resp := result.NewRespByMessage(&result, res)
 				beehiveContext.SendResp(*resp)
 			}
-		case constants.ResourceTypeMission:
-			klog.Infof("mission operation type: %s", op)
-			err := e.handleMission(op, content)
-			if err != nil {
-				klog.Errorf("handle mission failed: %v", err)
-			}
 		default:
-			klog.Errorf("resType is not pod or configmap or secret or volume or mission: esType is %s", resType)
+			klog.Errorf("resType is not pod or configmap or secret or volume: esType is %s", resType)
 			continue
 		}
 	}
@@ -1245,31 +1223,6 @@ func (e *edged) handlePod(op string, content []byte) (err error) {
 		}
 	}
 	return nil
-}
-
-func (e *edged) handleMission(op string, content []byte) (err error) {
-	if e.missionManager == nil {
-		return fmt.Errorf("mission manager is not initialized.")
-	}
-
-	var mission missionsv1.Mission
-	err = json.Unmarshal(content, &mission)
-	if err != nil {
-		return err
-	}
-
-	switch op {
-	case model.InsertOperation:
-		err = e.missionManager.ApplyMission(&mission)
-	case model.UpdateOperation:
-		err = e.missionManager.ApplyMission(&mission)
-	case model.DeleteOperation:
-		err = e.missionManager.DeleteMission(&mission)
-	}
-	if err == nil {
-		klog.Infof("%s mission [%s] for cache success.", op, mission.Name)
-	}
-	return
 }
 
 func (e *edged) handlePodListFromMetaManager(content []byte) (err error) {
