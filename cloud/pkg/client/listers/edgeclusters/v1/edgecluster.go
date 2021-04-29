@@ -25,44 +25,44 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// MissionLister helps list Missions.
+// EdgeClusterLister helps list EdgeClusters.
 // All objects returned here must be treated as read-only.
-type MissionLister interface {
-	// List lists all Missions in the indexer.
+type EdgeClusterLister interface {
+	// List lists all EdgeClusters in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Mission, err error)
-	// Get retrieves the Mission from the index for a given name.
+	List(selector labels.Selector) (ret []*v1.EdgeCluster, err error)
+	// Get retrieves the EdgeCluster from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Mission, error)
-	MissionListerExpansion
+	Get(name string) (*v1.EdgeCluster, error)
+	EdgeClusterListerExpansion
 }
 
-// missionLister implements the MissionLister interface.
-type missionLister struct {
+// edgeClusterLister implements the EdgeClusterLister interface.
+type edgeClusterLister struct {
 	indexer cache.Indexer
 }
 
-// NewMissionLister returns a new MissionLister.
-func NewMissionLister(indexer cache.Indexer) MissionLister {
-	return &missionLister{indexer: indexer}
+// NewEdgeClusterLister returns a new EdgeClusterLister.
+func NewEdgeClusterLister(indexer cache.Indexer) EdgeClusterLister {
+	return &edgeClusterLister{indexer: indexer}
 }
 
-// List lists all Missions in the indexer.
-func (s *missionLister) List(selector labels.Selector) (ret []*v1.Mission, err error) {
+// List lists all EdgeClusters in the indexer.
+func (s *edgeClusterLister) List(selector labels.Selector) (ret []*v1.EdgeCluster, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Mission))
+		ret = append(ret, m.(*v1.EdgeCluster))
 	})
 	return ret, err
 }
 
-// Get retrieves the Mission from the index for a given name.
-func (s *missionLister) Get(name string) (*v1.Mission, error) {
+// Get retrieves the EdgeCluster from the index for a given name.
+func (s *edgeClusterLister) Get(name string) (*v1.EdgeCluster, error) {
 	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("mission"), name)
+		return nil, errors.NewNotFound(v1.Resource("edgecluster"), name)
 	}
-	return obj.(*v1.Mission), nil
+	return obj.(*v1.EdgeCluster), nil
 }
