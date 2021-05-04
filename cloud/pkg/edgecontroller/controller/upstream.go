@@ -31,8 +31,8 @@ import (
 	"sort"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sinformer "k8s.io/client-go/informers"
@@ -42,6 +42,7 @@ import (
 
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	crdClientset "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/client"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/config"
@@ -50,7 +51,6 @@ import (
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/types"
 	common "github.com/kubeedge/kubeedge/common/constants"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
-	crdClientset "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned"
 )
 
 // SortedContainerStatuses define A type to help sort container statuses based on container names.
@@ -98,7 +98,7 @@ type UpstreamController struct {
 	queryNodeChan             chan model.Message
 	updateNodeChan            chan model.Message
 	podDeleteChan             chan model.Message
-	edgeClusterStatusChan           chan model.Message
+	edgeClusterStatusChan     chan model.Message
 
 	// lister
 	podLister       corelisters.PodLister
@@ -190,7 +190,7 @@ func (uc *UpstreamController) dispatchMessage() {
 
 		resourceType, err := messagelayer.GetResourceType(msg)
 		if err != nil {
-			klog.Warningf("parse message: %s resource type with error: %s", msg.GetID(), err)
+			klog.Warningf("parse message: %s resource type with error: %s,", msg.GetID(), err)
 			continue
 		}
 
@@ -231,8 +231,8 @@ func (uc *UpstreamController) dispatchMessage() {
 			} else {
 				klog.Errorf("message: %s, operation type: %s unsupported", msg.GetID(), msg.GetOperation())
 			}
-		case model.ResourceTypeEdgeClusterStatus: 
-		    uc.edgeClusterStatusChan <- msg
+		case model.ResourceTypeEdgeClusterStatus:
+			uc.edgeClusterStatusChan <- msg
 		default:
 			klog.Errorf("message: %s, resource type: %s unsupported", msg.GetID(), resourceType)
 		}
@@ -603,7 +603,6 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 
 				// TODO: comment below for test failure. Needs to decide whether to keep post troubleshoot
 				// In case the status stored at metadata service is outdated, update the heartbeat automatically
-
 
 				klog.V(4).Infof("message: %s, update edgeCluster status successfully, namespace: %s, name: %s", msg.GetID(), getEdgeCluster.Namespace, getEdgeCluster.Name)
 
