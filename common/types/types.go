@@ -1,6 +1,7 @@
 package types
 
 import (
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,4 +26,10 @@ type NodeStatusRequest struct {
 	UID             types.UID
 	Status          v1.NodeStatus
 	ExtendResources map[v1.ResourceName][]ExtendResource
+}
+
+// EdgeClusterStatusRequest is Message.Content which come from edge
+type EdgeClusterStatusRequest struct {
+	UID    types.UID
+	Status edgeclustersv1.EdgeClusterStatus
 }
