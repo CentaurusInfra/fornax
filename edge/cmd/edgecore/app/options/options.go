@@ -29,18 +29,21 @@ import (
 )
 
 type EdgeCoreOptions struct {
-	ConfigFile string
+	ConfigFile      string
+	EdgeClusterMode bool
 }
 
 func NewEdgeCoreOptions() *EdgeCoreOptions {
 	return &EdgeCoreOptions{
-		ConfigFile: path.Join(constants.DefaultConfigDir, "edgecore.yaml"),
+		ConfigFile:      path.Join(constants.DefaultConfigDir, "edgecore.yaml"),
+		EdgeClusterMode: false,
 	}
 }
 
 func (o *EdgeCoreOptions) Flags() (fss cliflag.NamedFlagSets) {
 	fs := fss.FlagSet("global")
 	fs.StringVar(&o.ConfigFile, "config", o.ConfigFile, "The path to the configuration file. Flags override values in this file.")
+	fs.BoolVar(&o.EdgeClusterMode, "edgecluster", false, "whether run edgecore in the Edge-Cluster mode.")
 	return
 }
 
