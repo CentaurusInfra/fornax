@@ -20,7 +20,7 @@ package missions
 
 import (
 	internalinterfaces "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/missions/v1"
+	v1 "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/edgeclusters/v1"
 )
 
 // Interface provides access to each of this group's versions.

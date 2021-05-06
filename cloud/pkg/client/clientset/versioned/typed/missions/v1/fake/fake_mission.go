@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	missionsv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/missions/v1"
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,19 +39,19 @@ var missionsResource = schema.GroupVersionResource{Group: "edgeclusters.kubeedge
 var missionsKind = schema.GroupVersionKind{Group: "edgeclusters.kubeedge.io", Version: "v1", Kind: "Mission"}
 
 // Get takes name of the mission, and returns the corresponding mission object, and an error if there is any.
-func (c *FakeMissions) Get(ctx context.Context, name string, options v1.GetOptions) (result *missionsv1.Mission, err error) {
+func (c *FakeMissions) Get(ctx context.Context, name string, options v1.GetOptions) (result *edgeclustersv1.Mission, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(missionsResource, name), &missionsv1.Mission{})
+		Invokes(testing.NewRootGetAction(missionsResource, name), &edgeclustersv1.Mission{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*missionsv1.Mission), err
+	return obj.(*edgeclustersv1.Mission), err
 }
 
 // List takes label and field selectors, and returns the list of Missions that match those selectors.
-func (c *FakeMissions) List(ctx context.Context, opts v1.ListOptions) (result *missionsv1.MissionList, err error) {
+func (c *FakeMissions) List(ctx context.Context, opts v1.ListOptions) (result *edgeclustersv1.MissionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(missionsResource, missionsKind, opts), &missionsv1.MissionList{})
+		Invokes(testing.NewRootListAction(missionsResource, missionsKind, opts), &edgeclustersv1.MissionList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -60,8 +60,8 @@ func (c *FakeMissions) List(ctx context.Context, opts v1.ListOptions) (result *m
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &missionsv1.MissionList{ListMeta: obj.(*missionsv1.MissionList).ListMeta}
-	for _, item := range obj.(*missionsv1.MissionList).Items {
+	list := &edgeclustersv1.MissionList{ListMeta: obj.(*edgeclustersv1.MissionList).ListMeta}
+	for _, item := range obj.(*edgeclustersv1.MissionList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -76,11 +76,11 @@ func (c *FakeMissions) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 }
 
 // Create takes the representation of a mission and creates it.  Returns the server's representation of the mission, and an error, if there is any.
-func (c *FakeMissions) Create(ctx context.Context, mission *missionsv1.Mission, opts v1.CreateOptions) (result *missionsv1.Mission, err error) {
+func (c *FakeMissions) Create(ctx context.Context, mission *edgeclustersv1.Mission, opts v1.CreateOptions) (result *edgeclustersv1.Mission, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(missionsResource, mission), &missionsv1.Mission{})
+		Invokes(testing.NewRootCreateAction(missionsResource, mission), &edgeclustersv1.Mission{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*missionsv1.Mission), err
+	return obj.(*edgeclustersv1.Mission), err
 }

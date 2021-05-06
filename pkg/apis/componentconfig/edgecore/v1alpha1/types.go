@@ -105,6 +105,9 @@ type Modules struct {
 	// EdgeStream indicates edgestream module config
 	// +Required
 	EdgeStream *EdgeStream `json:"edgeStream,omitempty"`
+
+	// EdgeCluster indicates EdgeCluster module config
+	EdgeCluster *EdgeCluster `json:"edgeCluster,omitempty"`
 }
 
 // Edged indicates the config fo edged module
@@ -244,9 +247,6 @@ type Edged struct {
 	// EnableMetrics indicates whether enable the metrics
 	// default true
 	EnableMetrics bool `json:"enableMetrics,omitempty"`
-
-	
-	EdgeCluster *EdgeCluster `json:"edgeCluster,omitempty"`
 }
 
 // EdgeHub indicates the EdgeHub module config
@@ -484,15 +484,28 @@ type EdgeCluster struct {
 	// Name of the edge cluster
 	Name string `json:"name,omitempty"`
 
-	// clusterKubeconfig indicates the path to the edge cluster kubeconfig file
-	ClusterKubeconfig string `json:"clusterKubeconfig,omitempty"`
+	// kubeconfig indicates the path to the edge cluster kubeconfig file
+	Kubeconfig string `json:"kubeconfig,omitempty"`
 
-	// Distribution of the cluster, supported value: arkots, to support in the furture: k3s, 
+	// Distribution of the cluster, supported value: arkots, to support in the furture: k3s,
 	KubeDistro string `json:"kubeDistro,omitempty"`
 
 	// labels of the cluster
 	Labels map[string]string `json:"labels,omitempty"`
 
-	
+	// StatusUpdateFrequency indicates  status update frequency (second)
+	// default 10
+	StatusUpdateInterval int32 `json:"statusUpdateInterval,omitempty"`
 
+	// RegisterNode enables automatic registration
+	// default true
+	RegisterCluster bool `json:"registerCluster,omitempty"`
+
+	RegisterNamespace string `json:"registerNamespace, omitempty"`
+	// NodeIP indicates current node ip
+	// default get local host ip
+	NodeIP string `json:"nodeIP"`
+	// HostnameOverride indicates hostname
+	// default os.Hostname()
+	HostnameOverride string `json:"hostnameOverride,omitempty"`
 }

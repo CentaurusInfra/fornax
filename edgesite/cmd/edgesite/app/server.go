@@ -92,7 +92,7 @@ runs on edge nodes and manages containerized applications.`,
 func registerModules(c *v1alpha1.EdgeSiteConfig) {
 	edged.Register(c.Modules.Edged)
 	edgecontroller.Register(c.Modules.EdgeController)
-	metamanager.Register(c.Modules.MetaManager)
+	metamanager.Register(c.Modules.MetaManager, false)
 	// Nodte: Need to put it to the end, and wait for all models to register before executing
 	dbm.InitDBConfig(c.DataBase.DriverName, c.DataBase.AliasName, c.DataBase.DataSource)
 }

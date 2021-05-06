@@ -22,7 +22,7 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/missions/v1"
+	v1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	scheme "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"

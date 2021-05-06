@@ -25,17 +25,18 @@ const (
 )
 
 type metaManager struct {
-	enable bool
+	enable          bool
+	edgeClusterMode bool
 }
 
-func newMetaManager(enable bool) *metaManager {
-	return &metaManager{enable: enable}
+func newMetaManager(enable bool, edgeClusterMode bool) *metaManager {
+	return &metaManager{enable: enable, edgeClusterMode: edgeClusterMode}
 }
 
 // Register register metamanager
-func Register(metaManager *v1alpha1.MetaManager) {
+func Register(metaManager *v1alpha1.MetaManager, edgeClusterMode bool) {
 	metamanagerconfig.InitConfigure(metaManager)
-	meta := newMetaManager(metaManager.Enable)
+	meta := newMetaManager(metaManager.Enable, edgeClusterMode)
 	initDBTable(meta)
 	core.Register(meta)
 }
@@ -76,10 +77,14 @@ func (m *metaManager) Start() {
 			case <-beehiveContext.Done():
 				klog.Warning("MetaManager stop")
 				return
+
 			case <-timer.C:
-				timer.Reset(period)
-				msg := model.NewMessage("").BuildRouter(MetaManagerModuleName, GroupResource, model.ResourceTypePodStatus, OperationMetaSync)
-				beehiveContext.Send(MetaManagerModuleName, *msg)
+				// TODO: need to sync mission and cluster status in edgecluster-mode
+				if !m.edgeClusterMode {
+					timer.Reset(period)
+					msg := model.NewMessage("").BuildRouter(MetaManagerModuleName, GroupResource, model.ResourceTypePodStatus, OperationMetaSync)
+					beehiveContext.Send(MetaManagerModuleName, *msg)
+				}
 			}
 		}
 	}()

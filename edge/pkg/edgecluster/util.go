@@ -12,10 +12,11 @@ limitations under the License.
 
 */
 
-package missionmanager
+package edgecluster
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"time"
@@ -33,7 +34,7 @@ func FileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func ExecCommandLine(commandline string, timeout int) (int, string, error) {
+func ExecCommandLine(commandline string, timeout int) (string, error) {
 	var cmd *exec.Cmd
 	if timeout > 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
@@ -54,11 +55,12 @@ func ExecCommandLine(commandline string, timeout int) (int, string, error) {
 		}
 	}
 
+	var finalErr error
 	if exitCode != 0 || err != nil {
-		klog.Errorf("Command (%v) failed: exitcode: %v, output (%v), error: %v", commandline, exitCode, string(output), err)
+		finalErr = fmt.Errorf("Command (%v) failed: exitcode: %v, output (%v), error: %v", commandline, exitCode, string(output), err)
 	} else {
 		klog.V(3).Infof("Running Command (%v) succeeded", commandline)
 	}
 
-	return exitCode, string(output), err
+	return string(output), finalErr
 }

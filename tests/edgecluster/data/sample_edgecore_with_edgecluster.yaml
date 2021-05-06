@@ -20,33 +20,11 @@ modules:
       readDeadline: 15
       server: 172.31.22.126:10000
       writeDeadline: 15
-  edged:
-    cgroupDriver: cgroupfs
-    cgroupRoot: ""
-    cgroupsPerQOS: true
-    clusterDNS: ""
-    clusterDomain: ""
-    devicePluginEnabled: false
-    dockerAddress: unix:///var/run/docker.sock
-    gpuPluginEnabled: false
-    hostnameOverride: ip-172-31-31-131
-    nodeIP: 172.31.31.131
-    podSandboxImage: kubeedge/pause:3.1
-    remoteImageEndpoint: unix:///var/run/dockershim.sock
-    remoteRuntimeEndpoint: unix:///var/run/dockershim.sock
-    runtimeType: docker
-    edgeCluster:
-      enable: true
-      clusterKubeconfig: /home/ubuntu/go/src/github.com/kubeedge/tests/arktos/arktos.kubeconfig
-      name: arktos-cluster-1
-      kubeDistro: arktos
-      labels:
-        edgeCluster: true
-  eventBus:
-    mqttMode: 2
-    mqttQOS: 0
-    mqttRetain: false
-    mqttServerExternal: tcp://127.0.0.1:1883
-    mqttServerInternal: tcp://127.0.0.1:1884
+  edgeCluster:
+    enable: true
+    kubeconfig: /root/arktos.kubeconfig
+    kubeDistro: arktos
+    labels:
+      edgeCluster: true
 
 
