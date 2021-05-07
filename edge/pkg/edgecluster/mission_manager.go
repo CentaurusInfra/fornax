@@ -45,6 +45,7 @@ type MissionManager struct {
 	KubeDistro     string
 	KubeconfigFile string
 	KubectlCli     string
+	MissionMatch   map[string]bool
 }
 
 //NewMissionManager creates new mission manager object
@@ -59,10 +60,12 @@ func NewMissionManager(edgeClusterConfig *v1alpha1.EdgeCluster) *MissionManager 
 		KubeDistro:     edgeClusterConfig.KubeDistro,
 		KubeconfigFile: edgeClusterConfig.Kubeconfig,
 		KubectlCli:     filepath.Join(basedir, DistroToKubectl[edgeClusterConfig.KubeDistro]),
+		MissionMatch:   map[string]bool{},
 	}
 }
 
 func (m *MissionManager) ApplyMission(mission *edgeclustersv1.Mission) error {
+	m.MissionMatch[mission.Name] = m.isMatchingMission(mission)
 
 	missionYaml, err := buildMissionYaml(mission)
 	if err != nil {
@@ -94,6 +97,7 @@ func (m *MissionManager) ApplyMission(mission *edgeclustersv1.Mission) error {
 }
 
 func (m *MissionManager) DeleteMission(mission *edgeclustersv1.Mission) error {
+	delete(m.MissionMatch, mission.Name)
 	if m.isMatchingMission(mission) == false {
 		klog.Infof("Mission %v does not match this cluster", mission.Name)
 	} else {
@@ -177,10 +181,10 @@ func (m *MissionManager) isMatchingMission(mission *edgeclustersv1.Mission) bool
 }
 
 func (m *MissionManager) AlignMissionList(missionList []*edgeclustersv1.Mission) error {
-	activeMissionNames := map[string]bool{}
+	missionMap := map[string]bool{}
 	var errs []error
 	for _, mi := range missionList {
-		activeMissionNames[mi.Name] = true
+		missionMap[mi.Name] = true
 		if err := m.ApplyMission(mi); err != nil {
 			// Try to apply as many missions as possible, so move on after hitting error
 			errs = append(errs, fmt.Errorf("Error when applying mission %s: %v", mi.Name, err))
@@ -194,7 +198,7 @@ func (m *MissionManager) AlignMissionList(missionList []*edgeclustersv1.Mission)
 	}
 
 	for _, mi := range localMissions {
-		if _, exists := activeMissionNames[mi]; !exists {
+		if _, exists := missionMap[mi]; !exists {
 			if err := m.DeleteMissionByName(mi); err != nil {
 				// Try to remove as many missions as possible, so move on after hitting error
 				errs = append(errs, fmt.Errorf("Error when deleting mission %s: %v", mi, err))

@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/kubeedge/beehive/pkg/common/util"
@@ -38,7 +39,9 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgecluster/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager"
+	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/client"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 
 	"k8s.io/klog/v2"
@@ -46,17 +49,22 @@ import (
 
 const (
 	syncMsgRespTimeout = 1 * time.Minute
-	EdgeController = "edgecontroller"
+	EdgeController     = "edgecontroller"
 )
 
 // edgeCluster is the main edgeCluster implementation.
 type edgeCluster struct {
 	name                  string
 	missionManager        *MissionManager
+	uid                   types.UID
 	statusUpdateInterval  time.Duration
 	registrationCompleted bool
 	namespace             string
 	enable                bool
+	metaClient            client.CoreInterface
+	kubeDistro            string
+	kubectlPath           string
+	kubeconfig            string
 }
 
 // Register register edgeCluster
@@ -98,13 +106,30 @@ func (e *edgeCluster) Start() {
 //newEdgeCluster creates new edgeCluster object and initialises it
 func newEdgeCluster(enable bool) (*edgeCluster, error) {
 	missionManager := NewMissionManager(&config.Config.EdgeCluster)
+	metaClient := client.New()
+
+	if !FileExists(config.Config.Kubeconfig) {
+		return nil, fmt.Errorf("Could not open kubeconfig file (%s)", config.Config.Kubeconfig)
+	}
+
+	if _, exists := DistroToKubectl[config.Config.KubeDistro]; !exists {
+		return nil, fmt.Errorf("Invalid kube distribution (%v)", config.Config.KubeDistro)
+	}
+
+	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	kubectlPath := filepath.Join(basedir, DistroToKubectl[config.Config.KubeDistro])
 
 	ec := &edgeCluster{
 		name:                 config.Config.Name,
 		namespace:            config.Config.RegisterNamespace,
 		missionManager:       missionManager,
 		enable:               enable,
+		uid:                  types.UID("76246eec-1dc7-4bcf-89b4-686dbc3b4234"),
 		statusUpdateInterval: time.Duration(config.Config.EdgeCluster.StatusUpdateInterval) * time.Second,
+		metaClient:           metaClient,
+		kubeDistro:           config.Config.KubeDistro,
+		kubeconfig:           config.Config.Kubeconfig,
+		kubectlPath:          kubectlPath,
 	}
 	return ec, nil
 }
