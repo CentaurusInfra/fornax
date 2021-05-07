@@ -17,3 +17,27 @@ spec:
   scope: Cluster
   subresources:
     status: {}
+  additionalPrinterColumns:
+    - name: LastHearbeat
+      type: date
+      JSONPath: .status.lastHeartBeat
+    - name: Healthy
+      type: boolean
+      description: Whether the cluster is healthy and accessible
+      JSONPath: .status.healthy
+    - name: Nodes
+      type: string
+      description: nodes
+      JSONPath: .status.nodes
+    - name: EdgeNodes
+      type: string
+      JSONPath: .status.edgeNodes
+    - name: EdgeClusters
+      type: string
+      JSONPath: .status.edgeClusters
+    - name: ReceivedMissions
+      type: string
+      JSONPath: .status.receivedMissions
+    - name: MatchedMissions
+      type: string
+      JSONPath: .status.activeMissions

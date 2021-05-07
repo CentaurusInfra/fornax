@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	"k8s.io/klog/v2"
@@ -33,6 +34,7 @@ import (
 	"github.com/kubeedge/beehive/pkg/core"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	edgeapi "github.com/kubeedge/kubeedge/common/types"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgecluster/config"
@@ -47,7 +49,7 @@ func (e *edgeCluster) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) 
 	var ec = &edgeclustersv1.EdgeCluster{}
 	var err error
 
-	if err = checkEdgeClusterConfig(); err != nil {
+	if err := e.checkEdgeClusterConfig(); err != nil {
 		return nil, err
 	}
 
@@ -78,39 +80,25 @@ func (e *edgeCluster) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) 
 		ec.Labels[k] = v
 	}
 
-	// The status
-	ec.Status.Ready = true
-
 	return ec, nil
 }
 
-func checkEdgeClusterConfig() error {
+func (e *edgeCluster) checkEdgeClusterConfig() error {
 	edgeClusterConfig := edgeclusterconfig.Config
 
-	if !FileExists(edgeClusterConfig.Kubeconfig) {
-		return fmt.Errorf("Could not open kubeconfig file (%s)", edgeClusterConfig.Kubeconfig)
-	}
-
-	if _, exists := DistroToKubectl[edgeClusterConfig.KubeDistro]; !exists {
-		return fmt.Errorf("Invalid kube distribution (%v)", edgeClusterConfig.KubeDistro)
+	if e.TestClusterReady() == false {
+		return fmt.Errorf("The cluster is not reacheable.")
 	}
 
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	kubectlPath := filepath.Join(basedir, DistroToKubectl[edgeClusterConfig.KubeDistro])
-
-	test_cluster_command := fmt.Sprintf("%s cluster-info --kubeconfig=%s", kubectlPath, edgeClusterConfig.Kubeconfig)
-	if _, err := ExecCommandLine(test_cluster_command, COMMAND_TIMEOUT_SEC); err != nil {
-		return fmt.Errorf("The cluster is unreachable: %v", err)
-	}
-
 	mission_crd_file := filepath.Join(basedir, MISSION_CRD_FILE)
-	deploy_mission_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", kubectlPath, edgeClusterConfig.Kubeconfig, mission_crd_file)
+	deploy_mission_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", e.kubectlPath, edgeClusterConfig.Kubeconfig, mission_crd_file)
 	if _, err := ExecCommandLine(deploy_mission_crd_cmd, COMMAND_TIMEOUT_SEC); err != nil {
 		return fmt.Errorf("Failed to deploy mission crd: %v", err)
 	}
 
 	edgecluster_crd_file := filepath.Join(basedir, EDGECLUSTER_CRD_FILE)
-	deploy_edgecluster_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", kubectlPath, edgeClusterConfig.Kubeconfig, edgecluster_crd_file)
+	deploy_edgecluster_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", e.kubectlPath, edgeClusterConfig.Kubeconfig, edgecluster_crd_file)
 	if _, err := ExecCommandLine(deploy_edgecluster_crd_cmd, COMMAND_TIMEOUT_SEC); err != nil {
 		return fmt.Errorf("Failed to deploy edgecluster crd: %v", err)
 	}
@@ -164,17 +152,44 @@ func (e *edgeCluster) registerEdgeCluster() error {
 	return nil
 }
 
+func (e *edgeCluster) getEdgeClusterStatusRequest(edgeCluster *edgeclustersv1.EdgeCluster) (*edgeapi.EdgeClusterStatusRequest, error) {
+	var edgeClusterStatus = &edgeapi.EdgeClusterStatusRequest{}
+	edgeClusterStatus.UID = e.uid
+	edgeClusterStatus.Status = *edgeCluster.Status.DeepCopy()
+	edgeClusterStatus.Status.Healthy = e.TestClusterReady()
+
+	edgeClusterStatus.Status.EdgeClusters = e.GetEdgeClusterNames()
+	edgeClusterStatus.Status.Nodes = e.GetNodeNames()
+	edgeClusterStatus.Status.EdgeNodes = e.GetEdgeNodeNames()
+
+	var receivedMissions []string
+	var matchededMissions []string
+	for k, v := range e.missionManager.MissionMatch {
+		receivedMissions = append(receivedMissions, k)
+		if v == true {
+			matchededMissions = append(matchededMissions, k)
+		}
+	}
+
+	edgeClusterStatus.Status.ReceivedMissions = receivedMissions
+	edgeClusterStatus.Status.ActiveMissions = matchededMissions
+
+	klog.V(4).Infof("EdgeCluster Status %#v", edgeClusterStatus)
+
+	return edgeClusterStatus, nil
+}
+
 func (e *edgeCluster) updateEdgeClusterStatus() error {
-	/*edgeClusterStatus, err := e.getEdgeClusterStatusRequest(&initEdgeCluster)
+	edgeClusterStatus, err := e.getEdgeClusterStatusRequest(&initEdgeCluster)
 	if err != nil {
 		klog.Errorf("Unable to construct api.EdgeClusterStatusRequest object for edge: %v", err)
 		return err
 	}
 
-	err = e.metaClient.EdgeClusterStatus(e.namespace).Update(edgeCluster.Name, *edgeClusterStatus)
+	err = e.metaClient.EdgeClusterStatus(e.namespace).Update(e.name, *edgeClusterStatus)
 	if err != nil {
 		klog.Errorf("update edgeCluster failed, error: %v", err)
-	}*/
+	}
 	return nil
 }
 
@@ -188,4 +203,49 @@ func (e *edgeCluster) syncEdgeClusterStatus() {
 	if err := e.updateEdgeClusterStatus(); err != nil {
 		klog.Errorf("Unable to update edgeCluster status: %v", err)
 	}
+}
+
+func (e *edgeCluster) TestClusterReady() bool {
+	test_cluster_command := fmt.Sprintf("%s cluster-info --kubeconfig=%s", e.kubectlPath, e.kubeconfig)
+	if _, err := ExecCommandLine(test_cluster_command, COMMAND_TIMEOUT_SEC); err != nil {
+		klog.Errorf("The cluster is unreachable: %v", err)
+		return false
+	}
+
+	return true
+}
+
+func (e *edgeCluster) GetEdgeClusterNames() []string {
+	return e.GetLocalClusterScopeResourceNames("edgeclusters", "")
+}
+
+func (e *edgeCluster) GetNodeNames() []string {
+	return e.GetLocalClusterScopeResourceNames("nodes", "")
+}
+
+func (e *edgeCluster) GetEdgeNodeNames() []string {
+	return e.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge=")
+}
+
+func (e *edgeCluster) GetLocalClusterScopeResourceNames(resType string, label string) []string {
+	labelOption := ""
+	if len(label) > 0 {
+		labelOption = "-l " + label
+	}
+	get_resource_cmd := fmt.Sprintf(" %s get %s -o json %s --kubeconfig=%s | jq -r '.items[] | [.metadata.name] | @tsv' ", e.kubectlPath, resType, labelOption, e.kubeconfig)
+	output, err := ExecCommandLine(get_resource_cmd, COMMAND_TIMEOUT_SEC)
+	if err != nil {
+		klog.Errorf("Failed to get %v: %v", err)
+		return []string{"error"}
+	}
+
+	names := []string{}
+	for _, o := range strings.Split(output, "\n") {
+		name := strings.TrimSpace(o)
+		if len(name) > 0 {
+			names = append(names, name)
+		}
+	}
+
+	return names
 }

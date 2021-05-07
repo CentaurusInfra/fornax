@@ -562,6 +562,7 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 					klog.Error(errLog)
 					uc.edgeClusterMsgResponse(name, namespace, errLog, msg)
 					continue
+
 				}
 
 				edgeCluster := &edgeclustersv1.EdgeCluster{}
@@ -586,30 +587,53 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 				edgeClusterStatusRequest := &edgeapi.EdgeClusterStatusRequest{}
 				err := json.Unmarshal(data, edgeClusterStatusRequest)
 				if err != nil {
-					klog.Warningf("message: %s process failure, unmarshal marshaled message content with error: %s", msg.GetID(), err)
+					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
 					continue
-				}
+				}				
 
-				getEdgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().Get(context.Background(), name, metaV1.GetOptions{})
+				existingEdgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().Get(context.Background(), name, metaV1.GetOptions{})
 				if errors.IsNotFound(err) {
 					klog.Warningf("message: %s process failure, edgeCluster %s not found", msg.GetID(), name)
 					continue
 				}
 
 				if err != nil {
-					klog.Warningf("message: %s process failure with error: %s, namespaces: %s name: %s", msg.GetID(), err, namespace, name)
+					klog.Warningf("message: %s process failure with error: %s, name: %s", msg.GetID(), err,  name)
 					continue
 				}
 
-				// TODO: comment below for test failure. Needs to decide whether to keep post troubleshoot
-				// In case the status stored at metadata service is outdated, update the heartbeat automatically
+				edgeClusterStatusRequest.Status.LastHeartBeat = metaV1.NewTime(time.Now())
+				existingEdgeCluster.Status = edgeClusterStatusRequest.Status
+				edgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().UpdateStatus(context.Background(), existingEdgeCluster, metaV1.UpdateOptions{})
+				if err != nil {
+					klog.Warningf("message: %s process failure, update edgeCluster failed with error: %s, name: %s", msg.GetID(), err, existingEdgeCluster.Name)
+					continue
+				}
+				resMsg := model.NewMessage(msg.GetID())
+				resMsg.SetResourceVersion(edgeCluster.ResourceVersion)
+				resMsg.Content = "OK"
+				nodeID, err := messagelayer.GetNodeID(msg)
+				if err != nil {
+					klog.Warningf("Message: %s process failure, get node id failed with error: %s", msg.GetID(), err)
+					continue
+				}
+				resource, err := messagelayer.BuildResource(nodeID, namespace, model.ResourceTypeEdgeCluster, edgeCluster.Name)
+				if err != nil {
+					klog.Warningf("Message: %s process failure, build message resource failed with error: %s", msg.GetID(), err)
+					continue
+				}
+				resMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.ResponseOperation)
+				if err = uc.messageLayer.Response(*resMsg); err != nil {
+					klog.Warningf("Message: %s process failure, sending response failed with error: %s", msg.GetID(), err)
+					continue
+				}
 
-				klog.V(4).Infof("message: %s, update edgeCluster status successfully, namespace: %s, name: %s", msg.GetID(), getEdgeCluster.Namespace, getEdgeCluster.Name)
+				klog.V(4).Infof("message: %s, update edgeCluster status successfully, name: %s", msg.GetID(), existingEdgeCluster.Name)
 
 			default:
 				klog.Warningf("message: %s process failure, edgeCluster status operation: %s unsupported", msg.GetID(), msg.GetOperation())
 			}
-			klog.V(4).Infof("message: %s process successfully", msg.GetID())
+			klog.V(4).Infof("message: %s processed successfully", msg.GetID())
 		}
 	}
 }

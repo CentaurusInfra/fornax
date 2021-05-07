@@ -105,7 +105,19 @@ type EdgeClusterSpec struct {
 
 // EdgeClusterStatus is a description of Mission status
 type EdgeClusterStatus struct {
-	Ready bool `json:"reachable,omitempty"`
+	Healthy bool `json:"healthy,omitempty"`
+
+	EdgeClusters []string `json:"edgeClusters,omitempty"`
+
+	Nodes []string `json:"nodes,omitempty"`
+
+	EdgeNodes []string `json:"edgeNodes,omitempty"`
+
+	ReceivedMissions []string `json:"receivedMissions,omitempty"`
+
+	ActiveMissions []string `json:"activeMissions,omitempty"`
+
+	LastHeartBeat metav1.Time `json:"lastHeartBeat,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
