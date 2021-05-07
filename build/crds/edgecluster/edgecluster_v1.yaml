@@ -25,19 +25,19 @@ spec:
       type: boolean
       description: Whether the cluster is healthy and accessible
       JSONPath: .status.healthy
-    - name: nodes
+    - name: Nodes
       type: string
       description: nodes
       JSONPath: .status.nodes
-    - name: edgenodes
+    - name: EdgeNodes
       type: string
       JSONPath: .status.edgeNodes
-    - name: edgeclusters
+    - name: EdgeClusters
       type: string
       JSONPath: .status.edgeClusters
-    - name: receivedMissions
+    - name: ReceivedMissions
       type: string
       JSONPath: .status.receivedMissions
-    - name: matchedMissions
+    - name: MatchedMissions
       type: string
       JSONPath: .status.activeMissions
