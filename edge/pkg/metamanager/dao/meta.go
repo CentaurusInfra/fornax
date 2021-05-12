@@ -112,6 +112,17 @@ func QueryAllMetaByType(dataType string) (*[]Meta, error) {
 	return meta, nil
 }
 
+// QueryAllMeta return all meta, if no error, Meta not null
+func QueryAll() (*[]Meta, error) {
+	meta := new([]Meta)
+	_, err := dbm.DBAccess.QueryTable(MetaTableName).All(meta)
+	if err != nil {
+		return nil, err
+	}
+
+	return meta, nil
+}
+
 // DeleteMetaByKey delete the meta of a give type
 // Use cautiously only in debug mode.
 func DeleteMetaByType(dataType string) error {
