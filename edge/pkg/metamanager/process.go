@@ -149,7 +149,13 @@ func resourceUnchanged(resType string, resKey string, content []byte) bool {
 }
 
 func (m *metaManager) processInsert(message model.Message) {
-	var err error
+	resKey, resType, _ := parseResource(message.GetResource())
+	dbRecord, err := dao.QueryMeta("key", resKey)
+	if err == nil && len(*dbRecord) > 0 {
+		m.processUpdate(message)
+		return
+	}
+
 	var content []byte
 	switch message.GetContent().(type) {
 	case []uint8:
@@ -163,7 +169,7 @@ func (m *metaManager) processInsert(message model.Message) {
 		}
 	}
 	imitator.DefaultV2Client.Inject(message)
-	resKey, resType, _ := parseResource(message.GetResource())
+
 	switch resType {
 	case constants.ResourceTypeServiceList:
 		var svcList []v1.Service
@@ -225,6 +231,7 @@ func (m *metaManager) processInsert(message model.Message) {
 }
 
 func (m *metaManager) processUpdate(message model.Message) {
+
 	var err error
 	var content []byte
 	switch message.GetContent().(type) {
