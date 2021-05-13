@@ -15,9 +15,9 @@ import (
 	"github.com/kubeedge/beehive/pkg/core"
 	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/edge/cmd/edgecore/app/options"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/dbm"
 	"github.com/kubeedge/kubeedge/edge/pkg/devicetwin"
-	"github.com/kubeedge/kubeedge/edge/pkg/edgecluster"
 	"github.com/kubeedge/kubeedge/edge/pkg/edged"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgestream"
@@ -92,11 +92,11 @@ offering HTTP client capabilities to components of cloud to reach HTTP servers r
 					config.Modules.Edged.NodeIP = localIP
 				}
 			} else {
-				if config.Modules.EdgeCluster.NodeIP == "" {
-					config.Modules.EdgeCluster.NodeIP = localIP
+				if config.Modules.Clusterd.NodeIP == "" {
+					config.Modules.Clusterd.NodeIP = localIP
 				}
-				if config.Modules.EdgeCluster.Name == "" {
-					config.Modules.EdgeCluster.Name = hostnameOverride
+				if config.Modules.Clusterd.Name == "" {
+					config.Modules.Clusterd.Name = hostnameOverride
 				}
 			}
 
@@ -171,8 +171,8 @@ func registerModules(c *v1alpha1.EdgeCoreConfig, edgeClusterMode bool) {
 	metamanager.Register(c.Modules.MetaManager, edgeClusterMode)
 
 	if edgeClusterMode {
-		edgecluster.Register(c.Modules.EdgeCluster)
-		edgestream.Register(c.Modules.EdgeStream, c.Modules.EdgeCluster.Name, c.Modules.EdgeCluster.NodeIP)
+		clusterd.Register(c.Modules.Clusterd)
+		edgestream.Register(c.Modules.EdgeStream, c.Modules.Clusterd.Name, c.Modules.Clusterd.NodeIP)
 	} else {
 		devicetwin.Register(c.Modules.DeviceTwin, c.Modules.Edged.HostnameOverride)
 		edged.Register(c.Modules.Edged)

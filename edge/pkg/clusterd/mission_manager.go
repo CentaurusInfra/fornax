@@ -12,7 +12,7 @@ limitations under the License.
 
 */
 
-package edgecluster
+package clusterd
 
 import (
 	"encoding/json"
@@ -49,7 +49,7 @@ type MissionManager struct {
 }
 
 //NewMissionManager creates new mission manager object
-func NewMissionManager(edgeClusterConfig *v1alpha1.EdgeCluster) *MissionManager {
+func NewMissionManager(edgeClusterConfig *v1alpha1.Clusterd) *MissionManager {
 
 	// No need to check the config, as it was checked during the registration
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))

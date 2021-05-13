@@ -49,7 +49,7 @@ func feedbackError(err error, info string, request model.Message) {
 	switch source {
 	case modules.EdgedModuleName:
 		sendToEdged(errResponse, request.IsSync())
-	case modules.EdgeClusterModuleName:
+	case modules.ClusterdModuleName:
 		sendToEdgeCluster(errResponse, request.IsSync())
 	default:
 		sendToCloud(errResponse)
@@ -69,7 +69,7 @@ func sendToEdged(message *model.Message, sync bool) {
 }
 
 func sendToEdgeCluster(message *model.Message, sync bool) {
-	sendToEdgeModules(message, sync, modules.EdgeClusterModuleName)
+	sendToEdgeModules(message, sync, modules.ClusterdModuleName)
 }
 
 func sendToEdgeMesh(message *model.Message, sync bool) {
@@ -354,7 +354,7 @@ func (m *metaManager) processUpdate(message model.Message) {
 		sendToCloud(&message)
 		resp := message.NewRespByMessage(&message, OK)
 		sendToEdged(resp, message.IsSync())
-	case modules.EdgeClusterModuleName:
+	case modules.ClusterdModuleName:
 		sendToCloud(&message)
 		resp := message.NewRespByMessage(&message, OK)
 		sendToEdgeCluster(resp, message.IsSync())

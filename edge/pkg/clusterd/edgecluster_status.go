@@ -20,7 +20,7 @@ Changes done are
 1. setEdgeClusterReadyCondition is partially come from "k8s.io/kubernetes/pkg/kubelet.setEdgeClusterReadyCondition"
 */
 
-package edgecluster
+package clusterd
 
 import (
 	"fmt"
@@ -35,17 +35,17 @@ import (
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
+	edgeclusterconfig "github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
-	"github.com/kubeedge/kubeedge/edge/pkg/edgecluster/config"
-	edgeclusterconfig "github.com/kubeedge/kubeedge/edge/pkg/edgecluster/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub"
 	v1 "k8s.io/api/core/v1"
 )
 
 var initEdgeCluster edgeclustersv1.EdgeCluster
 
-func (e *edgeCluster) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
+func (e *clusterd) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
 	var ec = &edgeclustersv1.EdgeCluster{}
 	var err error
 
@@ -83,7 +83,7 @@ func (e *edgeCluster) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) 
 	return ec, nil
 }
 
-func (e *edgeCluster) checkEdgeClusterConfig() error {
+func (e *clusterd) checkEdgeClusterConfig() error {
 	edgeClusterConfig := edgeclusterconfig.Config
 
 	if e.TestClusterReady() == false {
@@ -106,11 +106,11 @@ func (e *edgeCluster) checkEdgeClusterConfig() error {
 	return nil
 }
 
-func (e *edgeCluster) setInitEdgeCluster(ec *edgeclustersv1.EdgeCluster) {
+func (e *clusterd) setInitEdgeCluster(ec *edgeclustersv1.EdgeCluster) {
 	initEdgeCluster.Status = *ec.Status.DeepCopy()
 }
 
-func (e *edgeCluster) registerEdgeCluster() error {
+func (e *clusterd) registerEdgeCluster() error {
 	ec, err := e.initialEdgeCluster()
 	if err != nil {
 		klog.Errorf("Unable to construct edgeclustersv1.EdgeCluster object for edge: %v", err)
@@ -130,7 +130,7 @@ func (e *edgeCluster) registerEdgeCluster() error {
 
 	klog.Infof("Attempting to register edgeCluster (%s), %s", ec.Name, resource)
 
-	edgeClusterInfoMsg := message.BuildMsg(modules.MetaGroup, "", modules.EdgeClusterModuleName, resource, model.InsertOperation, ec)
+	edgeClusterInfoMsg := message.BuildMsg(modules.MetaGroup, "", modules.ClusterdModuleName, resource, model.InsertOperation, ec)
 	var res model.Message
 	if _, ok := core.GetModules()[edgehub.ModuleNameEdgeHub]; ok {
 		res, err = beehiveContext.SendSync(edgehub.ModuleNameEdgeHub, *edgeClusterInfoMsg, syncMsgRespTimeout)
@@ -152,7 +152,7 @@ func (e *edgeCluster) registerEdgeCluster() error {
 	return nil
 }
 
-func (e *edgeCluster) getEdgeClusterStatusRequest(edgeCluster *edgeclustersv1.EdgeCluster) (*edgeapi.EdgeClusterStatusRequest, error) {
+func (e *clusterd) getEdgeClusterStatusRequest(edgeCluster *edgeclustersv1.EdgeCluster) (*edgeapi.EdgeClusterStatusRequest, error) {
 	var edgeClusterStatus = &edgeapi.EdgeClusterStatusRequest{}
 	edgeClusterStatus.UID = e.uid
 	edgeClusterStatus.Status = *edgeCluster.Status.DeepCopy()
@@ -179,7 +179,7 @@ func (e *edgeCluster) getEdgeClusterStatusRequest(edgeCluster *edgeclustersv1.Ed
 	return edgeClusterStatus, nil
 }
 
-func (e *edgeCluster) updateEdgeClusterStatus() error {
+func (e *clusterd) updateEdgeClusterStatus() error {
 	edgeClusterStatus, err := e.getEdgeClusterStatusRequest(&initEdgeCluster)
 	if err != nil {
 		klog.Errorf("Unable to construct api.EdgeClusterStatusRequest object for edge: %v", err)
@@ -193,7 +193,7 @@ func (e *edgeCluster) updateEdgeClusterStatus() error {
 	return nil
 }
 
-func (e *edgeCluster) syncEdgeClusterStatus() {
+func (e *clusterd) syncEdgeClusterStatus() {
 	if !e.registrationCompleted {
 		if err := e.registerEdgeCluster(); err != nil {
 			klog.Fatalf("Register edgeCluster failed: %v", err)
@@ -205,7 +205,7 @@ func (e *edgeCluster) syncEdgeClusterStatus() {
 	}
 }
 
-func (e *edgeCluster) TestClusterReady() bool {
+func (e *clusterd) TestClusterReady() bool {
 	test_cluster_command := fmt.Sprintf("%s cluster-info --kubeconfig=%s", e.kubectlPath, e.kubeconfig)
 	if _, err := ExecCommandLine(test_cluster_command, COMMAND_TIMEOUT_SEC); err != nil {
 		klog.Errorf("The cluster is unreachable: %v", err)
@@ -215,19 +215,19 @@ func (e *edgeCluster) TestClusterReady() bool {
 	return true
 }
 
-func (e *edgeCluster) GetEdgeClusterNames() []string {
+func (e *clusterd) GetEdgeClusterNames() []string {
 	return e.GetLocalClusterScopeResourceNames("edgeclusters", "")
 }
 
-func (e *edgeCluster) GetNodeNames() []string {
+func (e *clusterd) GetNodeNames() []string {
 	return e.GetLocalClusterScopeResourceNames("nodes", "")
 }
 
-func (e *edgeCluster) GetEdgeNodeNames() []string {
+func (e *clusterd) GetEdgeNodeNames() []string {
 	return e.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge=")
 }
 
-func (e *edgeCluster) GetLocalClusterScopeResourceNames(resType string, label string) []string {
+func (e *clusterd) GetLocalClusterScopeResourceNames(resType string, label string) []string {
 	labelOption := ""
 	if len(label) > 0 {
 		labelOption = "-l " + label

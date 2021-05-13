@@ -18,5 +18,5 @@ const (
 	// StreamGroup group
 	StreamGroup = "edgestream"
 	// EdgeCluster Group
-	EdgeClusterGroup = "edgecluster"
+	ClusterdGroup = "clusterd"
 )

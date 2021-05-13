@@ -20,7 +20,7 @@ modules:
       readDeadline: 15
       server: 172.31.22.126:10000
       writeDeadline: 15
-  edgeCluster:
+  clusterd:
     enable: true
     kubeconfig: /root/arktos.kubeconfig
     kubeDistro: arktos

@@ -13,6 +13,6 @@ const (
 	EdgeStreamModuleName = "edgestream"
 	// DeviceTwinModuleName name
 	DeviceTwinModuleName = "twin"
-	// EdgeClusterModuleName name
-	EdgeClusterModuleName = "edgecluster"
+	// ClusterdModuleName name
+	ClusterdModuleName = "clusterd"
 )
