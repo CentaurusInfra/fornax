@@ -12,12 +12,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-@CHANGELOG
-KubeEdge Authors: To create mini-kubelet for edge deployment scenario,
-This file is derived from K8S Kubelet code with reduced set of methods
-Changes done are
-1. setEdgeClusterReadyCondition is partially come from "k8s.io/kubernetes/pkg/kubelet.setEdgeClusterReadyCondition"
 */
 
 package clusterd
@@ -36,7 +30,7 @@ import (
 	"github.com/kubeedge/beehive/pkg/core/model"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
-	edgeclusterconfig "github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
+	clusterdconfig "github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub"
@@ -49,13 +43,13 @@ func (e *clusterd) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
 	var ec = &edgeclustersv1.EdgeCluster{}
 	var err error
 
-	if err := e.checkEdgeClusterConfig(); err != nil {
+	if err := e.checkclusterdconfig(); err != nil {
 		return nil, err
 	}
 
-	edgeClusterConfig := edgeclusterconfig.Config
+	clusterdconfig := clusterdconfig.Config
 
-	clusterName := edgeClusterConfig.Name
+	clusterName := clusterdconfig.Name
 	if len(clusterName) == 0 {
 		clusterName, err = os.Hostname()
 		if err != nil {
@@ -65,8 +59,8 @@ func (e *clusterd) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
 	}
 	ec.Name = clusterName
 
-	ec.Spec.Kubeconfig = edgeClusterConfig.Kubeconfig
-	ec.Spec.KubeDistro = edgeClusterConfig.KubeDistro
+	ec.Spec.Kubeconfig = clusterdconfig.Kubeconfig
+	ec.Spec.KubeDistro = clusterdconfig.KubeDistro
 
 	ec.Labels = map[string]string{
 		// Kubernetes built-in labels
@@ -76,15 +70,15 @@ func (e *clusterd) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
 		"role.kubernetes.io/edgecluster": "",
 	}
 
-	for k, v := range edgeClusterConfig.Labels {
+	for k, v := range clusterdconfig.Labels {
 		ec.Labels[k] = v
 	}
 
 	return ec, nil
 }
 
-func (e *clusterd) checkEdgeClusterConfig() error {
-	edgeClusterConfig := edgeclusterconfig.Config
+func (e *clusterd) checkclusterdconfig() error {
+	clusterdconfig := clusterdconfig.Config
 
 	if e.TestClusterReady() == false {
 		return fmt.Errorf("The cluster is not reacheable.")
@@ -92,13 +86,13 @@ func (e *clusterd) checkEdgeClusterConfig() error {
 
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	mission_crd_file := filepath.Join(basedir, MISSION_CRD_FILE)
-	deploy_mission_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", e.kubectlPath, edgeClusterConfig.Kubeconfig, mission_crd_file)
+	deploy_mission_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", e.kubectlPath, clusterdconfig.Kubeconfig, mission_crd_file)
 	if _, err := ExecCommandLine(deploy_mission_crd_cmd, COMMAND_TIMEOUT_SEC); err != nil {
 		return fmt.Errorf("Failed to deploy mission crd: %v", err)
 	}
 
 	edgecluster_crd_file := filepath.Join(basedir, EDGECLUSTER_CRD_FILE)
-	deploy_edgecluster_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", e.kubectlPath, edgeClusterConfig.Kubeconfig, edgecluster_crd_file)
+	deploy_edgecluster_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", e.kubectlPath, clusterdconfig.Kubeconfig, edgecluster_crd_file)
 	if _, err := ExecCommandLine(deploy_edgecluster_crd_cmd, COMMAND_TIMEOUT_SEC); err != nil {
 		return fmt.Errorf("Failed to deploy edgecluster crd: %v", err)
 	}
@@ -188,7 +182,7 @@ func (e *clusterd) updateEdgeClusterStatus() error {
 
 	err = e.metaClient.EdgeClusterStatus(e.namespace).Update(e.name, *edgeClusterStatus)
 	if err != nil {
-		klog.Errorf("update edgeCluster failed, error: %v", err)
+		klog.Errorf("update edgeCluster status failed, error: %v", err)
 	}
 	return nil
 }

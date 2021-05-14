@@ -49,17 +49,17 @@ type MissionManager struct {
 }
 
 //NewMissionManager creates new mission manager object
-func NewMissionManager(edgeClusterConfig *v1alpha1.Clusterd) *MissionManager {
+func NewMissionManager(clusterdConfig *v1alpha1.Clusterd) *MissionManager {
 
 	// No need to check the config, as it was checked during the registration
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	return &MissionManager{
-		ClusterName:    edgeClusterConfig.Name,
-		ClusterLabels:  edgeClusterConfig.Labels,
-		KubeDistro:     edgeClusterConfig.KubeDistro,
-		KubeconfigFile: edgeClusterConfig.Kubeconfig,
-		KubectlCli:     filepath.Join(basedir, DistroToKubectl[edgeClusterConfig.KubeDistro]),
+		ClusterName:    clusterdConfig.Name,
+		ClusterLabels:  clusterdConfig.Labels,
+		KubeDistro:     clusterdConfig.KubeDistro,
+		KubeconfigFile: clusterdConfig.Kubeconfig,
+		KubectlCli:     filepath.Join(basedir, DistroToKubectl[clusterdConfig.KubeDistro]),
 		MissionMatch:   map[string]bool{},
 	}
 }

@@ -52,7 +52,7 @@ const (
 	EdgeController     = "edgecontroller"
 )
 
-// edgeCluster is the main edgeCluster implementation.
+// clusterd is the implementation to manage an edge cluser.
 type clusterd struct {
 	name                  string
 	missionManager        *MissionManager
@@ -67,12 +67,12 @@ type clusterd struct {
 	kubeconfig            string
 }
 
-// Register register edgeCluster
+// Register register clusterd module
 func Register(e *v1alpha1.Clusterd) {
 	config.InitConfigure(e)
 	clusterd, err := newClusterd(e.Enable)
 	if err != nil {
-		klog.Errorf("init new edgeCluster error, %v", err)
+		klog.Errorf("init new clusterd error, %v", err)
 		os.Exit(1)
 		return
 	}
@@ -93,7 +93,7 @@ func (e *clusterd) Enable() bool {
 }
 
 func (e *clusterd) Start() {
-	klog.Info("Starting edgeCluster...")
+	klog.Info("Starting clusterd...")
 
 	go utilwait.Until(e.syncEdgeClusterStatus, e.statusUpdateInterval, utilwait.NeverStop)
 
