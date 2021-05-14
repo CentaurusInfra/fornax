@@ -167,7 +167,7 @@ func NewDefaultEdgeCoreConfig() *EdgeCoreConfig {
 				TunnelServer:            net.JoinHostPort("127.0.0.1", strconv.Itoa(constants.DefaultTunnelPort)),
 				WriteDeadline:           15,
 			},
-			EdgeCluster: &EdgeCluster{
+			Clusterd: &Clusterd{
 				Enable:               true,
 				Name:                 "",
 				Kubeconfig:           "",

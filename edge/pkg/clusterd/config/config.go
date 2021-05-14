@@ -10,13 +10,13 @@ var Config Configure
 var once sync.Once
 
 type Configure struct {
-	v1alpha1.EdgeCluster
+	v1alpha1.Clusterd
 }
 
-func InitConfigure(e *v1alpha1.EdgeCluster) {
+func InitConfigure(e *v1alpha1.Clusterd) {
 	once.Do(func() {
 		Config = Configure{
-			EdgeCluster: *e,
+			Clusterd: *e,
 		}
 	})
 }

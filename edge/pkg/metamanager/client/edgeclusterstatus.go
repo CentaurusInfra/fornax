@@ -40,7 +40,7 @@ func (c *edgeClusterStatus) Create(ns *edgeapi.EdgeClusterStatusRequest) (*edgea
 
 func (c *edgeClusterStatus) Update(rsName string, ecs edgeapi.EdgeClusterStatusRequest) error {
 	resource := fmt.Sprintf("%s/%s/%s", c.namespace, model.ResourceTypeEdgeClusterStatus, rsName)
-	edgeClusterStatusMsg := message.BuildMsg(modules.MetaGroup, "", modules.EdgeClusterModuleName, resource, model.UpdateOperation, ecs)
+	edgeClusterStatusMsg := message.BuildMsg(modules.MetaGroup, "", modules.ClusterdModuleName, resource, model.UpdateOperation, ecs)
 	_, err := c.send.SendSync(edgeClusterStatusMsg)
 	if err != nil {
 		return fmt.Errorf("update edgeClusterStatus failed, err: %v", err)

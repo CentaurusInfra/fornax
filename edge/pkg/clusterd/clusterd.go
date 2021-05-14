@@ -17,11 +17,11 @@ limitations under the License.
 KubeEdge Authors: To create mini-kubelet for edge deployment scenario,
 This file is derived from K8S Kubelet code with reduced set of methods
 Changes done are
-1. package edgecluster got some functions from "k8s.io/kubernetes/pkg/kubelet/kubelet.go"
+1. package clusterd got some functions from "k8s.io/kubernetes/pkg/kubelet/kubelet.go"
 and made some variant
 */
 
-package edgecluster
+package clusterd
 
 import (
 	"encoding/json"
@@ -36,8 +36,8 @@ import (
 	"github.com/kubeedge/beehive/pkg/core/model"
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	"github.com/kubeedge/kubeedge/common/constants"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
-	"github.com/kubeedge/kubeedge/edge/pkg/edgecluster/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/client"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
@@ -52,8 +52,8 @@ const (
 	EdgeController     = "edgecontroller"
 )
 
-// edgeCluster is the main edgeCluster implementation.
-type edgeCluster struct {
+// clusterd is the implementation to manage an edge cluser.
+type clusterd struct {
 	name                  string
 	missionManager        *MissionManager
 	uid                   types.UID
@@ -67,33 +67,33 @@ type edgeCluster struct {
 	kubeconfig            string
 }
 
-// Register register edgeCluster
-func Register(e *v1alpha1.EdgeCluster) {
+// Register register clusterd module
+func Register(e *v1alpha1.Clusterd) {
 	config.InitConfigure(e)
-	edgeCluster, err := newEdgeCluster(e.Enable)
+	clusterd, err := newClusterd(e.Enable)
 	if err != nil {
-		klog.Errorf("init new edgeCluster error, %v", err)
+		klog.Errorf("init new clusterd error, %v", err)
 		os.Exit(1)
 		return
 	}
-	core.Register(edgeCluster)
+	core.Register(clusterd)
 }
 
-func (e *edgeCluster) Name() string {
-	return modules.EdgeClusterModuleName
+func (e *clusterd) Name() string {
+	return modules.ClusterdModuleName
 }
 
-func (e *edgeCluster) Group() string {
-	return modules.EdgeClusterGroup
+func (e *clusterd) Group() string {
+	return modules.ClusterdGroup
 }
 
 //Enable indicates whether this module is enabled
-func (e *edgeCluster) Enable() bool {
+func (e *clusterd) Enable() bool {
 	return e.enable
 }
 
-func (e *edgeCluster) Start() {
-	klog.Info("Starting edgeCluster...")
+func (e *clusterd) Start() {
+	klog.Info("Starting clusterd...")
 
 	go utilwait.Until(e.syncEdgeClusterStatus, e.statusUpdateInterval, utilwait.NeverStop)
 
@@ -103,9 +103,9 @@ func (e *edgeCluster) Start() {
 	return
 }
 
-//newEdgeCluster creates new edgeCluster object and initialises it
-func newEdgeCluster(enable bool) (*edgeCluster, error) {
-	missionManager := NewMissionManager(&config.Config.EdgeCluster)
+//newClusterd creates new Clusterd object and initialises it
+func newClusterd(enable bool) (*clusterd, error) {
+	missionManager := NewMissionManager(&config.Config.Clusterd)
 	metaClient := client.New()
 
 	if !FileExists(config.Config.Kubeconfig) {
@@ -119,13 +119,13 @@ func newEdgeCluster(enable bool) (*edgeCluster, error) {
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	kubectlPath := filepath.Join(basedir, DistroToKubectl[config.Config.KubeDistro])
 
-	ec := &edgeCluster{
+	ec := &clusterd{
 		name:                 config.Config.Name,
 		namespace:            config.Config.RegisterNamespace,
 		missionManager:       missionManager,
 		enable:               enable,
 		uid:                  types.UID("76246eec-1dc7-4bcf-89b4-686dbc3b4234"),
-		statusUpdateInterval: time.Duration(config.Config.EdgeCluster.StatusUpdateInterval) * time.Second,
+		statusUpdateInterval: time.Duration(config.Config.Clusterd.StatusUpdateInterval) * time.Second,
 		metaClient:           metaClient,
 		kubeDistro:           config.Config.KubeDistro,
 		kubeconfig:           config.Config.Kubeconfig,
@@ -134,7 +134,7 @@ func newEdgeCluster(enable bool) (*edgeCluster, error) {
 	return ec, nil
 }
 
-func (e *edgeCluster) syncCloud() {
+func (e *clusterd) syncCloud() {
 	time.Sleep(10 * time.Second)
 
 	//when starting, send msg to metamanager once to get existing missions
@@ -144,7 +144,7 @@ func (e *edgeCluster) syncCloud() {
 	for {
 		select {
 		case <-beehiveContext.Done():
-			klog.Warning("EdgeCluster Sync stop")
+			klog.Warning("Clusterd Sync stop")
 			return
 		default:
 		}
@@ -202,7 +202,7 @@ func (e *edgeCluster) syncCloud() {
 	}
 }
 
-func (e *edgeCluster) handleMissionList(content []byte) (err error) {
+func (e *clusterd) handleMissionList(content []byte) (err error) {
 	if e.missionManager == nil {
 		return fmt.Errorf("mission manager is not initialized.")
 	}
@@ -226,7 +226,7 @@ func (e *edgeCluster) handleMissionList(content []byte) (err error) {
 	return e.missionManager.AlignMissionList(missionList)
 }
 
-func (e *edgeCluster) handleMission(op string, content []byte) (err error) {
+func (e *clusterd) handleMission(op string, content []byte) (err error) {
 	if e.missionManager == nil {
 		return fmt.Errorf("mission manager is not initialized.")
 	}

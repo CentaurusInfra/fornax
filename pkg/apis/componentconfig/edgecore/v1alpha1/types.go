@@ -106,8 +106,8 @@ type Modules struct {
 	// +Required
 	EdgeStream *EdgeStream `json:"edgeStream,omitempty"`
 
-	// EdgeCluster indicates EdgeCluster module config
-	EdgeCluster *EdgeCluster `json:"edgeCluster,omitempty"`
+	// Clusterd indicates Clusterd module config
+	Clusterd *Clusterd `json:"clusterd,omitempty"`
 }
 
 // Edged indicates the config fo edged module
@@ -475,8 +475,8 @@ type EdgeStream struct {
 	WriteDeadline int32 `json:"writeDeadline,omitempty"`
 }
 
-// EdgeCluster indicates the edge cluster config
-type EdgeCluster struct {
+// Clusterd indicates the clusterd config
+type Clusterd struct {
 	// Enable indicates whether edge cluster is enabled, if set to false, skip checking other configs.
 	// default true
 	Enable bool `json:"enable,omitempty"`

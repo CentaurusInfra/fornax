@@ -49,8 +49,8 @@ func feedbackError(err error, info string, request model.Message) {
 	switch source {
 	case modules.EdgedModuleName:
 		sendToEdged(errResponse, request.IsSync())
-	case modules.EdgeClusterModuleName:
-		sendToEdgeCluster(errResponse, request.IsSync())
+	case modules.ClusterdModuleName:
+		sendToClusterd(errResponse, request.IsSync())
 	default:
 		sendToCloud(errResponse)
 	}
@@ -68,8 +68,8 @@ func sendToEdged(message *model.Message, sync bool) {
 	sendToEdgeModules(message, sync, modules.EdgedModuleName)
 }
 
-func sendToEdgeCluster(message *model.Message, sync bool) {
-	sendToEdgeModules(message, sync, modules.EdgeClusterModuleName)
+func sendToClusterd(message *model.Message, sync bool) {
+	sendToEdgeModules(message, sync, modules.ClusterdModuleName)
 }
 
 func sendToEdgeMesh(message *model.Message, sync bool) {
@@ -124,8 +124,8 @@ func isEdgeMeshResource(resType string) bool {
 		resType == model.ResourceTypePodlist
 }
 
-// if resource type is EdgeCluster related
-func isEdgeClusterResource(resType string) bool {
+// if resource type is clusterd related
+func isClusterdResource(resType string) bool {
 	return resType == constants.ResourceTypeMission
 }
 
@@ -219,8 +219,8 @@ func (m *metaManager) processInsert(message model.Message) {
 	if isEdgeMeshResource(resType) {
 		// Notify edgemesh
 		sendToEdgeMesh(&message, false)
-	} else if isEdgeClusterResource(resType) {
-		sendToEdgeCluster(&message, false)
+	} else if isClusterdResource(resType) {
+		sendToClusterd(&message, false)
 	} else {
 		// Notify edged
 		sendToEdged(&message, false)
@@ -354,15 +354,15 @@ func (m *metaManager) processUpdate(message model.Message) {
 		sendToCloud(&message)
 		resp := message.NewRespByMessage(&message, OK)
 		sendToEdged(resp, message.IsSync())
-	case modules.EdgeClusterModuleName:
+	case modules.ClusterdModuleName:
 		sendToCloud(&message)
 		resp := message.NewRespByMessage(&message, OK)
-		sendToEdgeCluster(resp, message.IsSync())
+		sendToClusterd(resp, message.IsSync())
 	case cloudmodules.EdgeControllerModuleName, cloudmodules.DynamicControllerModuleName:
 		if isEdgeMeshResource(resType) {
 			sendToEdgeMesh(&message, message.IsSync())
-		} else if isEdgeClusterResource(resType) {
-			sendToEdgeCluster(&message, message.IsSync())
+		} else if isClusterdResource(resType) {
+			sendToClusterd(&message, message.IsSync())
 		} else {
 			sendToEdged(&message, message.IsSync())
 		}
@@ -408,8 +408,8 @@ func (m *metaManager) processResponse(message model.Message) {
 	if message.GetSource() == CloudControlerModel {
 		if resType == constants.ResourceTypeService || resType == constants.ResourceTypeEndpoints {
 			sendToEdgeMesh(&message, message.IsSync())
-		} else if isEdgeClusterResource(resType) {
-			sendToEdgeCluster(&message, message.IsSync())
+		} else if isClusterdResource(resType) {
+			sendToClusterd(&message, message.IsSync())
 		} else {
 			sendToEdged(&message, message.IsSync())
 		}
@@ -449,8 +449,8 @@ func (m *metaManager) processDelete(message model.Message) {
 		return
 	}
 
-	if isEdgeClusterResource(resType) {
-		sendToEdgeCluster(&message, message.IsSync())
+	if isClusterdResource(resType) {
+		sendToClusterd(&message, message.IsSync())
 	} else {
 		// Notify edged
 		sendToEdged(&message, false)
@@ -472,7 +472,7 @@ func (m *metaManager) processQuery(message model.Message) {
 			resp := message.NewRespByMessage(&message, *metas)
 			resp.SetRoute(MetaManagerModuleName, resp.GetGroup())
 			if m.edgeClusterMode {
-				sendToEdgeCluster(resp, message.IsSync())
+				sendToClusterd(resp, message.IsSync())
 			} else {
 				sendToEdged(resp, message.IsSync())
 			}
@@ -495,7 +495,7 @@ func (m *metaManager) processQuery(message model.Message) {
 		if resType == constants.ResourceTypeService || resType == constants.ResourceTypeEndpoints || resType == constants.ResourceTypeListener {
 			sendToEdgeMesh(resp, message.IsSync())
 		} else if m.edgeClusterMode {
-			sendToEdgeCluster(resp, message.IsSync())
+			sendToClusterd(resp, message.IsSync())
 		} else {
 			sendToEdged(resp, message.IsSync())
 		}
@@ -543,8 +543,8 @@ func (m *metaManager) processRemoteQuery(message model.Message) {
 		resp.BuildHeader(resp.GetID(), originalID, resp.GetTimestamp())
 		if resType == constants.ResourceTypeService || resType == constants.ResourceTypeEndpoints {
 			sendToEdgeMesh(&resp, message.IsSync())
-		} else if isEdgeClusterResource(resType) {
-			sendToEdgeCluster(&message, message.IsSync())
+		} else if isClusterdResource(resType) {
+			sendToClusterd(&message, message.IsSync())
 		} else {
 			sendToEdged(&resp, message.IsSync())
 		}

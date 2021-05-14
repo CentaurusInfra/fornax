@@ -12,7 +12,7 @@ limitations under the License.
 
 */
 
-package edgecluster
+package clusterd
 
 import (
 	"context"
