@@ -17,10 +17,22 @@ spec:
   scope: Cluster
   subresources:
     status: {}
+  additionalPrinterColumns:
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+    - name: Status
+      type: string
+      JSONPath: .status
   validation:
     openAPIV3Schema:
       type: object
       properties:
+        statuscheck:
+          type: object
+          properties:
+            command:
+              type: string
         spec:
           type: object
           properties:

@@ -33,3 +33,10 @@ type EdgeClusterStatusRequest struct {
 	UID    types.UID
 	Status edgeclustersv1.EdgeClusterStatus
 }
+
+// MissionStatusRequest is Message.Content which come from edge
+type MissionStatusRequest struct {
+	UID         types.UID
+	ClusterName string
+	Status      map[string]string
+}
