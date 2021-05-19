@@ -54,17 +54,19 @@ const (
 
 // clusterd is the implementation to manage an edge cluser.
 type clusterd struct {
-	name                  string
-	missionManager        *MissionManager
-	uid                   types.UID
-	statusUpdateInterval  time.Duration
-	registrationCompleted bool
-	namespace             string
-	enable                bool
-	metaClient            client.CoreInterface
-	kubeDistro            string
-	kubectlPath           string
-	kubeconfig            string
+	name                            string
+	missionDeployer                 *MissionDeployer
+	missionStatusRepoter            *MissionStatusReporter
+	uid                             types.UID
+	edgeClusterStatusUpdateInterval time.Duration
+	missionStatusUpdateInterval     time.Duration
+	registrationCompleted           bool
+	namespace                       string
+	enable                          bool
+	metaClient                      client.CoreInterface
+	kubeDistro                      string
+	kubectlPath                     string
+	kubeconfig                      string
 }
 
 // Register register clusterd module
@@ -72,9 +74,7 @@ func Register(e *v1alpha1.Clusterd) {
 	config.InitConfigure(e)
 	clusterd, err := newClusterd(e.Enable)
 	if err != nil {
-		klog.Errorf("init new clusterd error, %v", err)
-		os.Exit(1)
-		return
+		klog.Fatalf("init new clusterd error, %v", err)
 	}
 	core.Register(clusterd)
 }
@@ -95,7 +95,7 @@ func (e *clusterd) Enable() bool {
 func (e *clusterd) Start() {
 	klog.Info("Starting clusterd...")
 
-	go utilwait.Until(e.syncEdgeClusterStatus, e.statusUpdateInterval, utilwait.NeverStop)
+	go utilwait.Until(e.syncEdgeClusterStatus, e.edgeClusterStatusUpdateInterval, utilwait.NeverStop)
 
 	klog.Infof("starting sync with cloud")
 	e.syncCloud()
@@ -105,9 +105,6 @@ func (e *clusterd) Start() {
 
 //newClusterd creates new Clusterd object and initialises it
 func newClusterd(enable bool) (*clusterd, error) {
-	missionManager := NewMissionManager(&config.Config.Clusterd)
-	metaClient := client.New()
-
 	if !FileExists(config.Config.Kubeconfig) {
 		return nil, fmt.Errorf("Could not open kubeconfig file (%s)", config.Config.Kubeconfig)
 	}
@@ -119,19 +116,28 @@ func newClusterd(enable bool) (*clusterd, error) {
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	kubectlPath := filepath.Join(basedir, DistroToKubectl[config.Config.KubeDistro])
 
-	ec := &clusterd{
-		name:                 config.Config.Name,
-		namespace:            config.Config.RegisterNamespace,
-		missionManager:       missionManager,
-		enable:               enable,
-		uid:                  types.UID("76246eec-1dc7-4bcf-89b4-686dbc3b4234"),
-		statusUpdateInterval: time.Duration(config.Config.Clusterd.StatusUpdateInterval) * time.Second,
-		metaClient:           metaClient,
-		kubeDistro:           config.Config.KubeDistro,
-		kubeconfig:           config.Config.Kubeconfig,
-		kubectlPath:          kubectlPath,
+	missionDeployer := NewMissionDeployer(&config.Config.Clusterd)
+
+	c := &clusterd{
+		name:                            config.Config.Name,
+		namespace:                       config.Config.RegisterNamespace,
+		missionDeployer:                 missionDeployer,
+		enable:                          enable,
+		uid:                             types.UID("76246eec-1dc7-4bcf-89b4-686dbc3b4234"),
+		edgeClusterStatusUpdateInterval: time.Duration(config.Config.Clusterd.EdgeClusterStatusUpdateInterval) * time.Second,
+		metaClient:                      client.New(),
+		kubeDistro:                      config.Config.KubeDistro,
+		kubeconfig:                      config.Config.Kubeconfig,
+		kubectlPath:                     kubectlPath,
 	}
-	return ec, nil
+
+	stopChan := make(chan struct{})
+	missionStatusRepoter := NewMissionStatusReporter(&config.Config.Clusterd, c, missionDeployer, stopChan)
+	c.missionStatusRepoter = missionStatusRepoter
+
+	go missionStatusRepoter.Run(config.Config.MissionStatusWatchWorkers, stopChan)
+
+	return c, nil
 }
 
 func (e *clusterd) syncCloud() {
@@ -203,8 +209,8 @@ func (e *clusterd) syncCloud() {
 }
 
 func (e *clusterd) handleMissionList(content []byte) (err error) {
-	if e.missionManager == nil {
-		return fmt.Errorf("mission manager is not initialized.")
+	if e.missionDeployer == nil {
+		return fmt.Errorf("mission deployer is not initialized.")
 	}
 
 	var lists []string
@@ -223,12 +229,12 @@ func (e *clusterd) handleMissionList(content []byte) (err error) {
 		missionList = append(missionList, &mission)
 	}
 
-	return e.missionManager.AlignMissionList(missionList)
+	return e.missionDeployer.AlignMissionList(missionList)
 }
 
 func (e *clusterd) handleMission(op string, content []byte) (err error) {
-	if e.missionManager == nil {
-		return fmt.Errorf("mission manager is not initialized.")
+	if e.missionDeployer == nil {
+		return fmt.Errorf("mission deployer is not initialized.")
 	}
 
 	var mission edgeclustersv1.Mission
@@ -239,14 +245,14 @@ func (e *clusterd) handleMission(op string, content []byte) (err error) {
 
 	switch op {
 	case model.InsertOperation:
-		err = e.missionManager.ApplyMission(&mission)
+		err = e.missionDeployer.ApplyMission(&mission)
 	case model.UpdateOperation:
-		err = e.missionManager.ApplyMission(&mission)
+		err = e.missionDeployer.ApplyMission(&mission)
 	case model.DeleteOperation:
-		err = e.missionManager.DeleteMission(&mission)
+		err = e.missionDeployer.DeleteMission(&mission)
 	}
 	if err == nil {
-		klog.Infof("%s mission [%s] for cache success.", op, mission.Name)
+		klog.V(3).Infof("%s mission [%s] for cache success.", op, mission.Name)
 	}
 	return
 }

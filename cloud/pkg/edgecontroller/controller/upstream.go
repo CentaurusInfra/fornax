@@ -29,6 +29,7 @@ import (
 	stderrors "errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
@@ -99,6 +100,7 @@ type UpstreamController struct {
 	updateNodeChan            chan model.Message
 	podDeleteChan             chan model.Message
 	edgeClusterStatusChan     chan model.Message
+	missionStatusChan         chan model.Message
 
 	// lister
 	podLister       corelisters.PodLister
@@ -126,6 +128,7 @@ func (uc *UpstreamController) Start() error {
 	uc.updateNodeChan = make(chan model.Message, config.Config.Buffer.UpdateNode)
 	uc.podDeleteChan = make(chan model.Message, config.Config.Buffer.DeletePod)
 	uc.edgeClusterStatusChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterStatus)
+	uc.missionStatusChan = make(chan model.Message, config.Config.Buffer.UpdateMissionStatus)
 
 	go uc.dispatchMessage()
 
@@ -167,6 +170,9 @@ func (uc *UpstreamController) Start() error {
 	}
 	for i := 0; i < int(config.Config.Load.UpdateEdgeClusterStatusWorkers); i++ {
 		go uc.updateEdgeClusterStatus()
+	}
+	for i := 0; i < int(config.Config.Load.UpdateMissionStatusWorkers); i++ {
+		go uc.updateMissionStatus()
 	}
 	return nil
 }
@@ -233,6 +239,8 @@ func (uc *UpstreamController) dispatchMessage() {
 			}
 		case model.ResourceTypeEdgeClusterStatus:
 			uc.edgeClusterStatusChan <- msg
+		case model.ResourceTypeMissionStatus:
+			uc.missionStatusChan <- msg
 		default:
 			klog.Errorf("message: %s, resource type: %s unsupported", msg.GetID(), resourceType)
 		}
@@ -589,7 +597,7 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 				if err != nil {
 					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
 					continue
-				}				
+				}
 
 				existingEdgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().Get(context.Background(), name, metaV1.GetOptions{})
 				if errors.IsNotFound(err) {
@@ -598,7 +606,7 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 				}
 
 				if err != nil {
-					klog.Warningf("message: %s process failure with error: %s, name: %s", msg.GetID(), err,  name)
+					klog.Warningf("message: %s process failure with error: %s, name: %s", msg.GetID(), err, name)
 					continue
 				}
 
@@ -632,6 +640,116 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 
 			default:
 				klog.Warningf("message: %s process failure, edgeCluster status operation: %s unsupported", msg.GetID(), msg.GetOperation())
+			}
+			klog.V(4).Infof("message: %s processed successfully", msg.GetID())
+		}
+	}
+}
+
+func aggregateStatus(status *map[string]string, newStatus map[string]string, clusterName string) {
+	for key := range *status {
+		if key == clusterName || strings.HasPrefix(key, clusterName+"/") {
+			newVal, ok := newStatus[key]
+			if ok {
+				(*status)[key] = newVal
+				delete(newStatus, key)
+			} else {
+				delete(*status, key)
+			}
+		}
+	}
+
+	for key, val := range newStatus {
+		(*status)[key] = val
+	}
+}
+
+func (uc *UpstreamController) updateMissionStatus() {
+	for {
+		select {
+		case <-beehiveContext.Done():
+			klog.Warning("stop updateMissionStatus")
+			return
+		case msg := <-uc.missionStatusChan:
+			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
+
+			var data []byte
+			switch msg.Content.(type) {
+			case []byte:
+				data = msg.GetContent().([]byte)
+			default:
+				var err error
+				data, err = json.Marshal(msg.GetContent())
+				if err != nil {
+					klog.Warningf("message: %s process failure, marshal message content with error: %s", msg.GetID(), err)
+					continue
+				}
+			}
+
+			namespace, err := messagelayer.GetNamespace(msg)
+			if err != nil {
+				klog.Warningf("message: %s process failure, get namespace failed with error: %s", msg.GetID(), err)
+				continue
+			}
+			name, err := messagelayer.GetResourceName(msg)
+			if err != nil {
+				klog.Warningf("message: %s process failure, get resource name failed with error: %s", msg.GetID(), err)
+				continue
+			}
+
+			switch msg.GetOperation() {
+			case model.UpdateOperation:
+				missionStatusRequest := &edgeapi.MissionStatusRequest{}
+				err := json.Unmarshal(data, missionStatusRequest)
+				if err != nil {
+					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
+					continue
+				}
+
+				existingMission, err := uc.crdClient.EdgeclustersV1().Missions().Get(context.Background(), name, metaV1.GetOptions{})
+				if errors.IsNotFound(err) {
+					klog.Warningf("message: %s process failure, mission %s not found", msg.GetID(), name)
+					continue
+				}
+
+				if err != nil {
+					klog.Warningf("message: %s process failure with error: %s, name: %s", msg.GetID(), err, name)
+					continue
+				}
+
+				if existingMission.Status == nil {
+					existingMission.Status = map[string]string{}
+				}
+
+				aggregateStatus(&(existingMission.Status), missionStatusRequest.Status, missionStatusRequest.ClusterName)
+				mission, err := uc.crdClient.EdgeclustersV1().Missions().UpdateStatus(context.Background(), existingMission, metaV1.UpdateOptions{})
+				if err != nil {
+					klog.Warningf("message: %s process failure, update mission failed with error: %s, name: %s", msg.GetID(), err, existingMission.Name)
+					continue
+				}
+				resMsg := model.NewMessage(msg.GetID())
+				resMsg.SetResourceVersion(mission.ResourceVersion)
+				resMsg.Content = "OK"
+				nodeID, err := messagelayer.GetNodeID(msg)
+				if err != nil {
+					klog.Warningf("Message: %s process failure, get node id failed with error: %s", msg.GetID(), err)
+					continue
+				}
+				resource, err := messagelayer.BuildResource(nodeID, namespace, model.ResourceTypeMission, mission.Name)
+				if err != nil {
+					klog.Warningf("Message: %s process failure, build message resource failed with error: %s", msg.GetID(), err)
+					continue
+				}
+				resMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.ResponseOperation)
+				if err = uc.messageLayer.Response(*resMsg); err != nil {
+					klog.Warningf("Message: %s process failure, sending response failed with error: %s", msg.GetID(), err)
+					continue
+				}
+
+				klog.V(4).Infof("message: %s, update mission status successfully, name: %s", msg.GetID(), existingMission.Name)
+
+			default:
+				klog.Warningf("message: %s process failure, mission status operation: %s unsupported", msg.GetID(), msg.GetOperation())
 			}
 			klog.V(4).Infof("message: %s processed successfully", msg.GetID())
 		}
