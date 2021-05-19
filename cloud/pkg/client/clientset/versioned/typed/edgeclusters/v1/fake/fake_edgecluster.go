@@ -25,6 +25,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 )
@@ -85,11 +86,46 @@ func (c *FakeEdgeClusters) Create(ctx context.Context, edgeCluster *edgeclusters
 	return obj.(*edgeclustersv1.EdgeCluster), err
 }
 
+// Update takes the representation of a edgeCluster and updates it. Returns the server's representation of the edgeCluster, and an error, if there is any.
+func (c *FakeEdgeClusters) Update(ctx context.Context, edgeCluster *edgeclustersv1.EdgeCluster, opts v1.UpdateOptions) (result *edgeclustersv1.EdgeCluster, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateAction(edgeclustersResource, edgeCluster), &edgeclustersv1.EdgeCluster{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*edgeclustersv1.EdgeCluster), err
+}
+
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeEdgeClusters) UpdateStatus(ctx context.Context, edgeCluster *edgeclustersv1.EdgeCluster, opts v1.UpdateOptions) (*edgeclustersv1.EdgeCluster, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(edgeclustersResource, "status", edgeCluster), &edgeclustersv1.EdgeCluster{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*edgeclustersv1.EdgeCluster), err
+}
+
+// Delete takes name of the edgeCluster and deletes it. Returns an error if one occurs.
+func (c *FakeEdgeClusters) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+	_, err := c.Fake.
+		Invokes(testing.NewRootDeleteAction(edgeclustersResource, name), &edgeclustersv1.EdgeCluster{})
+	return err
+}
+
+// DeleteCollection deletes a collection of objects.
+func (c *FakeEdgeClusters) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(edgeclustersResource, listOpts)
+
+	_, err := c.Fake.Invokes(action, &edgeclustersv1.EdgeClusterList{})
+	return err
+}
+
+// Patch applies the patch and returns the patched edgeCluster.
+func (c *FakeEdgeClusters) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *edgeclustersv1.EdgeCluster, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(edgeclustersResource, name, pt, data, subresources...), &edgeclustersv1.EdgeCluster{})
 	if obj == nil {
 		return nil, err
 	}

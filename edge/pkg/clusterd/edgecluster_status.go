@@ -158,7 +158,7 @@ func (e *clusterd) getEdgeClusterStatusRequest(edgeCluster *edgeclustersv1.EdgeC
 
 	var receivedMissions []string
 	var matchededMissions []string
-	for k, v := range e.missionManager.MissionMatch {
+	for k, v := range e.missionDeployer.MissionMatch {
 		receivedMissions = append(receivedMissions, k)
 		if v == true {
 			matchededMissions = append(matchededMissions, k)
@@ -183,8 +183,34 @@ func (e *clusterd) updateEdgeClusterStatus() error {
 	err = e.metaClient.EdgeClusterStatus(e.namespace).Update(e.name, *edgeClusterStatus)
 	if err != nil {
 		klog.Errorf("update edgeCluster status failed, error: %v", err)
+		return err
 	}
+
 	return nil
+}
+
+func (e *clusterd) UpdateMissionStatus(missionName string, missionStatus map[string]string) error {
+	updatedMissionStatus := map[string]string{}
+	clusterName := clusterdconfig.Config.Name
+	for key, val := range missionStatus {
+		if key == LOCAL_EDGE_CLUSTER {
+			updatedMissionStatus[clusterName] = val
+		} else {
+			updatedMissionStatus[clusterName+"/"+key] = val
+		}
+	}
+	msRequest := edgeapi.MissionStatusRequest{
+		UID:         e.uid,
+		ClusterName: clusterName,
+		Status:      updatedMissionStatus,
+	}
+
+	err := e.metaClient.MissionStatus(e.namespace).Update(missionName, msRequest)
+	if err != nil {
+		klog.Errorf("update mission %v status failed, error: %v", missionName, err)
+	}
+
+	return err
 }
 
 func (e *clusterd) syncEdgeClusterStatus() {

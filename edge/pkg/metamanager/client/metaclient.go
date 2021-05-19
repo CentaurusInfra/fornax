@@ -31,6 +31,7 @@ type CoreInterface interface {
 	VolumeAttachmentsGetter
 	ListenerGetter
 	EdgeClusterStatusGetter
+	MissionStatusGetter
 }
 
 type metaClient struct {
@@ -55,6 +56,10 @@ func (m *metaClient) NodeStatus(namespace string) NodeStatusInterface {
 
 func (m *metaClient) EdgeClusterStatus(namespace string) EdgeClusterStatusInterface {
 	return newEdgeClusterStatus(namespace, m.send)
+}
+
+func (m *metaClient) MissionStatus(namespace string) MissionStatusInterface {
+	return newMissionStatus(namespace, m.send)
 }
 
 func (m *metaClient) Secrets(namespace string) SecretsInterface {

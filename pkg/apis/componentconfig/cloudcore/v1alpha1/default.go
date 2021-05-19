@@ -104,6 +104,7 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					DeletePod:                  constants.DefaultDeletePodBuffer,
 					UpdateEdgeClusterStatus:    constants.DefaultUpdateEdgeClusterStatusBuffer,
 					EdgeClustersEvent:          constants.DefaultEdgeClustersEventBuffer,
+					UpdateMissionStatus:        constants.DefaultUpdateMissionStatusBuffer,
 				},
 				Context: &ControllerContext{
 					SendModule:       metaconfig.ModuleNameCloudHub,
@@ -125,6 +126,7 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					UpdateNodeWorkers:                 constants.DefaultUpdateNodeWorkers,
 					DeletePodWorkers:                  constants.DefaultDeletePodWorkers,
 					UpdateEdgeClusterStatusWorkers:    constants.DefaultUpdateEdgeClusterStatusWorkers,
+					UpdateMissionStatusWorkers:        constants.DefaultUpdateMissionStatusWorkers,
 				},
 			},
 			DeviceController: &DeviceController{

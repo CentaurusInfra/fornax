@@ -22,7 +22,6 @@ import (
 
 // +genclient
 // +genclient:nonNamespaced
-// +genclient:onlyVerbs=create,get,list,watch,updateStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Mission specifies a workload to deploy in edge clusters
@@ -31,11 +30,9 @@ type Mission struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines desired state of network
-	// +optional
 	Spec MissionSpec `json:"spec"`
 
-	Status MissionStatus `json:"status,omitempty"`
+	Status map[string]string `json:"status,omitempty"`
 }
 
 // MissionSpec is a description of Mission
@@ -43,6 +40,8 @@ type MissionSpec struct {
 	Content string `json:"content,omitempty"`
 
 	Placement GenericPlacementFields `json:"placement,omitempty"`
+
+	StatusCheck StatusCheckFields `json:"statuscheck"`
 }
 
 type GenericClusterReference struct {
@@ -50,15 +49,12 @@ type GenericClusterReference struct {
 }
 
 type GenericPlacementFields struct {
-	Clusters        []GenericClusterReference `json:"clusters,omitempty"`
-	MatchLabels     map[string]string `yaml:"matchLabels,omitempty"`
+	Clusters    []GenericClusterReference `json:"clusters,omitempty"`
+	MatchLabels map[string]string         `json:"matchlabels,omitempty"`
 }
 
-// MissionStatus is a description of Mission status
-type MissionStatus struct {
-	Run bool `json:"run,omitempty"`
-	Succeeded bool `json:"succeeded,omitempty"`
-    Propogated bool `json:"propogated,omitempty"`
+type StatusCheckFields struct {
+	Command string `json:"command"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -75,7 +71,6 @@ type MissionList struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +genclient:onlyVerbs=create,get,list,watch,updateStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // EdgeCluster specifies an edge cluster
@@ -96,7 +91,7 @@ type EdgeClusterSpec struct {
 	// kubeconfig indicates the path to the edge cluster kubeconfig file
 	Kubeconfig string `json:"kubeconfig,omitempty"`
 
-	// Distribution of the cluster, supported value: arkots, to support in the furture: k3s, 
+	// Distribution of the cluster, supported value: arkots, to support in the furture: k3s
 	KubeDistro string `json:"kubeDistro,omitempty"`
 
 	// labels of the cluster
@@ -107,17 +102,17 @@ type EdgeClusterSpec struct {
 type EdgeClusterStatus struct {
 	Healthy bool `json:"healthy,omitempty"`
 
-	EdgeClusters []string `json:"edgeClusters,omitempty"`
+	EdgeClusters []string `json:"edgeclusters,omitempty"`
 
 	Nodes []string `json:"nodes,omitempty"`
 
-	EdgeNodes []string `json:"edgeNodes,omitempty"`
+	EdgeNodes []string `json:"edgenodes,omitempty"`
 
-	ReceivedMissions []string `json:"receivedMissions,omitempty"`
+	ReceivedMissions []string `json:"receivedmissions,omitempty"`
 
-	ActiveMissions []string `json:"activeMissions,omitempty"`
+	ActiveMissions []string `json:"activemissions,omitempty"`
 
-	LastHeartBeat metav1.Time `json:"lastHeartBeat,omitempty"`
+	LastHeartBeat metav1.Time `json:"lastheartbeat,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

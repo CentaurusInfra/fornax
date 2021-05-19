@@ -20,7 +20,7 @@ spec:
   additionalPrinterColumns:
     - name: LastHearbeat
       type: date
-      JSONPath: .status.lastHeartBeat
+      JSONPath: .status.lastheartbeat
     - name: Healthy
       type: boolean
       description: Whether the cluster is healthy and accessible
@@ -31,13 +31,13 @@ spec:
       JSONPath: .status.nodes
     - name: EdgeNodes
       type: string
-      JSONPath: .status.edgeNodes
+      JSONPath: .status.edgenodes
     - name: EdgeClusters
       type: string
-      JSONPath: .status.edgeClusters
+      JSONPath: .status.edgeclusters
     - name: ReceivedMissions
       type: string
-      JSONPath: .status.receivedMissions
+      JSONPath: .status.receivedmissions
     - name: MatchedMissions
       type: string
-      JSONPath: .status.activeMissions
+      JSONPath: .status.activemissions

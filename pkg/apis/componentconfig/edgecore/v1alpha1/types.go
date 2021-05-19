@@ -482,6 +482,7 @@ type Clusterd struct {
 	Enable bool `json:"enable,omitempty"`
 
 	// Name of the edge cluster
+	// default os.Hostname()
 	Name string `json:"name,omitempty"`
 
 	// kubeconfig indicates the path to the edge cluster kubeconfig file
@@ -493,9 +494,13 @@ type Clusterd struct {
 	// labels of the cluster
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// StatusUpdateFrequency indicates  status update frequency (second)
+	// EdgeClusterStatusUpdateFrequency indicates EdgeCluster status update frequency (second)
 	// default 10
-	StatusUpdateInterval int32 `json:"statusUpdateInterval,omitempty"`
+	EdgeClusterStatusUpdateInterval int32 `json:"edgeClusterStatusUpdateInterval,omitempty"`
+
+	// MissionStatusUpdateFrequency indicates Mission status update frequency (second)
+	// default 10
+	MissionStatusUpdateInterval int32 `json:"missionStatusUpdateInterval,omitempty"`
 
 	// RegisterNode enables automatic registration
 	// default true
@@ -505,7 +510,8 @@ type Clusterd struct {
 	// NodeIP indicates current node ip
 	// default get local host ip
 	NodeIP string `json:"nodeIP"`
-	// HostnameOverride indicates hostname
-	// default os.Hostname()
-	HostnameOverride string `json:"hostnameOverride,omitempty"`
+
+	InformerResyncInterval int32 `json:"informerResyncInterval,omitempty"`
+
+	MissionStatusWatchWorkers int `json:"missionStatusWatchWorkers,omitempty"`
 }

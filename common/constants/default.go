@@ -95,6 +95,7 @@ const (
 	DefaultUpdateNodeWorkers                 = 4
 	DefaultDeletePodWorkers                  = 4
 	DefaultUpdateEdgeClusterStatusWorkers    = 1
+	DefaultUpdateMissionStatusWorkers        = 4
 
 	DefaultUpdatePodStatusBuffer            = 1024
 	DefaultUpdateNodeStatusBuffer           = 1024
@@ -109,6 +110,7 @@ const (
 	DefaultUpdateNodeBuffer                 = 1024
 	DefaultDeletePodBuffer                  = 1024
 	DefaultUpdateEdgeClusterStatusBuffer    = 1024
+	DefaultUpdateMissionStatusBuffer        = 1024
 
 	DefaultPodEventBuffer           = 1
 	DefaultConfigMapEventBuffer     = 1
@@ -154,6 +156,9 @@ const (
 	ServerPort = 10350
 
 	// edgeCluster
-	DefaultStatusUpdateInterval = 10
-	DefaultRegisterNamespace    = "default"
+	DefaultEdgeClusterStatusUpdateInterval = 10
+	DefaultInformerResyncInterval          = 1
+	DefaultMissionStatusWatchWorkers       = 4
+	DefaultRegisterNamespace               = "default"
+	DefaultMissionStatusUpdateInterval     = 10
 )

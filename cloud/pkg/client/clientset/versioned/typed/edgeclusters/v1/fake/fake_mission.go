@@ -25,6 +25,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 )
@@ -85,11 +86,46 @@ func (c *FakeMissions) Create(ctx context.Context, mission *edgeclustersv1.Missi
 	return obj.(*edgeclustersv1.Mission), err
 }
 
+// Update takes the representation of a mission and updates it. Returns the server's representation of the mission, and an error, if there is any.
+func (c *FakeMissions) Update(ctx context.Context, mission *edgeclustersv1.Mission, opts v1.UpdateOptions) (result *edgeclustersv1.Mission, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateAction(missionsResource, mission), &edgeclustersv1.Mission{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*edgeclustersv1.Mission), err
+}
+
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeMissions) UpdateStatus(ctx context.Context, mission *edgeclustersv1.Mission, opts v1.UpdateOptions) (*edgeclustersv1.Mission, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(missionsResource, "status", mission), &edgeclustersv1.Mission{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*edgeclustersv1.Mission), err
+}
+
+// Delete takes name of the mission and deletes it. Returns an error if one occurs.
+func (c *FakeMissions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+	_, err := c.Fake.
+		Invokes(testing.NewRootDeleteAction(missionsResource, name), &edgeclustersv1.Mission{})
+	return err
+}
+
+// DeleteCollection deletes a collection of objects.
+func (c *FakeMissions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(missionsResource, listOpts)
+
+	_, err := c.Fake.Invokes(action, &edgeclustersv1.MissionList{})
+	return err
+}
+
+// Patch applies the patch and returns the patched mission.
+func (c *FakeMissions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *edgeclustersv1.Mission, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(missionsResource, name, pt, data, subresources...), &edgeclustersv1.Mission{})
 	if obj == nil {
 		return nil, err
 	}
