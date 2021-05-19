@@ -34,7 +34,7 @@ spec:
       JSONPath: .status.edgenodes
     - name: EdgeClusters
       type: string
-      JSONPath: .status.edgemlusters
+      JSONPath: .status.edgeclusters
     - name: ReceivedMissions
       type: string
       JSONPath: .status.receivedmissions
