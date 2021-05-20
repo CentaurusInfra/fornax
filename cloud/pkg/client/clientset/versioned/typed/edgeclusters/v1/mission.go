@@ -40,7 +40,6 @@ type MissionsGetter interface {
 type MissionInterface interface {
 	Create(ctx context.Context, mission *v1.Mission, opts metav1.CreateOptions) (*v1.Mission, error)
 	Update(ctx context.Context, mission *v1.Mission, opts metav1.UpdateOptions) (*v1.Mission, error)
-	UpdateStatus(ctx context.Context, mission *v1.Mission, opts metav1.UpdateOptions) (*v1.Mission, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Mission, error)
@@ -122,21 +121,6 @@ func (c *missions) Update(ctx context.Context, mission *v1.Mission, opts metav1.
 	err = c.client.Put().
 		Resource("missions").
 		Name(mission.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(mission).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *missions) UpdateStatus(ctx context.Context, mission *v1.Mission, opts metav1.UpdateOptions) (result *v1.Mission, err error) {
-	result = &v1.Mission{}
-	err = c.client.Put().
-		Resource("missions").
-		Name(mission.Name).
-		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(mission).
 		Do(ctx).

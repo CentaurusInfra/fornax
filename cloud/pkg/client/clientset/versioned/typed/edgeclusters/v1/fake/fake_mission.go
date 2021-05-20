@@ -96,17 +96,6 @@ func (c *FakeMissions) Update(ctx context.Context, mission *edgeclustersv1.Missi
 	return obj.(*edgeclustersv1.Mission), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeMissions) UpdateStatus(ctx context.Context, mission *edgeclustersv1.Mission, opts v1.UpdateOptions) (*edgeclustersv1.Mission, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(missionsResource, "status", mission), &edgeclustersv1.Mission{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*edgeclustersv1.Mission), err
-}
-
 // Delete takes name of the mission and deletes it. Returns an error if one occurs.
 func (c *FakeMissions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.

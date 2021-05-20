@@ -461,6 +461,7 @@ func (m *metaManager) processDelete(message model.Message) {
 }
 
 func (m *metaManager) processQuery(message model.Message) {
+	//dao.DeleteMetaByType("mission")
 	resKey, resType, resID := parseResource(message.GetResource())
 	var metas *[]string
 	var err error

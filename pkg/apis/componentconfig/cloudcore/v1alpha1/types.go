@@ -254,9 +254,9 @@ type EdgeControllerBuffer struct {
 	// DeletePod indicates the buffer of delete pod message from edge
 	// default 1024
 	DeletePod int32 `json:"deletePod,omitempty"`
-	// UpdateMissionStatus indicates the buffer of update Mission status
+	// UpdateMissionState indicates the buffer of update Mission status
 	// default 1024
-	UpdateMissionStatus int32 `json:"updateMissionStatus,omitempty"`
+	UpdateMissionState int32 `json:"updateMissionState,omitempty"`
 	// default 1
 	MissionsEvent int32 `json:"missionsEvent,omitempty"`
 	// UpdateEdgeClusterStatus indicates the buffer of update EdgeCluster status
@@ -319,9 +319,9 @@ type EdgeControllerLoad struct {
 	// UpdatEdgeClusterStatusWorkers indicates the load of update edgecluster status workers
 	// default 1
 	UpdateEdgeClusterStatusWorkers int32 `json:"updateEdgeClusterStatusWorkers,omitempty"`
-	// UpdatMissionStatusWorkers indicates the load of update mission status workers
+	// UpdatMissionStateWorkers indicates the load of update mission status workers
 	// default 4
-	UpdateMissionStatusWorkers int32 `json:"updateMissionStatusWorkers,omitempty"`
+	UpdateMissionStateWorkers int32 `json:"updateMissionStateWorkers,omitempty"`
 }
 
 // DeviceController indicates the device controller

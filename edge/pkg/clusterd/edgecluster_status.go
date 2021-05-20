@@ -189,23 +189,23 @@ func (e *clusterd) updateEdgeClusterStatus() error {
 	return nil
 }
 
-func (e *clusterd) UpdateMissionStatus(missionName string, missionStatus map[string]string) error {
-	updatedMissionStatus := map[string]string{}
+func (e *clusterd) UpdateMissionState(missionName string, missionState map[string]string) error {
+	updatedMissionState := map[string]string{}
 	clusterName := clusterdconfig.Config.Name
-	for key, val := range missionStatus {
+	for key, val := range missionState {
 		if key == LOCAL_EDGE_CLUSTER {
-			updatedMissionStatus[clusterName] = val
+			updatedMissionState[clusterName] = val
 		} else {
-			updatedMissionStatus[clusterName+"/"+key] = val
+			updatedMissionState[clusterName+"/"+key] = val
 		}
 	}
-	msRequest := edgeapi.MissionStatusRequest{
+	msRequest := edgeapi.MissionStateRequest{
 		UID:         e.uid,
 		ClusterName: clusterName,
-		Status:      updatedMissionStatus,
+		State:       updatedMissionState,
 	}
 
-	err := e.metaClient.MissionStatus(e.namespace).Update(missionName, msRequest)
+	err := e.metaClient.MissionState(e.namespace).Update(missionName, msRequest)
 	if err != nil {
 		klog.Errorf("update mission %v status failed, error: %v", missionName, err)
 	}

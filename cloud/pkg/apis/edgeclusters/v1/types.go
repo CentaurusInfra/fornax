@@ -32,7 +32,7 @@ type Mission struct {
 
 	Spec MissionSpec `json:"spec"`
 
-	Status map[string]string `json:"status,omitempty"`
+	State map[string]string `json:"state,omitempty"`
 }
 
 // MissionSpec is a description of Mission
@@ -41,7 +41,7 @@ type MissionSpec struct {
 
 	Placement GenericPlacementFields `json:"placement,omitempty"`
 
-	StatusCheck StatusCheckFields `json:"statuscheck"`
+	StateCheck StateCheckFields `json:"statecheck"`
 }
 
 type GenericClusterReference struct {
@@ -53,8 +53,8 @@ type GenericPlacementFields struct {
 	MatchLabels map[string]string         `json:"matchlabels,omitempty"`
 }
 
-type StatusCheckFields struct {
-	Command string `json:"command"`
+type StateCheckFields struct {
+	Command string `json:"command,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
