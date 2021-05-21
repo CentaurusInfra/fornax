@@ -22,24 +22,26 @@ const (
 	EdgeCluster_offline = "cluster offline"
 )
 
-//Mission state prune periodically update the mission state when some edgeclusters become offline
+//Mission state pruner periodically update the mission state when some edgeclusters become offline
 type MissionStatePruner struct {
 	enable             bool
 	syncInterval       time.Duration
 	edgeclusterTimeout time.Duration
-	// Here we use a client, instead of an informer/lister, to check whether edgeclusters are offline. Reaso
+	// Here we use a client, instead of an informer/lister, to check whether edgeclusters are offline.
 	// Reason I: We check the edge cluster once for a long period ( default one per minute), to avoid noise of edge cluster state flip&flop.
 	// So a long connection used by informer/lister actually is more expensive.
 	// Reason II: informers are good at detecting object changes. But here we are interested in edgeclusters whose status have NOT changed for a long time.
-	crdClient crdClientset.Interface
+	crdClient             crdClientset.Interface
+	deadEdgeClustersCache map[string]bool
 }
 
 func newMissionStatePruner(msp *configv1alpha1.MissionStatePruner) *MissionStatePruner {
 	return &MissionStatePruner{
-		enable:             msp.Enable,
-		crdClient:          keclient.GetCRDClient(),
-		syncInterval:       time.Duration(msp.SyncInterval) * time.Second,
-		edgeclusterTimeout: time.Duration(msp.EdgeClusterTimeout) * time.Second,
+		enable:                msp.Enable,
+		crdClient:             keclient.GetCRDClient(),
+		syncInterval:          time.Duration(msp.SyncInterval) * time.Second,
+		edgeclusterTimeout:    time.Duration(msp.EdgeClusterTimeout) * time.Second,
+		deadEdgeClustersCache: map[string]bool{},
 	}
 }
 
@@ -48,22 +50,18 @@ func Register(msp *configv1alpha1.MissionStatePruner) {
 	core.Register(newMissionStatePruner(msp))
 }
 
-// Name of controller
 func (msp *MissionStatePruner) Name() string {
 	return modules.MissionStatePrunerModuleName
 }
 
-// Group of controller
 func (msp *MissionStatePruner) Group() string {
 	return modules.SyncControllerModuleGroup
 }
 
-// Group of controller
 func (msp *MissionStatePruner) Enable() bool {
 	return msp.enable
 }
 
-// Start controller
 func (msp *MissionStatePruner) Start() {
 	go wait.Until(msp.checkAndPrune, msp.syncInterval, beehiveContext.Done())
 }
@@ -76,10 +74,20 @@ func (msp *MissionStatePruner) checkAndPrune() {
 	}
 
 	deadEdgeClusters := map[string]bool{}
+	newDeadEdgeClusters := false
 	for _, ec := range allEdgeClusters.Items {
 		if time.Now().Sub(ec.Status.LastHeartBeat.Time) > msp.edgeclusterTimeout {
 			deadEdgeClusters[ec.Name] = true
+			if _, ok := msp.deadEdgeClustersCache[ec.Name]; !ok {
+				newDeadEdgeClusters = true
+			}
 		}
+	}
+
+	msp.deadEdgeClustersCache = deadEdgeClusters
+	if !newDeadEdgeClusters {
+		klog.V(4).Infof("Did not find new offline edge clusters.")
+		return
 	}
 
 	allMissions, err := msp.crdClient.EdgeclustersV1().Missions().List(context.Background(), metav1.ListOptions{})
@@ -95,15 +103,17 @@ func (msp *MissionStatePruner) checkAndPrune() {
 			parts := strings.Split(key, "/")
 			switch len(parts) {
 			case 0:
-				// it should not happen
+				// it should not happen, an empty mission names should be blocked at creation
 				klog.Errorf("invalid mission state key.")
 				continue
 			case 1:
+				// set the mission state about the dead edgecluster
 				if deadEdgeClusters[key] && val != EdgeCluster_offline {
 					mission.State[key] = EdgeCluster_offline
 					changed = true
 				}
 			default:
+				// remove the mission state about the sub-clusters of the dead edgecluster
 				if deadEdgeClusters[parts[0]] {
 					delete(mission.State, key)
 					changed = true
