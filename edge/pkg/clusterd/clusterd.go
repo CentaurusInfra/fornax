@@ -56,10 +56,10 @@ const (
 type clusterd struct {
 	name                            string
 	missionDeployer                 *MissionDeployer
-	missionStatusRepoter            *MissionStatusReporter
+	missionStateRepoter             *MissionStateReporter
 	uid                             types.UID
 	edgeClusterStatusUpdateInterval time.Duration
-	missionStatusUpdateInterval     time.Duration
+	missionStateUpdateInterval      time.Duration
 	registrationCompleted           bool
 	namespace                       string
 	enable                          bool
@@ -132,10 +132,10 @@ func newClusterd(enable bool) (*clusterd, error) {
 	}
 
 	stopChan := make(chan struct{})
-	missionStatusRepoter := NewMissionStatusReporter(&config.Config.Clusterd, c, missionDeployer, stopChan)
-	c.missionStatusRepoter = missionStatusRepoter
+	missionStateRepoter := NewMissionStateReporter(&config.Config.Clusterd, c, missionDeployer, stopChan)
+	c.missionStateRepoter = missionStateRepoter
 
-	go missionStatusRepoter.Run(config.Config.MissionStatusWatchWorkers, stopChan)
+	go missionStateRepoter.Run(config.Config.MissionStateWatchWorkers, stopChan)
 
 	return c, nil
 }
@@ -214,12 +214,11 @@ func (e *clusterd) handleMissionList(content []byte) (err error) {
 	}
 
 	var lists []string
-	if err = json.Unmarshal([]byte(content), &lists); err != nil {
+	if err = json.Unmarshal(content, &lists); err != nil {
 		return err
 	}
 
-	var missionList []*edgeclustersv1.Mission
-
+	missionList := []*edgeclustersv1.Mission{}
 	for _, list := range lists {
 		var mission edgeclustersv1.Mission
 		err = json.Unmarshal([]byte(list), &mission)

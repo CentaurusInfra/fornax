@@ -100,7 +100,7 @@ type UpstreamController struct {
 	updateNodeChan            chan model.Message
 	podDeleteChan             chan model.Message
 	edgeClusterStatusChan     chan model.Message
-	missionStatusChan         chan model.Message
+	missionStateChan          chan model.Message
 
 	// lister
 	podLister       corelisters.PodLister
@@ -128,7 +128,7 @@ func (uc *UpstreamController) Start() error {
 	uc.updateNodeChan = make(chan model.Message, config.Config.Buffer.UpdateNode)
 	uc.podDeleteChan = make(chan model.Message, config.Config.Buffer.DeletePod)
 	uc.edgeClusterStatusChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterStatus)
-	uc.missionStatusChan = make(chan model.Message, config.Config.Buffer.UpdateMissionStatus)
+	uc.missionStateChan = make(chan model.Message, config.Config.Buffer.UpdateMissionState)
 
 	go uc.dispatchMessage()
 
@@ -171,8 +171,8 @@ func (uc *UpstreamController) Start() error {
 	for i := 0; i < int(config.Config.Load.UpdateEdgeClusterStatusWorkers); i++ {
 		go uc.updateEdgeClusterStatus()
 	}
-	for i := 0; i < int(config.Config.Load.UpdateMissionStatusWorkers); i++ {
-		go uc.updateMissionStatus()
+	for i := 0; i < int(config.Config.Load.UpdateMissionStateWorkers); i++ {
+		go uc.updateMissionState()
 	}
 	return nil
 }
@@ -239,8 +239,8 @@ func (uc *UpstreamController) dispatchMessage() {
 			}
 		case model.ResourceTypeEdgeClusterStatus:
 			uc.edgeClusterStatusChan <- msg
-		case model.ResourceTypeMissionStatus:
-			uc.missionStatusChan <- msg
+		case model.ResourceTypeMissionState:
+			uc.missionStateChan <- msg
 		default:
 			klog.Errorf("message: %s, resource type: %s unsupported", msg.GetID(), resourceType)
 		}
@@ -646,31 +646,31 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 	}
 }
 
-func aggregateStatus(status *map[string]string, newStatus map[string]string, clusterName string) {
-	for key := range *status {
+func aggregateState(state *map[string]string, newState map[string]string, clusterName string) {
+	for key := range *state {
 		if key == clusterName || strings.HasPrefix(key, clusterName+"/") {
-			newVal, ok := newStatus[key]
+			newVal, ok := newState[key]
 			if ok {
-				(*status)[key] = newVal
-				delete(newStatus, key)
+				(*state)[key] = newVal
+				delete(newState, key)
 			} else {
-				delete(*status, key)
+				delete(*state, key)
 			}
 		}
 	}
 
-	for key, val := range newStatus {
-		(*status)[key] = val
+	for key, val := range newState {
+		(*state)[key] = val
 	}
 }
 
-func (uc *UpstreamController) updateMissionStatus() {
+func (uc *UpstreamController) updateMissionState() {
 	for {
 		select {
 		case <-beehiveContext.Done():
-			klog.Warning("stop updateMissionStatus")
+			klog.Warning("stop updateMissionState")
 			return
-		case msg := <-uc.missionStatusChan:
+		case msg := <-uc.missionStateChan:
 			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
 
 			var data []byte
@@ -699,8 +699,8 @@ func (uc *UpstreamController) updateMissionStatus() {
 
 			switch msg.GetOperation() {
 			case model.UpdateOperation:
-				missionStatusRequest := &edgeapi.MissionStatusRequest{}
-				err := json.Unmarshal(data, missionStatusRequest)
+				missionStateRequest := &edgeapi.MissionStateRequest{}
+				err := json.Unmarshal(data, missionStateRequest)
 				if err != nil {
 					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
 					continue
@@ -717,12 +717,12 @@ func (uc *UpstreamController) updateMissionStatus() {
 					continue
 				}
 
-				if existingMission.Status == nil {
-					existingMission.Status = map[string]string{}
+				if existingMission.State == nil {
+					existingMission.State = map[string]string{}
 				}
 
-				aggregateStatus(&(existingMission.Status), missionStatusRequest.Status, missionStatusRequest.ClusterName)
-				mission, err := uc.crdClient.EdgeclustersV1().Missions().UpdateStatus(context.Background(), existingMission, metaV1.UpdateOptions{})
+				aggregateState(&(existingMission.State), missionStateRequest.State, missionStateRequest.ClusterName)
+				mission, err := uc.crdClient.EdgeclustersV1().Missions().Update(context.Background(), existingMission, metaV1.UpdateOptions{})
 				if err != nil {
 					klog.Warningf("message: %s process failure, update mission failed with error: %s, name: %s", msg.GetID(), err, existingMission.Name)
 					continue
@@ -746,10 +746,10 @@ func (uc *UpstreamController) updateMissionStatus() {
 					continue
 				}
 
-				klog.V(4).Infof("message: %s, update mission status successfully, name: %s", msg.GetID(), existingMission.Name)
+				klog.V(4).Infof("message: %s, update mission state successfully, name: %s", msg.GetID(), existingMission.Name)
 
 			default:
-				klog.Warningf("message: %s process failure, mission status operation: %s unsupported", msg.GetID(), msg.GetOperation())
+				klog.Warningf("message: %s process failure, mission state operation: %s unsupported", msg.GetID(), msg.GetOperation())
 			}
 			klog.V(4).Infof("message: %s processed successfully", msg.GetID())
 		}

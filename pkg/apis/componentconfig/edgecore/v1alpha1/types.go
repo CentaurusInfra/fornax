@@ -498,9 +498,9 @@ type Clusterd struct {
 	// default 10
 	EdgeClusterStatusUpdateInterval int32 `json:"edgeClusterStatusUpdateInterval,omitempty"`
 
-	// MissionStatusUpdateFrequency indicates Mission status update frequency (second)
+	// MissionStateUpdateFrequency indicates Mission status update frequency (second)
 	// default 10
-	MissionStatusUpdateInterval int32 `json:"missionStatusUpdateInterval,omitempty"`
+	MissionStateUpdateInterval int32 `json:"missionStateUpdateInterval,omitempty"`
 
 	// RegisterNode enables automatic registration
 	// default true
@@ -513,5 +513,5 @@ type Clusterd struct {
 
 	InformerResyncInterval int32 `json:"informerResyncInterval,omitempty"`
 
-	MissionStatusWatchWorkers int `json:"missionStatusWatchWorkers,omitempty"`
+	MissionStateWatchWorkers int `json:"missionStateWatchWorkers,omitempty"`
 }

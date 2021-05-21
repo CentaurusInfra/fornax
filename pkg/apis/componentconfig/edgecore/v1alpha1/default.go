@@ -174,11 +174,11 @@ func NewDefaultEdgeCoreConfig() *EdgeCoreConfig {
 				KubeDistro:                      "arkots",
 				Labels:                          map[string]string{},
 				EdgeClusterStatusUpdateInterval: constants.DefaultEdgeClusterStatusUpdateInterval,
-				MissionStatusUpdateInterval:     constants.DefaultMissionStatusUpdateInterval,
+				MissionStateUpdateInterval:      constants.DefaultMissionStateUpdateInterval,
 				InformerResyncInterval:          constants.DefaultInformerResyncInterval,
 				RegisterCluster:                 true,
 				RegisterNamespace:               constants.DefaultRegisterNamespace,
-				MissionStatusWatchWorkers:       constants.DefaultMissionStatusWatchWorkers,
+				MissionStateWatchWorkers:        constants.DefaultMissionStateWatchWorkers,
 			},
 		},
 	}
