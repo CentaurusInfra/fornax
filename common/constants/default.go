@@ -157,8 +157,12 @@ const (
 
 	// edgeCluster
 	DefaultEdgeClusterStatusUpdateInterval = 10
-	DefaultInformerResyncInterval          = 1
+	DefaultStateResyncInterval             = 1
 	DefaultMissionStateWatchWorkers        = 4
 	DefaultRegisterNamespace               = "default"
 	DefaultMissionStateUpdateInterval      = 10
+
+	//missionstatepruner
+	DefaultStateSyncInterval  = 60
+	DefaultEdgeClusterTimeout = 60
 )

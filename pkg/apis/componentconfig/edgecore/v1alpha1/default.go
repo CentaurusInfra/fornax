@@ -175,7 +175,7 @@ func NewDefaultEdgeCoreConfig() *EdgeCoreConfig {
 				Labels:                          map[string]string{},
 				EdgeClusterStatusUpdateInterval: constants.DefaultEdgeClusterStatusUpdateInterval,
 				MissionStateUpdateInterval:      constants.DefaultMissionStateUpdateInterval,
-				InformerResyncInterval:          constants.DefaultInformerResyncInterval,
+				ResyncInterval:                  constants.DefaultStateResyncInterval,
 				RegisterCluster:                 true,
 				RegisterNamespace:               constants.DefaultRegisterNamespace,
 				MissionStateWatchWorkers:        constants.DefaultMissionStateWatchWorkers,

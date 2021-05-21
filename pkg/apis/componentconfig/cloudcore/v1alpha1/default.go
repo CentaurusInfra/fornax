@@ -168,6 +168,11 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 				Port:        9443,
 				RestTimeout: 60,
 			},
+			MissionStatePruner: &MissionStatePruner{
+				Enable:             false,
+				SyncInterval:       constants.DefaultStateSyncInterval,
+				EdgeClusterTimeout: constants.DefaultEdgeClusterTimeout,
+			},
 		},
 		LeaderElection: &componentbaseconfig.LeaderElectionConfiguration{
 			LeaderElect:       false,
