@@ -76,6 +76,8 @@ type Modules struct {
 	CloudStream *CloudStream `json:"cloudStream,omitempty"`
 	// Router indicates router module config
 	Router *Router `json:"router,omitempty"`
+
+	MissionStatePruner *MissionStatePruner `json:"missionstatepruner,omitempty"`
 }
 
 // CloudHub indicates the config of CloudHub module.
@@ -413,4 +415,15 @@ type Router struct {
 	Address     string `json:"address,omitempty"`
 	Port        uint32 `json:"port,omitempty"`
 	RestTimeout uint32 `json:"restTimeout,omitempty"`
+}
+
+type MissionStatePruner struct {
+	// default true
+	Enable bool `json:"enable,omitempty"`
+	// the interval (in seconds) that the pruner will prune the offline mission state
+	//default 60
+	SyncInterval int `json:"syncInterval,omitempty"`
+	//The seconds that an edgecluster will be deemed as 'offline' if it has not reported a heartbeat
+	//default 60
+	EdgeClusterTimeout int `json:"edgeClusterTimeout,omitempty"`
 }

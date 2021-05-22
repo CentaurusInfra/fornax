@@ -511,7 +511,7 @@ type Clusterd struct {
 	// default get local host ip
 	NodeIP string `json:"nodeIP"`
 
-	InformerResyncInterval int32 `json:"informerResyncInterval,omitempty"`
+	ResyncInterval int32 `json:"resyncInterval,omitempty"`
 
 	MissionStateWatchWorkers int `json:"missionStateWatchWorkers,omitempty"`
 }

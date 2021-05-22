@@ -30,6 +30,12 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	// it forces the state of each mission is reported to upper layer at least once per minute.
+	// We set this value hard-coded, instead of user-configurable, as it will be a performance if it is not set too small.
+	ForcedResyncInterval = 60
+)
+
 type MissionStateReporter struct {
 	ClusterName                string
 	KubeconfigFile             string
@@ -40,12 +46,14 @@ type MissionStateReporter struct {
 	missionDeployer            *MissionDeployer
 	missionStateUpdateInterval time.Duration
 	KubectlCli                 string
+	MaxStateIdleCycles         int
+	StateIdleCycles            map[string]int
 }
 
 //NewMissionStateReporter creates new mission state  object
 func NewMissionStateReporter(clusterdConfig *v1alpha1.Clusterd, c *clusterd, md *MissionDeployer, stopCh <-chan struct{}) *MissionStateReporter {
 
-	resyncPeriod := time.Duration(clusterdConfig.InformerResyncInterval) * time.Second
+	resyncPeriod := time.Duration(clusterdConfig.ResyncInterval) * time.Second
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	msw := &MissionStateReporter{
@@ -58,6 +66,8 @@ func NewMissionStateReporter(clusterdConfig *v1alpha1.Clusterd, c *clusterd, md 
 		missionStateUpdateInterval: time.Duration(clusterdConfig.MissionStateUpdateInterval) * time.Second,
 		resyncPeriod:               resyncPeriod,
 		KubectlCli:                 filepath.Join(basedir, DistroToKubectl[clusterdConfig.KubeDistro]),
+		MaxStateIdleCycles:         ForcedResyncInterval / int(clusterdConfig.ResyncInterval),
+		StateIdleCycles:            map[string]int{},
 	}
 
 	return msw
@@ -100,8 +110,17 @@ func (m *MissionStateReporter) stateSyncer() {
 	for _, mission := range missionList {
 		newmissionCache[mission.Name] = mission
 		_, exists := m.missionCache[mission.Name]
+		// if the mission state changes, we send an update
 		if !exists || !EqualMaps(m.missionCache[mission.Name].State, mission.State) {
 			m.queue.Add(mission.Name)
+		} else {
+			// if the state has been idle for a long time, we send an update
+			if i, ok := m.StateIdleCycles[mission.Name]; ok {
+				m.StateIdleCycles[mission.Name] += 1
+				if i > m.MaxStateIdleCycles {
+					m.queue.Add(mission.Name)
+				}
+			}
 		}
 	}
 
@@ -146,6 +165,9 @@ func (m *MissionStateReporter) processQueue(missionName string) (err error) {
 	defer func() {
 		klog.V(4).Infof("Finished syncing mission %q (%v)", missionName, time.Since(startTime))
 	}()
+
+	// reset the value of state idle cycles for this mission
+	m.StateIdleCycles[missionName] = 0
 
 	return m.clusterd.UpdateMissionState(missionName, m.missionCache[missionName].State)
 }
