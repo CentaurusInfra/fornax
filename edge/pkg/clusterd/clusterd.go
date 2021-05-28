@@ -25,16 +25,12 @@ package clusterd
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/kubeedge/beehive/pkg/common/util"
 	"github.com/kubeedge/beehive/pkg/core"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
@@ -42,7 +38,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/client"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
-	utilwait "k8s.io/apimachinery/pkg/util/wait"
 
 	"k8s.io/klog/v2"
 )
@@ -54,19 +49,13 @@ const (
 
 // clusterd is the implementation to manage an edge cluser.
 type clusterd struct {
-	name                            string
-	missionDeployer                 *MissionDeployer
-	missionStateRepoter             *MissionStateReporter
-	uid                             types.UID
-	edgeClusterStatusUpdateInterval time.Duration
-	missionStateUpdateInterval      time.Duration
-	registrationCompleted           bool
-	namespace                       string
-	enable                          bool
-	metaClient                      client.CoreInterface
-	kubeDistro                      string
-	kubectlPath                     string
-	kubeconfig                      string
+	missionDeployer           *MissionDeployer
+	missionStateRepoter       *MissionStateReporter
+	edgeClusterStatusReporter *EdgeClusterStatusReporter
+	uid                       types.UID
+	namespace                 string
+	enable                    bool
+	metaClient                client.CoreInterface
 }
 
 // Register register clusterd module
@@ -95,8 +84,6 @@ func (e *clusterd) Enable() bool {
 func (e *clusterd) Start() {
 	klog.Info("Starting clusterd...")
 
-	go utilwait.Until(e.syncEdgeClusterStatus, e.edgeClusterStatusUpdateInterval, utilwait.NeverStop)
-
 	klog.Infof("starting sync with cloud")
 	e.syncCloud()
 
@@ -105,37 +92,21 @@ func (e *clusterd) Start() {
 
 //newClusterd creates new Clusterd object and initialises it
 func newClusterd(enable bool) (*clusterd, error) {
-	if !FileExists(config.Config.Kubeconfig) {
-		return nil, fmt.Errorf("Could not open kubeconfig file (%s)", config.Config.Kubeconfig)
-	}
-
-	if _, exists := DistroToKubectl[config.Config.KubeDistro]; !exists {
-		return nil, fmt.Errorf("Invalid kube distribution (%v)", config.Config.KubeDistro)
-	}
-
-	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	kubectlPath := filepath.Join(basedir, DistroToKubectl[config.Config.KubeDistro])
-
-	missionDeployer := NewMissionDeployer(&config.Config.Clusterd)
+	missionDeployer := NewMissionDeployer()
 
 	c := &clusterd{
-		name:                            config.Config.Name,
-		namespace:                       config.Config.RegisterNamespace,
-		missionDeployer:                 missionDeployer,
-		enable:                          enable,
-		uid:                             types.UID("76246eec-1dc7-4bcf-89b4-686dbc3b4234"),
-		edgeClusterStatusUpdateInterval: time.Duration(config.Config.Clusterd.EdgeClusterStatusUpdateInterval) * time.Second,
-		metaClient:                      client.New(),
-		kubeDistro:                      config.Config.KubeDistro,
-		kubeconfig:                      config.Config.Kubeconfig,
-		kubectlPath:                     kubectlPath,
+		namespace:       config.Config.RegisterNamespace,
+		missionDeployer: missionDeployer,
+		enable:          enable,
+		uid:             types.UID("76246eec-1dc7-4bcf-89b4-686dbc3b4234"),
+		metaClient:      client.New(),
 	}
 
-	stopChan := make(chan struct{})
-	missionStateRepoter := NewMissionStateReporter(&config.Config.Clusterd, c, missionDeployer, stopChan)
-	c.missionStateRepoter = missionStateRepoter
+	c.missionStateRepoter = NewMissionStateReporter(c, missionDeployer)
+	c.edgeClusterStatusReporter = NewEdgeClusterStatusReporter(c, missionDeployer)
 
-	go missionStateRepoter.Run(config.Config.MissionStateWatchWorkers, stopChan)
+	go c.missionStateRepoter.Run()
+	go c.edgeClusterStatusReporter.Run()
 
 	return c, nil
 }
@@ -188,13 +159,13 @@ func (e *clusterd) syncCloud() {
 					klog.Errorf("recevied mission list from unrecognized source : %v", result.GetSource())
 					continue
 				}
-				err := e.handleMissionList(content)
+				err := e.missionDeployer.UnmarshalAndHandleMissionList(content)
 				if err != nil {
 					klog.Errorf("handle missionList failed: %v", err)
 					continue
 				}
 			} else {
-				err := e.handleMission(op, content)
+				err := e.missionDeployer.UnmarshalAndHandleMission(op, content)
 				if err != nil {
 					klog.Errorf("handle mission failed: %v", err)
 					continue
@@ -206,52 +177,4 @@ func (e *clusterd) syncCloud() {
 			continue
 		}
 	}
-}
-
-func (e *clusterd) handleMissionList(content []byte) (err error) {
-	if e.missionDeployer == nil {
-		return fmt.Errorf("mission deployer is not initialized.")
-	}
-
-	var lists []string
-	if err = json.Unmarshal(content, &lists); err != nil {
-		return err
-	}
-
-	missionList := []*edgeclustersv1.Mission{}
-	for _, list := range lists {
-		var mission edgeclustersv1.Mission
-		err = json.Unmarshal([]byte(list), &mission)
-		if err != nil {
-			return err
-		}
-		missionList = append(missionList, &mission)
-	}
-
-	return e.missionDeployer.AlignMissionList(missionList)
-}
-
-func (e *clusterd) handleMission(op string, content []byte) (err error) {
-	if e.missionDeployer == nil {
-		return fmt.Errorf("mission deployer is not initialized.")
-	}
-
-	var mission edgeclustersv1.Mission
-	err = json.Unmarshal(content, &mission)
-	if err != nil {
-		return err
-	}
-
-	switch op {
-	case model.InsertOperation:
-		err = e.missionDeployer.ApplyMission(&mission)
-	case model.UpdateOperation:
-		err = e.missionDeployer.ApplyMission(&mission)
-	case model.DeleteOperation:
-		err = e.missionDeployer.DeleteMission(&mission)
-	}
-	if err == nil {
-		klog.V(3).Infof("%s mission [%s] for cache success.", op, mission.Name)
-	}
-	return
 }
