@@ -1,0 +1,18 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: job-to-all
+spec:
+  content: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: echo-1
+    spec:
+      template:
+        spec:
+          containers:
+          - name: echo
+            image: busybox
+            command: ['echo',  '1']
+          restartPolicy: Never
