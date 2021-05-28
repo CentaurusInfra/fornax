@@ -12,21 +12,22 @@ limitations under the License.
 
 */
 
-package clusterd
+package util
 
 import (
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
-	"reflect"
 	"time"
 
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	"k8s.io/klog/v2"
 )
 
-const ShellToUse = "bash"
+const (
+	ShellToUse          = "bash"
+	COMMAND_TIMEOUT_SEC = 10
+)
 
 func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -36,7 +37,11 @@ func FileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func ExecCommandLine(commandline string, timeout int) (string, error) {
+func ExecCommandLine(commandline string) (string, error) {
+	return ExecCommandLineWithTimeOut(commandline, COMMAND_TIMEOUT_SEC)
+}
+
+func ExecCommandLineWithTimeOut(commandline string, timeout int) (string, error) {
 	var cmd *exec.Cmd
 	if timeout > 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
@@ -65,34 +70,4 @@ func ExecCommandLine(commandline string, timeout int) (string, error) {
 	}
 
 	return string(output), finalErr
-}
-
-func EqualArray(a []edgeclustersv1.GenericClusterReference, b []edgeclustersv1.GenericClusterReference) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil && len(b) == 0 {
-		return true
-	}
-	if b == nil && len(a) == 0 {
-		return true
-	}
-
-	// for other cases, use the regular array compare
-	return reflect.DeepEqual(a, b)
-}
-
-func EqualMaps(a map[string]string, b map[string]string) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil && len(b) == 0 {
-		return true
-	}
-	if b == nil && len(a) == 0 {
-		return true
-	}
-
-	// for other cases, use the regular map compare
-	return reflect.DeepEqual(a, b)
 }

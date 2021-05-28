@@ -1,22 +1,51 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
+	"k8s.io/klog/v2"
 )
 
 var Config Configure
 var once sync.Once
 
-type Configure struct {
-	v1alpha1.Clusterd
+var DistroToKubectl = map[string]string{}
+
+func init() {
+	initializeDistroToKubectlMap()
 }
 
-func InitConfigure(e *v1alpha1.Clusterd) {
+func initializeDistroToKubectlMap() {
+	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+
+	DistroToKubectl["arktos"] = filepath.Join(basedir, "kubectl/arktos/kubectl")
+	DistroToKubectl["k8s"] = filepath.Join(basedir, "kubectl/vanilla/kubectl")
+	DistroToKubectl["k3s"] = "sudo kubectl"
+}
+
+type Configure struct {
+	v1alpha1.Clusterd
+	KubectlCli string
+}
+
+func InitConfigure(c *v1alpha1.Clusterd) {
 	once.Do(func() {
 		Config = Configure{
-			Clusterd: *e,
+			Clusterd: *c,
 		}
+
+		if !util.FileExists(c.Kubeconfig) {
+			klog.Fatalf("Could not open kubeconfig file (%s)", c.Kubeconfig)
+		}
+
+		if _, exists := DistroToKubectl[c.KubeDistro]; !exists {
+			klog.Fatalf("Invalid kube distribution (%v)", c.KubeDistro)
+		}
+
+		Config.KubectlCli = DistroToKubectl[c.KubeDistro]
 	})
 }

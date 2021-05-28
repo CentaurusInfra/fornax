@@ -18,117 +18,97 @@ import (
 	"encoding/json"
 	"fmt"
 	yaml "gopkg.in/yaml.v2"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/kubeedge/beehive/pkg/core/model"
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
-	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 
 	"k8s.io/klog/v2"
 )
 
-const (
-	COMMAND_TIMEOUT_SEC  = 10
-	MISSION_CRD_FILE     = "mission_v1.yaml"
-	EDGECLUSTER_CRD_FILE = "edgecluster_v1.yaml"
-	LOCAL_EDGE_CLUSTER   = "local_edge_cluster"
-	STATUS_NO_MATCH      = "not match"
-)
-
-var DistroToKubectl = map[string]string{
-	"arktos": "kubectl/arktos/kubectl",
-	"k8s":    "kubectl/vanilla/kubectl",
-}
+var cacheLock sync.Mutex
 
 type MissionDeployer struct {
-	ClusterName    string
-	ClusterLabels  map[string]string
-	KubeDistro     string
-	KubeconfigFile string
-	KubectlCli     string
-	MissionMatch   map[string]bool
+	MissionMatch map[string]bool
 }
 
 //NewMissionDeployer creates new mission deployer object
-func NewMissionDeployer(clusterdConfig *v1alpha1.Clusterd) *MissionDeployer {
-
-	// No need to check the clusterdConfig, as it was checked during the clusterd initialization
-	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-
+func NewMissionDeployer() *MissionDeployer {
 	return &MissionDeployer{
-		ClusterName:    clusterdConfig.Name,
-		ClusterLabels:  clusterdConfig.Labels,
-		KubeDistro:     clusterdConfig.KubeDistro,
-		KubeconfigFile: clusterdConfig.Kubeconfig,
-		KubectlCli:     filepath.Join(basedir, DistroToKubectl[clusterdConfig.KubeDistro]),
-		MissionMatch:   map[string]bool{},
+		MissionMatch: map[string]bool{},
 	}
 }
 
 func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
+	cacheLock.Lock()
 	m.MissionMatch[mission.Name] = m.isMatchingMission(mission)
-
-	needUpdateState := m.checkNeedUpdateState(mission)
-
+	cacheLock.Unlock()
 	missionYaml, err := buildMissionYaml(mission)
 	if err != nil {
 		// log the error and move on to apply the mission content
 		klog.Errorf("Error in applying mission CRD: %v. Moving on.", err)
 	} else {
-		deploy_mission_cmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", missionYaml, m.KubectlCli, m.KubeconfigFile)
-		_, err := ExecCommandLine(deploy_mission_cmd, COMMAND_TIMEOUT_SEC)
+		deploy_mission_cmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", missionYaml, config.Config.KubectlCli, config.Config.Kubeconfig)
+		output, err := util.ExecCommandLine(deploy_mission_cmd)
 		if err != nil {
 			klog.Errorf("Failed to apply mission %v: %v", mission.Name, err)
 		} else {
-			klog.V(3).Infof("Mission %v is saved.", mission.Name)
+			if strings.Contains(output, "created") {
+				klog.Infof("Mission %v is created ", mission.Name)
+			} else {
+				klog.V(4).Infof("Mission %v is configured.", mission.Name)
+			}
 		}
 	}
 
 	if m.isMatchingMission(mission) == false {
-		if needUpdateState {
-			m.UpdateMissionLocalState(mission.Name, STATUS_NO_MATCH)
-		}
 		klog.V(3).Infof("Mission %v does not match this cluster, skip the content applying", mission.Name)
-		return nil
-	}
-
-	if strings.TrimSpace(mission.Spec.Content) != "" {
-		deploy_content_cmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", mission.Spec.Content, m.KubectlCli, m.KubeconfigFile)
-		_, err = ExecCommandLine(deploy_content_cmd, COMMAND_TIMEOUT_SEC)
-		if err != nil {
-			klog.Errorf("Failed to apply the content of mission %v: %v", mission.Name, err)
-		} else {
-			klog.V(2).Infof("The content of mission %v applied successfully ", mission.Name)
+	} else {
+		if strings.TrimSpace(mission.Spec.Content) != "" {
+			deploy_content_cmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
+			output, err := util.ExecCommandLine(deploy_content_cmd)
+			if err != nil {
+				klog.Errorf("Failed to apply the content of mission %v: %v", mission.Name, err)
+			} else {
+				if strings.Contains(output, "unchanged") {
+					klog.V(4).Infof("The content of mission %v is unchanged ", mission.Name)
+				} else {
+					klog.Infof("The content of mission %v applied successfully ", mission.Name)
+				}
+			}
 		}
 	}
 
-	if needUpdateState {
-		m.StateUpdate(mission, false)
-	}
+	m.UpdateState(mission, false)
 
 	return nil
 }
 
 func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
+	cacheLock.Lock()
 	delete(m.MissionMatch, mission.Name)
+	cacheLock.Unlock()
 	if m.isMatchingMission(mission) == false {
 		klog.V(4).Infof("Mission %v does not match this cluster", mission.Name)
 	} else {
 		if strings.TrimSpace(mission.Spec.Content) != "" {
-			delete_content_cmd := fmt.Sprintf("printf \"%s\" | %s delete --kubeconfig=%s -f - ", mission.Spec.Content, m.KubectlCli, m.KubeconfigFile)
-			_, err := ExecCommandLine(delete_content_cmd, COMMAND_TIMEOUT_SEC)
+			delete_content_cmd := fmt.Sprintf("printf \"%s\" | %s delete --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
+			_, err := util.ExecCommandLine(delete_content_cmd)
 			if err != nil {
 				klog.Errorf("Failed to revert the content of mission %v: %v", mission.Name, err)
 			} else {
-				klog.Errorf("The content of mission %v is reverted.", mission.Name)
+				klog.Infof("The content of mission %v is reverted.", mission.Name)
 			}
 		}
 	}
 
-	delete_mission_cmd := fmt.Sprintf("%s delete mission %s --kubeconfig=%s", m.KubectlCli, mission.Name, m.KubeconfigFile)
-	if _, err := ExecCommandLine(delete_mission_cmd, COMMAND_TIMEOUT_SEC); err != nil {
+	delete_mission_cmd := fmt.Sprintf("%s delete mission %s --kubeconfig=%s", config.Config.KubectlCli, mission.Name, config.Config.Kubeconfig)
+	if _, err := util.ExecCommandLine(delete_mission_cmd); err != nil {
 		return fmt.Errorf("Failed to delete mission %v: %v", mission.Name, err)
 	}
 
@@ -138,46 +118,12 @@ func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
 }
 
 func (m *MissionDeployer) DeleteMissionByName(name string) error {
-	mission, err := m.GetMissionByName(name)
+	mission, err := helper.GetMissionByName(name)
 	if err != nil {
 		return err
 	}
 
 	return m.DeleteMission(mission)
-}
-
-func (m *MissionDeployer) GetMissionByName(name string) (*edgeclustersv1.Mission, error) {
-	get_mission_cmd := fmt.Sprintf("%s get mission %s --kubeconfig=%s -o json ", m.KubectlCli, name, m.KubeconfigFile)
-	output, err := ExecCommandLine(get_mission_cmd, COMMAND_TIMEOUT_SEC)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get mission %v: %v", name, err)
-	}
-
-	var mission edgeclustersv1.Mission
-	err = json.Unmarshal([]byte(output), &mission)
-	if err != nil {
-		return nil, err
-	}
-
-	return &mission, nil
-}
-
-func (m *MissionDeployer) GetLocalMissionNames() ([]string, error) {
-	get_mission_cmd := fmt.Sprintf(" %s get missions -o json --kubeconfig=%s | jq -r '.items[] | [.metadata.name] | @tsv' ", m.KubectlCli, m.KubeconfigFile)
-	output, err := ExecCommandLine(get_mission_cmd, COMMAND_TIMEOUT_SEC)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get mission names: %v", err)
-	}
-
-	names := []string{}
-	for _, o := range strings.Split(output, "\n") {
-		name := strings.TrimSpace(o)
-		if len(name) > 0 {
-			names = append(names, name)
-		}
-	}
-
-	return names, nil
 }
 
 func (m *MissionDeployer) isMatchingMission(mission *edgeclustersv1.Mission) bool {
@@ -187,7 +133,7 @@ func (m *MissionDeployer) isMatchingMission(mission *edgeclustersv1.Mission) boo
 	}
 
 	for _, matchingCluster := range mission.Spec.Placement.Clusters {
-		if m.ClusterName == matchingCluster.Name {
+		if config.Config.Name == matchingCluster.Name {
 			return true
 		}
 	}
@@ -198,7 +144,7 @@ func (m *MissionDeployer) isMatchingMission(mission *edgeclustersv1.Mission) boo
 	}
 
 	for k, v := range mission.Spec.Placement.MatchLabels {
-		if val, ok := m.ClusterLabels[k]; ok && val == v {
+		if val, ok := config.Config.Labels[k]; ok && val == v {
 			return true
 		}
 	}
@@ -217,11 +163,7 @@ func (m *MissionDeployer) AlignMissionList(missionList []*edgeclustersv1.Mission
 		}
 	}
 
-	localMissions, err := m.GetLocalMissionNames()
-	if err != nil {
-		errs = append(errs, fmt.Errorf("Error when get local missions: %v", err))
-		return fmt.Errorf("Hit the errors in mission align: %v", errs)
-	}
+	localMissions := helper.GetLocalClusterScopeResourceNames("missions", "")
 
 	for _, mi := range localMissions {
 		if _, exists := missionMap[mi]; !exists {
@@ -270,11 +212,12 @@ func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo 
 
 	statePatch := fmt.Sprintf("{\"state\":{\"%s\": %s}}", LOCAL_EDGE_CLUSTER, stateInfo)
 
-	stateUpdateCommand := fmt.Sprintf("%s patch mission %s --kubeconfig=%s --patch '%s' --type=merge", m.KubectlCli, missionName, m.KubeconfigFile, statePatch)
-	_, err := ExecCommandLine(stateUpdateCommand, COMMAND_TIMEOUT_SEC)
+	stateUpdateCommand := fmt.Sprintf("%s patch mission %s --kubeconfig=%s --patch '%s' --type=merge", config.Config.KubectlCli, missionName, config.Config.Kubeconfig, statePatch)
+	_, err := util.ExecCommandLine(stateUpdateCommand)
 	if err != nil {
 		if strings.Contains(err.Error(), "Error from server (NotFound):") {
 			klog.V(3).Infof("Mission %v is deleted.", missionName)
+			return nil
 		} else {
 			klog.Errorf("Error when checking the mission %v state: %v", missionName, err)
 		}
@@ -283,44 +226,31 @@ func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo 
 	return err
 }
 
-// this is a hacky way for PoC only
-func analyzeMissionContent(content string) (kind string, name string, namespace string) {
-	for _, line := range strings.Split(content, "\n") {
-		words := strings.Split(strings.TrimSpace(line), " ")
-		if strings.Contains(line, "kind:") && kind == "" {
-			kind = words[len(words)-1]
-			continue
-		}
-		if strings.Contains(line, "name:") && name == "" {
-			name = words[len(words)-1]
-			continue
-		}
-		if strings.Contains(line, "namespace:") && namespace == "" {
-			namespace = words[len(words)-1]
-			continue
-		}
-	}
-	return
-}
-
 func (m *MissionDeployer) GetStateCheckCommand(mission *edgeclustersv1.Mission) string {
 
 	command := strings.TrimSpace(mission.Spec.StateCheck.Command)
 	if command != "" {
-		return strings.ReplaceAll(command, "${kubectl}", m.KubectlCli)
+		return strings.ReplaceAll(command, "${kubectl}", config.Config.KubectlCli)
 	}
 
-	kind, name, namespace := analyzeMissionContent(mission.Spec.Content)
+	kind, name, namespace := helper.AnalyzeMissionContent(mission.Spec.Content)
 
-	command = fmt.Sprintf("%v get %v %v -n \"%v\" --kubeconfig %v --no-headers", m.KubectlCli, kind, name, namespace, m.KubeconfigFile)
+	command = fmt.Sprintf("%v get %v %v -n \"%v\" --kubeconfig %v --no-headers", config.Config.KubectlCli, kind, name, namespace, config.Config.Kubeconfig)
 
 	klog.V(3).Infof("the state check command is %v ", command)
 
 	return command
 }
 
-func (m *MissionDeployer) StateUpdate(mission *edgeclustersv1.Mission, needCheckMatch bool) {
-	if needCheckMatch && !m.isMatchingMission(mission) {
+// We only check the state when the mission spec changes for better efficiency
+// however, if force==true, we check it even if there is no chagne.
+func (m *MissionDeployer) UpdateState(mission *edgeclustersv1.Mission, force bool) {
+	if !m.MissionSpecChanged(mission) && !force {
+		klog.V(4).Infof("Mission %v spec is not changed, skip the state check.", mission.Name)
+		return
+	}
+
+	if m.isMatchingMission(mission) == false {
 		if err := m.UpdateMissionLocalState(mission.Name, STATUS_NO_MATCH); err != nil {
 			klog.Errorf("Error when updating the mission %v state: %v", mission.Name, err)
 		}
@@ -328,9 +258,14 @@ func (m *MissionDeployer) StateUpdate(mission *edgeclustersv1.Mission, needCheck
 	}
 
 	state_command := m.GetStateCheckCommand(mission)
-	output, err := ExecCommandLine(state_command, COMMAND_TIMEOUT_SEC)
+	output, err := util.ExecCommandLine(state_command)
 	if err != nil {
-		klog.Errorf("Error when checking the mission %v state: %v, output %v", mission.Name, err, output)
+		if strings.Contains(err.Error(), "Error from server (NotFound):") {
+			klog.V(3).Infof("Mission %v is deleted. Return", mission.Name)
+		} else {
+			klog.Errorf("Error when checking the mission %v state: %v", mission.Name, err)
+		}
+		return
 	}
 
 	err = m.UpdateMissionLocalState(mission.Name, output)
@@ -343,10 +278,11 @@ func (m *MissionDeployer) StateUpdate(mission *edgeclustersv1.Mission, needCheck
 // NO need to update the state if the change is in the Mission state.
 // Otherwise, the system will be drained, as the clusterd will be trapped
 // in getting update event which is caused by its own state update action and making another state update action.
-func (m *MissionDeployer) checkNeedUpdateState(mission *edgeclustersv1.Mission) bool {
-	existingMission, err := m.GetMissionByName(mission.Name)
+func (m *MissionDeployer) MissionSpecChanged(mission *edgeclustersv1.Mission) bool {
+	existingMission, err := helper.GetMissionByName(mission.Name)
 	if err != nil {
 		// "NotFound" error means it is a new mission, surely we need to check the status
+
 		if strings.Contains(err.Error(), "Error from server (NotFound):") {
 			return true
 		}
@@ -355,32 +291,51 @@ func (m *MissionDeployer) checkNeedUpdateState(mission *edgeclustersv1.Mission) 
 		return true
 	}
 
-	if !TrueEqual(existingMission.Spec, mission.Spec) {
-		klog.V(3).Infof("Mission %v Spec has changed. existing (%#v) new (%#v)", mission.Name, existingMission.Spec, mission.Spec)
+	if !helper.EqualMissionSpec(existingMission.Spec, mission.Spec) {
+		klog.Infof("Mission %v Spec has changed. existing (%#v) new (%#v)", mission.Name, existingMission.Spec, mission.Spec)
 		return true
 	}
 
 	return false
 }
 
-// for some reason we still need to find out, the same mission spec objects may be no longer deep-equal.
-// For instance, a null array turns into an empty array. This function aims to detect two spec objects are truly equal.
-func TrueEqual(a edgeclustersv1.MissionSpec, b edgeclustersv1.MissionSpec) bool {
-	if strings.TrimSpace(a.Content) != strings.TrimSpace(b.Content) {
-		return false
+func (m *MissionDeployer) UnmarshalAndHandleMissionList(content []byte) (err error) {
+	var lists []string
+	if err = json.Unmarshal(content, &lists); err != nil {
+		return err
 	}
 
-	if strings.TrimSpace(a.StateCheck.Command) != strings.TrimSpace(b.StateCheck.Command) {
-		return false
+	missionList := []*edgeclustersv1.Mission{}
+	for _, list := range lists {
+		var mission edgeclustersv1.Mission
+		err = json.Unmarshal([]byte(list), &mission)
+		if err != nil {
+			return err
+		}
+		missionList = append(missionList, &mission)
 	}
 
-	if !EqualMaps(a.Placement.MatchLabels, b.Placement.MatchLabels) {
-		return false
+	return m.AlignMissionList(missionList)
+}
+
+func (m *MissionDeployer) UnmarshalAndHandleMission(op string, content []byte) (err error) {
+	var mission edgeclustersv1.Mission
+	err = json.Unmarshal(content, &mission)
+	if err != nil {
+		return err
 	}
 
-	if !EqualArray(a.Placement.Clusters, b.Placement.Clusters) {
-		return false
+	switch op {
+	case model.InsertOperation:
+		err = m.ApplyMission(&mission)
+	case model.UpdateOperation:
+		err = m.ApplyMission(&mission)
+	case model.DeleteOperation:
+		err = m.DeleteMission(&mission)
+	}
+	if err == nil {
+		klog.V(3).Infof("%s mission [%s] succeeded.", op, mission.Name)
 	}
 
-	return true
+	return err
 }
