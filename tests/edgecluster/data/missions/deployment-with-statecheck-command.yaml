@@ -1,16 +1,15 @@
 apiVersion: edgeclusters.kubeedge.io/v1
 kind: Mission
 metadata:
-  name: deployment-to-arktos2
+  name: deployment-state-working
 spec:
-  placement:
-    clusters:
-    - name: arktos2
+  statecheck:
+    command: "echo working"
   content: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:
-      name: deployment-to-arktos2
+      name: deployment-state-working
       namespace: default
       labels:
         app: nginx
