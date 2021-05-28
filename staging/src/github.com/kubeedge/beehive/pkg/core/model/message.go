@@ -25,6 +25,7 @@ const (
 	ResourceTypeRule              = "rule"
 	ResourceTypeRuleEndpoint      = "ruleendpoint"
 	ResourceTypeMission           = "mission"
+	ResourceTypeMissionList       = "missionlist"
 	ResourceTypeMissionState      = "missionstate"
 	ResourceTypeEdgeCluster       = "edgecluster"
 	ResourceTypeEdgeClusterStatus = "edgeclusterstatus"

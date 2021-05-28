@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"reflect"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,7 @@ import (
 	routerv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/rules/v1"
 	crdClientset "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned"
 	crdinformers "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions"
+	crdlister "github.com/kubeedge/kubeedge/cloud/pkg/client/listers/edgeclusters/v1"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/client"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/informers"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
@@ -61,6 +63,8 @@ type DownstreamController struct {
 	svcLister clientgov1.ServiceLister
 
 	podLister clientgov1.PodLister
+
+	missionLister crdlister.MissionLister
 }
 
 func (dc *DownstreamController) syncPod() {
@@ -585,14 +589,14 @@ func (dc *DownstreamController) syncMissions() {
 
 			// send to all nodes
 			dc.lc.EdgeClusters.Range(func(key interface{}, value interface{}) bool {
-				nodeName, ok := key.(string)
+				clusterName, ok := key.(string)
 				if !ok {
 					klog.Warning("Failed to assert key to sting")
 					return true
 				}
 				msg := model.NewMessage("")
 				msg.SetResourceVersion(mission.ResourceVersion)
-				resource, err := messagelayer.BuildResource(nodeName, "default", model.ResourceTypeMission, mission.Name)
+				resource, err := messagelayer.BuildResource(clusterName, "default", model.ResourceTypeMission, mission.Name)
 				if err != nil {
 					klog.Warningf("Built message resource failed with error: %v", err)
 					return true
@@ -611,7 +615,6 @@ func (dc *DownstreamController) syncMissions() {
 }
 
 func (dc *DownstreamController) syncEdgeClusters() {
-	var operation string
 	for {
 		select {
 		case <-beehiveContext.Done():
@@ -627,42 +630,49 @@ func (dc *DownstreamController) syncEdgeClusters() {
 			klog.V(4).Infof("Get edgeCluster events: edgeCluster object: %+v.", edgeCluster)
 			switch e.Type {
 			case watch.Added:
-				operation = model.InsertOperation
+				fallthrough
 			case watch.Modified:
-				operation = model.UpdateOperation
-			case watch.Deleted:
-				operation = model.DeleteOperation
-			default:
-				// unsupported operation, no need to send to any node
-				klog.Warningf("EdgeCluster event type: %s unsupported", e.Type)
-				continue
-			}
-
-			klog.V(4).Infof("Sending edgeCluster events to nodes: %v", dc.lc.EdgeNodes)
-
-			// send to all nodes
-			dc.lc.EdgeNodes.Range(func(key interface{}, value interface{}) bool {
-				nodeName, ok := key.(string)
-				if !ok {
-					klog.Warning("Failed to assert key to sting")
-					return true
+				missionsInEdge := edgeCluster.Status.ReceivedMissions
+				missionsInEdgeSet := map[string]bool{}
+				for _, m := range missionsInEdge {
+					missionsInEdgeSet[m] = true
 				}
-				msg := model.NewMessage("")
-				msg.SetResourceVersion(edgeCluster.ResourceVersion)
-				resource, err := messagelayer.BuildResource(nodeName, "default", model.ResourceTypeEdgeCluster, edgeCluster.Name)
+
+				missionsInCloudSet := map[string]bool{}
+				missionList, err := dc.missionLister.List(labels.Everything())
 				if err != nil {
-					klog.Warningf("Built message resource failed with error: %v", err)
-					return true
+					klog.Warningf("Built message resource failed with error: %s", err)
+					break
 				}
-				msg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, operation)
-				msg.Content = edgeCluster
+				for _, m := range missionList {
+					missionsInCloudSet[m.Name] = true
+				}
+
+				if reflect.DeepEqual(missionsInEdgeSet, missionsInCloudSet) {
+					break
+				}
+
+				msg := model.NewMessage("")
+				resource, err := messagelayer.BuildResource(edgeCluster.Name, "default", common.ResourceTypeMissionList, "")
+				msg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.UpdateOperation)
+				msg.Content = missionList
+
 				if err := dc.messageLayer.Send(*msg); err != nil {
 					klog.Warningf("Failed to send message, error: %s, operation: %s, resource: %s", err, msg.GetOperation(), msg.GetResource())
 				} else {
 					klog.V(4).Infof("Message sent successfully, operation: %s, resource: %s", msg.GetOperation(), msg.GetResource())
 				}
-				return true
-			})
+
+			case watch.Deleted:
+				dc.lc.DeleteEdgeCluster(edgeCluster.ObjectMeta.Name)
+
+				//syncNodes() will send a message to all nodes.
+				//Yet I don't see any necessity to send a message to edgeclusters.
+			default:
+				// unsupported operation, no need to send to any node
+				klog.Warningf("EdgeCluster event type: %s unsupported", e.Type)
+				continue
+			}
 		}
 	}
 }
@@ -696,6 +706,9 @@ func (dc *DownstreamController) Start() error {
 
 	// mission
 	go dc.syncMissions()
+
+	// edgecluster
+	go dc.syncEdgeClusters()
 
 	return nil
 }
@@ -802,10 +815,17 @@ func NewDownstreamController(k8sInformerFactory k8sinformers.SharedInformerFacto
 		return nil, err
 	}
 
-	missionsInformer := crdInformerFactory.Edgeclusters().V1().Missions().Informer()
-	missionsManager, err := manager.NewMissionManager(missionsInformer)
+	missionsInformer := crdInformerFactory.Edgeclusters().V1().Missions()
+	missionsManager, err := manager.NewMissionManager(missionsInformer.Informer())
 	if err != nil {
 		klog.Warningf("Create missionsManager failed with error: %s", err)
+		return nil, err
+	}
+
+	edgeClustersInformer := crdInformerFactory.Edgeclusters().V1().EdgeClusters()
+	edgeClusterManager, err := manager.NewEdgeClusterManager(edgeClustersInformer.Informer())
+	if err != nil {
+		klog.Warningf("Create edgeClusterManager failed with error: %s", err)
 		return nil, err
 	}
 
@@ -825,6 +845,8 @@ func NewDownstreamController(k8sInformerFactory k8sinformers.SharedInformerFacto
 		rulesManager:         rulesManager,
 		ruleEndpointsManager: ruleEndpointsManager,
 		missionsManager:      missionsManager,
+		edgeClusterManager:   edgeClusterManager,
+		missionLister:        missionsInformer.Lister(),
 	}
 	if err := dc.initLocating(); err != nil {
 		return nil, err
