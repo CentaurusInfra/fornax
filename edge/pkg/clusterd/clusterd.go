@@ -153,7 +153,7 @@ func (e *clusterd) syncCloud() {
 		klog.V(4).Infof("result content is %s", result.Content)
 		_, resType, resID, err := util.ParseResourceEdge(result.GetResource(), result.GetOperation())
 		if err != nil {
-			klog.Errorf("Failed in edge resource parsing: %v", err)
+			klog.Errorf("failed in edge resource parsing: %v", err)
 			continue
 		}
 		switch resType {

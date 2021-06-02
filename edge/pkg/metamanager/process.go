@@ -267,7 +267,6 @@ func processMissionList(content []byte) error {
 		}
 
 		if _, exists := strayKeys[daoKey]; exists {
-			//dao.DeleteMetaByKey
 			delete(strayKeys, daoKey)
 		}
 	}
