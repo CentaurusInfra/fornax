@@ -13,6 +13,7 @@ import (
 	"github.com/kubeedge/beehive/pkg/core"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	cloudmodules "github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/common/constants"
 	connect "github.com/kubeedge/kubeedge/edge/pkg/common/cloudconnection"
@@ -126,7 +127,8 @@ func isEdgeMeshResource(resType string) bool {
 
 // if resource type is clusterd related
 func isClusterdResource(resType string) bool {
-	return resType == constants.ResourceTypeMission
+	return resType == constants.ResourceTypeMission ||
+		resType == constants.ResourceTypeMissionList
 }
 
 func isConnected() bool {
@@ -230,6 +232,55 @@ func (m *metaManager) processInsert(message model.Message) {
 	sendToCloud(resp)
 }
 
+func processMissionList(content []byte) error {
+	missionRecords, err := dao.QueryAllMetaByType(constants.ResourceTypeMission)
+	if err != nil {
+		return fmt.Errorf("Error in getting mission records in db: %v", err)
+	}
+
+	strayKeys := map[string]bool{}
+	for _, record := range *missionRecords {
+		strayKeys[record.Key] = true
+	}
+	var missionList []edgeclustersv1.Mission
+	err = json.Unmarshal(content, &missionList)
+	if err != nil {
+		return fmt.Errorf("Unmarshal update message content failed, %s", content)
+	}
+
+	for _, mission := range missionList {
+		data, err := json.Marshal(mission)
+		if err != nil {
+			klog.Errorf("Marshal mission content failed, %v", mission)
+			continue
+		}
+
+		daoKey := fmt.Sprintf("%s/%s/%s", "default", constants.ResourceTypeMission, mission.Name)
+		meta := &dao.Meta{
+			Key:   daoKey,
+			Type:  constants.ResourceTypeMission,
+			Value: string(data)}
+		err = dao.InsertOrUpdate(meta)
+		if err != nil {
+			klog.Errorf("Update meta failed, %v", meta)
+			continue
+		}
+
+		if _, exists := strayKeys[daoKey]; exists {
+			delete(strayKeys, daoKey)
+		}
+	}
+
+	for k := range strayKeys {
+		err = dao.DeleteMetaByKey(k)
+		if err != nil {
+			klog.Errorf("Error in delete meta %v", k)
+		}
+	}
+
+	return nil
+}
+
 func (m *metaManager) processUpdate(message model.Message) {
 
 	var err error
@@ -248,8 +299,15 @@ func (m *metaManager) processUpdate(message model.Message) {
 	imitator.DefaultV2Client.Inject(message)
 
 	resKey, resType, _ := parseResource(message.GetResource())
-	if resType == constants.ResourceTypeServiceList || resType == constants.ResourceTypeEndpointsList || resType == model.ResourceTypePodlist {
+	if resType == constants.ResourceTypeServiceList || resType == constants.ResourceTypeEndpointsList || resType == model.ResourceTypePodlist || resType == constants.ResourceTypeMissionList {
 		switch resType {
+		case constants.ResourceTypeMissionList:
+			err = processMissionList(content)
+			if err != nil {
+				klog.Errorf("Error to process mission list; %v", err)
+			}
+			return
+
 		case constants.ResourceTypeEndpointsList:
 			var epsList []v1.Endpoints
 			err = json.Unmarshal(content, &epsList)
