@@ -23,6 +23,7 @@ import (
 
 	v1alpha2 "github.com/kubeedge/kubeedge/cloud/pkg/apis/devices/v1alpha2"
 	v1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
+	networkingv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/networking/v1"
 	v1alpha1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/reliablesyncs/v1alpha1"
 	rulesv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/rules/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,6 +67,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Edgeclusters().V1().EdgeClusters().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("missions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Edgeclusters().V1().Missions().Informer()}, nil
+
+		// Group=networking.kubeedge.io, Version=v1
+	case networkingv1.SchemeGroupVersion.WithResource("subnets"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Networking().V1().Subnets().Informer()}, nil
+	case networkingv1.SchemeGroupVersion.WithResource("vpcs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Networking().V1().Vpcs().Informer()}, nil
 
 		// Group=reliablesyncs.kubeedge.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("clusterobjectsyncs"):

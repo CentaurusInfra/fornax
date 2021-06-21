@@ -1,0 +1,24 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: subnets.networking.kubeedge.io
+spec:
+  group: networking.kubeedge.io
+  versions:
+    - name: v1
+      served: true
+      storage: true
+  names:
+    kind: Subnet
+    plural: subnets
+    singular: subnet
+    shortNames:
+    - sn
+  scope: Cluster
+  additionalPrinterColumns:
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+    - name: Status
+      type: string
+      JSONPath: .state

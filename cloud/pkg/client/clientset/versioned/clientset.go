@@ -23,6 +23,7 @@ import (
 
 	devicesv1alpha2 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/devices/v1alpha2"
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/edgeclusters/v1"
+	networkingv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/networking/v1"
 	reliablesyncsv1alpha1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/reliablesyncs/v1alpha1"
 	rulesv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/rules/v1"
 	discovery "k8s.io/client-go/discovery"
@@ -34,6 +35,7 @@ type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	DevicesV1alpha2() devicesv1alpha2.DevicesV1alpha2Interface
 	EdgeclustersV1() edgeclustersv1.EdgeclustersV1Interface
+	NetworkingV1() networkingv1.NetworkingV1Interface
 	ReliablesyncsV1alpha1() reliablesyncsv1alpha1.ReliablesyncsV1alpha1Interface
 	RulesV1() rulesv1.RulesV1Interface
 }
@@ -44,6 +46,7 @@ type Clientset struct {
 	*discovery.DiscoveryClient
 	devicesV1alpha2       *devicesv1alpha2.DevicesV1alpha2Client
 	edgeclustersV1        *edgeclustersv1.EdgeclustersV1Client
+	networkingV1          *networkingv1.NetworkingV1Client
 	reliablesyncsV1alpha1 *reliablesyncsv1alpha1.ReliablesyncsV1alpha1Client
 	rulesV1               *rulesv1.RulesV1Client
 }
@@ -56,6 +59,11 @@ func (c *Clientset) DevicesV1alpha2() devicesv1alpha2.DevicesV1alpha2Interface {
 // EdgeclustersV1 retrieves the EdgeclustersV1Client
 func (c *Clientset) EdgeclustersV1() edgeclustersv1.EdgeclustersV1Interface {
 	return c.edgeclustersV1
+}
+
+// NetworkingV1 retrieves the NetworkingV1Client
+func (c *Clientset) NetworkingV1() networkingv1.NetworkingV1Interface {
+	return c.networkingV1
 }
 
 // ReliablesyncsV1alpha1 retrieves the ReliablesyncsV1alpha1Client
@@ -97,6 +105,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.networkingV1, err = networkingv1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.reliablesyncsV1alpha1, err = reliablesyncsv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -119,6 +131,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.devicesV1alpha2 = devicesv1alpha2.NewForConfigOrDie(c)
 	cs.edgeclustersV1 = edgeclustersv1.NewForConfigOrDie(c)
+	cs.networkingV1 = networkingv1.NewForConfigOrDie(c)
 	cs.reliablesyncsV1alpha1 = reliablesyncsv1alpha1.NewForConfigOrDie(c)
 	cs.rulesV1 = rulesv1.NewForConfigOrDie(c)
 
@@ -131,6 +144,7 @@ func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.devicesV1alpha2 = devicesv1alpha2.New(c)
 	cs.edgeclustersV1 = edgeclustersv1.New(c)
+	cs.networkingV1 = networkingv1.New(c)
 	cs.reliablesyncsV1alpha1 = reliablesyncsv1alpha1.New(c)
 	cs.rulesV1 = rulesv1.New(c)
 

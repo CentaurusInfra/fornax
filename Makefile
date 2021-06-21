@@ -47,6 +47,7 @@ all: verify-golang
 	KUBEEDGE_OUTPUT_SUBPATH=$(OUT_DIR) hack/make-rules/build.sh $(WHAT)
 	yes | cp -r binaries/kubectl $(OUT_DIR)/bin/
 	yes | cp build/crds/edgecluster/*.yaml $(OUT_DIR)/bin/
+	yes | cp build/crds/networking/*.yaml $(OUT_DIR)/bin/
 endif
 
 

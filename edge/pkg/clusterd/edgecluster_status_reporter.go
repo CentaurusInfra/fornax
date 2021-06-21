@@ -39,11 +39,6 @@ import (
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 )
 
-const (
-	MISSION_CRD_FILE     = "mission_v1.yaml"
-	EDGECLUSTER_CRD_FILE = "edgecluster_v1.yaml"
-)
-
 var initEdgeCluster edgeclustersv1.EdgeCluster
 
 type EdgeClusterStatusReporter struct {
@@ -51,6 +46,15 @@ type EdgeClusterStatusReporter struct {
 	edgeClusterStatusUpdateInterval time.Duration
 	missionDeployer                 *MissionDeployer
 	registrationCompleted           bool
+}
+
+func getRequiredCrdFiles() []string {
+	return []string{
+		"mission_v1.yaml",
+		"edgecluster_v1.yaml",
+		"vpc_v1.yaml",
+		"subnet_v1.yaml",
+	}
 }
 
 func NewEdgeClusterStatusReporter(c *clusterd, md *MissionDeployer) *EdgeClusterStatusReporter {
@@ -94,16 +98,12 @@ func (esr *EdgeClusterStatusReporter) prepareCluster() error {
 	}
 
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	mission_crd_file := filepath.Join(basedir, MISSION_CRD_FILE)
-	deploy_mission_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, mission_crd_file)
-	if _, err := util.ExecCommandLine(deploy_mission_crd_cmd); err != nil {
-		return fmt.Errorf("Failed to deploy mission crd: %v", err)
-	}
-
-	edgecluster_crd_file := filepath.Join(basedir, EDGECLUSTER_CRD_FILE)
-	deploy_edgecluster_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, edgecluster_crd_file)
-	if _, err := util.ExecCommandLine(deploy_edgecluster_crd_cmd); err != nil {
-		return fmt.Errorf("Failed to deploy edgecluster crd: %v", err)
+	for _, crdFile := range getRequiredCrdFiles() {
+		crd_file_path := filepath.Join(basedir, crdFile)
+		deploy_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, crd_file_path)
+		if _, err := util.ExecCommandLine(deploy_crd_cmd); err != nil {
+			return fmt.Errorf("Failed to deploy crd %v: %v", crdFile, err)
+		}
 	}
 
 	return nil
