@@ -27,6 +27,7 @@ import (
 	devices "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/devices"
 	edgeclusters "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/edgeclusters"
 	internalinterfaces "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/internalinterfaces"
+	networking "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/networking"
 	reliablesyncs "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/reliablesyncs"
 	rules "github.com/kubeedge/kubeedge/cloud/pkg/client/informers/externalversions/rules"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -177,6 +178,7 @@ type SharedInformerFactory interface {
 
 	Devices() devices.Interface
 	Edgeclusters() edgeclusters.Interface
+	Networking() networking.Interface
 	Reliablesyncs() reliablesyncs.Interface
 	Rules() rules.Interface
 }
@@ -187,6 +189,10 @@ func (f *sharedInformerFactory) Devices() devices.Interface {
 
 func (f *sharedInformerFactory) Edgeclusters() edgeclusters.Interface {
 	return edgeclusters.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Networking() networking.Interface {
+	return networking.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Reliablesyncs() reliablesyncs.Interface {
