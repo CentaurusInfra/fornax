@@ -32,11 +32,11 @@ func GetLocalClusterScopeResourceNames(resType string, label string) []string {
 	if len(label) > 0 {
 		labelOption = "-l " + label
 	}
-	get_resource_cmd := fmt.Sprintf(" %s get %s -o json %s --kubeconfig=%s | jq -r '.items[] | [.metadata.name] | @tsv' ", config.Config.KubectlCli, resType, labelOption, config.Config.Kubeconfig)
-	output, err := util.ExecCommandLine(get_resource_cmd)
+	getResourceCmd := fmt.Sprintf(" %s get %s -o json %s --kubeconfig=%s | jq -r '.items[] | [.metadata.name] | @tsv' ", config.Config.KubectlCli, resType, labelOption, config.Config.Kubeconfig)
+	output, err := util.ExecCommandLine(getResourceCmd)
 	if err != nil {
-		klog.Errorf("Failed to get %v: %v", err)
-		return []string{"error"}
+		klog.Errorf("Failed to get %v: %v", resType, err)
+		return []string{err.Error()}
 	}
 
 	names := []string{}
@@ -51,8 +51,8 @@ func GetLocalClusterScopeResourceNames(resType string, label string) []string {
 }
 
 func GetMissionByName(name string) (*edgeclustersv1.Mission, error) {
-	get_mission_cmd := fmt.Sprintf("%s get mission %s --kubeconfig=%s -o json ", config.Config.KubectlCli, name, config.Config.Kubeconfig)
-	output, err := util.ExecCommandLine(get_mission_cmd)
+	getMissionCmd := fmt.Sprintf("%s get mission %s --kubeconfig=%s -o json ", config.Config.KubectlCli, name, config.Config.Kubeconfig)
+	output, err := util.ExecCommandLine(getMissionCmd)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get mission %v: %v", name, err)
 	}
@@ -67,8 +67,8 @@ func GetMissionByName(name string) (*edgeclustersv1.Mission, error) {
 }
 
 func TestClusterReady() bool {
-	test_cluster_command := fmt.Sprintf("%s cluster-info --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
-	if _, err := util.ExecCommandLine(test_cluster_command); err != nil {
+	testClusterCommand := fmt.Sprintf("%s cluster-info --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
+	if _, err := util.ExecCommandLine(testClusterCommand); err != nil {
 		klog.Errorf("The cluster is unreachable: %v", err)
 		return false
 	}

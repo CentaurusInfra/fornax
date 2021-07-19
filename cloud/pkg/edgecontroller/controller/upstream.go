@@ -32,7 +32,6 @@ import (
 	"strings"
 	"time"
 
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +42,7 @@ import (
 
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	crdClientset "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/client"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
@@ -570,7 +570,6 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 					klog.Error(errLog)
 					uc.edgeClusterMsgResponse(name, namespace, errLog, msg)
 					continue
-
 				}
 
 				edgeCluster := &edgeclustersv1.EdgeCluster{}

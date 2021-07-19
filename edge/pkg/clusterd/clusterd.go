@@ -27,6 +27,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
+
 	"github.com/kubeedge/beehive/pkg/common/util"
 	"github.com/kubeedge/beehive/pkg/core"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
@@ -37,9 +40,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/client"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
-	"k8s.io/apimachinery/pkg/types"
-
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -86,8 +86,6 @@ func (e *clusterd) Start() {
 
 	klog.Infof("starting sync with cloud")
 	e.syncCloud()
-
-	return
 }
 
 //newClusterd creates new Clusterd object and initialises it
@@ -175,7 +173,7 @@ func (e *clusterd) syncCloud() {
 					continue
 				}
 			}
-			
+
 		default:
 			klog.Errorf("resource type %s is not supported", resType)
 			continue

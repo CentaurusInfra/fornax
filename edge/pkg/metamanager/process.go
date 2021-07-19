@@ -266,9 +266,7 @@ func processMissionList(content []byte) error {
 			continue
 		}
 
-		if _, exists := strayKeys[daoKey]; exists {
-			delete(strayKeys, daoKey)
-		}
+		delete(strayKeys, daoKey)
 	}
 
 	for k := range strayKeys {
@@ -282,7 +280,6 @@ func processMissionList(content []byte) error {
 }
 
 func (m *metaManager) processUpdate(message model.Message) {
-
 	var err error
 	var content []byte
 	switch message.GetContent().(type) {

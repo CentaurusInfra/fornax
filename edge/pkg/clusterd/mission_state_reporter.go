@@ -20,24 +20,24 @@ import (
 	"sync"
 	"time"
 
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
-	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
-
-	edgeapi "github.com/kubeedge/kubeedge/common/types"
-	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
-	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
+	edgeapi "github.com/kubeedge/kubeedge/common/types"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 )
 
 const (
 	// it forces the state of each mission is reported to upper layer at least once per minute.
 	// We set this value hard-coded, instead of user-configurable, as it will be a performance if it is not set too small.
 	ForcedResyncInterval = 60
-	LOCAL_EDGE_CLUSTER   = "local_edge_cluster"
-	STATUS_NO_MATCH      = "not match"
+	LocalEdgeCluster     = "LocalEdgeCluster"
+	StatusNotMatch       = "not match"
 )
 
 var stateCycleLock sync.Mutex
@@ -90,8 +90,8 @@ func (m *MissionStateReporter) Run() {
 }
 
 func (m *MissionStateReporter) stateSyncer() {
-	get_mission_cmd := fmt.Sprintf(" %s get missions -o json --kubeconfig=%s | jq .items ", config.Config.KubectlCli, config.Config.Kubeconfig)
-	output, err := util.ExecCommandLine(get_mission_cmd)
+	getMissionCmd := fmt.Sprintf(" %s get missions -o json --kubeconfig=%s | jq .items ", config.Config.KubectlCli, config.Config.Kubeconfig)
+	output, err := util.ExecCommandLine(getMissionCmd)
 	if err != nil {
 		klog.Errorf("Failed to get mission: %v", err)
 		return
@@ -113,7 +113,7 @@ func (m *MissionStateReporter) stateSyncer() {
 			// if the state has been idle for a long time, we send an update
 			if i, ok := m.stateIdleCycles[mission.Name]; ok {
 				stateCycleLock.Lock()
-				m.stateIdleCycles[mission.Name] += 1
+				m.stateIdleCycles[mission.Name]++
 				stateCycleLock.Unlock()
 				if i > m.maxStateIdleCycles {
 					m.queue.Add(mission.Name)
@@ -139,11 +139,11 @@ func (m *MissionStateReporter) syncQueue() {
 			// no error, forget this entry and return
 			m.queue.Forget(key)
 			return false
-		} else {
-			// rather than wait for a full resync, re-add the mission to the queue to be processed
-			m.queue.AddRateLimited(key)
-			utilruntime.HandleError(err)
 		}
+
+		// rather than wait for a full resync, re-add the mission to the queue to be processed
+		m.queue.AddRateLimited(key)
+		utilruntime.HandleError(err)
 		return false
 	}
 
@@ -194,7 +194,7 @@ func (m *MissionStateReporter) ReportMissionState(missionName string, missionSta
 	updatedMissionState := map[string]string{}
 	clusterName := config.Config.Name
 	for key, val := range missionState {
-		if key == LOCAL_EDGE_CLUSTER {
+		if key == LocalEdgeCluster {
 			updatedMissionState[clusterName] = val
 		} else {
 			updatedMissionState[clusterName+"/"+key] = val

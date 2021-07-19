@@ -22,12 +22,14 @@ import (
 	"path/filepath"
 	"time"
 
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
+	v1 "k8s.io/api/core/v1"
+	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/beehive/pkg/core"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
@@ -35,8 +37,6 @@ import (
 	"github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub"
-	v1 "k8s.io/api/core/v1"
-	utilwait "k8s.io/apimachinery/pkg/util/wait"
 )
 
 var initEdgeCluster edgeclustersv1.EdgeCluster
@@ -93,15 +93,15 @@ func (esr *EdgeClusterStatusReporter) initialEdgeCluster() (*edgeclustersv1.Edge
 }
 
 func (esr *EdgeClusterStatusReporter) prepareCluster() error {
-	if helper.TestClusterReady() == false {
-		return fmt.Errorf("The cluster is not reacheable.")
+	if !helper.TestClusterReady() {
+		return fmt.Errorf("the cluster is not reacheable")
 	}
 
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	for _, crdFile := range getRequiredCrdFiles() {
-		crd_file_path := filepath.Join(basedir, crdFile)
-		deploy_crd_cmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, crd_file_path)
-		if _, err := util.ExecCommandLine(deploy_crd_cmd); err != nil {
+		crdFilePath := filepath.Join(basedir, crdFile)
+		deployCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, crdFilePath)
+		if _, err := util.ExecCommandLine(deployCrdCmd); err != nil {
 			return fmt.Errorf("Failed to deploy crd %v: %v", crdFile, err)
 		}
 	}
@@ -168,7 +168,7 @@ func (esr *EdgeClusterStatusReporter) getEdgeClusterStatusRequest(edgeCluster *e
 	var matchededMissions []string
 	for k, v := range esr.missionDeployer.MissionMatch {
 		receivedMissions = append(receivedMissions, k)
-		if v == true {
+		if v {
 			matchededMissions = append(matchededMissions, k)
 		}
 	}

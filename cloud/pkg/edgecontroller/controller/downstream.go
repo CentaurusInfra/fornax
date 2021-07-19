@@ -585,8 +585,6 @@ func (dc *DownstreamController) syncMissions() {
 				continue
 			}
 
-			klog.V(4).Infof("Sending mission events to edge clusters: %v", dc.lc.EdgeClusters)
-
 			// send to all nodes
 			dc.lc.EdgeClusters.Range(func(key interface{}, value interface{}) bool {
 				clusterName, ok := key.(string)

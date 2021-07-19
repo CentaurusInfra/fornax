@@ -37,7 +37,7 @@ func registerModules(i interface{}) {
 		edgehub.Register(c.Modules.EdgeHub, c.Modules.Edged.HostnameOverride)
 		eventbus.Register(c.Modules.EventBus, c.Modules.Edged.HostnameOverride)
 		//edgemesh.Register(c.Modules.EdgeMesh)
-		metamanager.Register(c.Modules.MetaManager)
+		metamanager.Register(c.Modules.MetaManager, false)
 		servicebus.Register(c.Modules.ServiceBus)
 		edgestream.Register(c.Modules.EdgeStream, c.Modules.Edged.HostnameOverride, c.Modules.Edged.NodeIP)
 		test.Register(c.Modules.DBTest)

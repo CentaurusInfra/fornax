@@ -17,18 +17,18 @@ package clusterd
 import (
 	"encoding/json"
 	"fmt"
-	yaml "gopkg.in/yaml.v2"
 	"strconv"
 	"strings"
 	"sync"
+
+	yaml "gopkg.in/yaml.v2"
+	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/beehive/pkg/core/model"
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
-
-	"k8s.io/klog/v2"
 )
 
 var cacheLock sync.Mutex
@@ -53,8 +53,8 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 		// log the error and move on to apply the mission content
 		klog.Errorf("Error in applying mission CRD: %v. Moving on.", err)
 	} else {
-		deploy_mission_cmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", missionYaml, config.Config.KubectlCli, config.Config.Kubeconfig)
-		output, err := util.ExecCommandLine(deploy_mission_cmd)
+		ddeployMissionCmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", missionYaml, config.Config.KubectlCli, config.Config.Kubeconfig)
+		output, err := util.ExecCommandLine(ddeployMissionCmd)
 		if err != nil {
 			klog.Errorf("Failed to apply mission %v: %v", mission.Name, err)
 		} else {
@@ -66,12 +66,12 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 		}
 	}
 
-	if m.isMatchingMission(mission) == false {
+	if !m.isMatchingMission(mission) {
 		klog.V(3).Infof("Mission %v does not match this cluster, skip the content applying", mission.Name)
 	} else {
 		if strings.TrimSpace(mission.Spec.Content) != "" {
-			deploy_content_cmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
-			output, err := util.ExecCommandLine(deploy_content_cmd)
+			deployContentCmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
+			output, err := util.ExecCommandLine(deployContentCmd)
 			if err != nil {
 				klog.Errorf("Failed to apply the content of mission %v: %v", mission.Name, err)
 			} else {
@@ -93,12 +93,12 @@ func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
 	cacheLock.Lock()
 	delete(m.MissionMatch, mission.Name)
 	cacheLock.Unlock()
-	if m.isMatchingMission(mission) == false {
+	if !m.isMatchingMission(mission) {
 		klog.V(4).Infof("Mission %v does not match this cluster", mission.Name)
 	} else {
 		if strings.TrimSpace(mission.Spec.Content) != "" {
-			delete_content_cmd := fmt.Sprintf("printf \"%s\" | %s delete --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
-			_, err := util.ExecCommandLine(delete_content_cmd)
+			deployContentCmd := fmt.Sprintf("printf \"%s\" | %s delete --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
+			_, err := util.ExecCommandLine(deployContentCmd)
 			if err != nil {
 				klog.Errorf("Failed to revert the content of mission %v: %v", mission.Name, err)
 			} else {
@@ -107,8 +107,8 @@ func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
 		}
 	}
 
-	delete_mission_cmd := fmt.Sprintf("%s delete mission %s --kubeconfig=%s", config.Config.KubectlCli, mission.Name, config.Config.Kubeconfig)
-	if _, err := util.ExecCommandLine(delete_mission_cmd); err != nil {
+	deleteMissionCmd := fmt.Sprintf("%s delete mission %s --kubeconfig=%s", config.Config.KubectlCli, mission.Name, config.Config.Kubeconfig)
+	if _, err := util.ExecCommandLine(deleteMissionCmd); err != nil {
 		return fmt.Errorf("Failed to delete mission %v: %v", mission.Name, err)
 	}
 
@@ -183,7 +183,6 @@ func (m *MissionDeployer) AlignMissionList(missionList []*edgeclustersv1.Mission
 
 // create a yaml to use by "kubectl apply" command
 func buildMissionYaml(input *edgeclustersv1.Mission) (string, error) {
-
 	// probably due to the json encoder in arktos, the commmnd "kubectl apply missiong" in arktos
 	// fails if the mission.StateCheck.Command is nil or empty.
 	// We trick it with a string with one space.
@@ -192,7 +191,7 @@ func buildMissionYaml(input *edgeclustersv1.Mission) (string, error) {
 		input.Spec.StateCheck.Command = " "
 	}
 
-	yaml_part1_template := `apiVersion: edgeclusters.kubeedge.io/v1
+	yamlPart1Template := `apiVersion: edgeclusters.kubeedge.io/v1
 kind: Mission
 metadata:
   name: %s
@@ -203,14 +202,14 @@ spec:
 		return "", err
 	}
 
-	output := fmt.Sprintf(yaml_part1_template, input.Name, strings.ReplaceAll(string(specStr), "\n", "\n  "))
+	output := fmt.Sprintf(yamlPart1Template, input.Name, strings.ReplaceAll(string(specStr), "\n", "\n  "))
 	return output, nil
 }
 
 func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo string) error {
 	stateInfo = strconv.Quote(strings.TrimSpace(stateInfo))
 
-	statePatch := fmt.Sprintf("{\"state\":{\"%s\": %s}}", LOCAL_EDGE_CLUSTER, stateInfo)
+	statePatch := fmt.Sprintf("{\"state\":{\"%s\": %s}}", LocalEdgeCluster, stateInfo)
 
 	stateUpdateCommand := fmt.Sprintf("%s patch mission %s --kubeconfig=%s --patch '%s' --type=merge", config.Config.KubectlCli, missionName, config.Config.Kubeconfig, statePatch)
 	_, err := util.ExecCommandLine(stateUpdateCommand)
@@ -218,16 +217,15 @@ func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo 
 		if strings.Contains(err.Error(), "Error from server (NotFound):") {
 			klog.V(3).Infof("Mission %v is deleted.", missionName)
 			return nil
-		} else {
-			klog.Errorf("Error when checking the mission %v state: %v", missionName, err)
 		}
+
+		klog.Errorf("Error when checking the mission %v state: %v", missionName, err)
 	}
 
-	return err
+	return nil
 }
 
 func (m *MissionDeployer) GetStateCheckCommand(mission *edgeclustersv1.Mission) string {
-
 	command := strings.TrimSpace(mission.Spec.StateCheck.Command)
 	if command != "" {
 		return strings.ReplaceAll(command, "${kubectl}", config.Config.KubectlCli)
@@ -250,15 +248,15 @@ func (m *MissionDeployer) UpdateState(mission *edgeclustersv1.Mission, force boo
 		return
 	}
 
-	if m.isMatchingMission(mission) == false {
-		if err := m.UpdateMissionLocalState(mission.Name, STATUS_NO_MATCH); err != nil {
+	if !m.isMatchingMission(mission) {
+		if err := m.UpdateMissionLocalState(mission.Name, StatusNotMatch); err != nil {
 			klog.Errorf("Error when updating the mission %v state: %v", mission.Name, err)
 		}
 		return
 	}
 
-	state_command := m.GetStateCheckCommand(mission)
-	output, err := util.ExecCommandLine(state_command)
+	stateCommand := m.GetStateCheckCommand(mission)
+	output, err := util.ExecCommandLine(stateCommand)
 	if err != nil {
 		if strings.Contains(err.Error(), "Error from server (NotFound):") {
 			klog.V(3).Infof("Mission %v is deleted. Return", mission.Name)

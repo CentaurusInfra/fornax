@@ -77,7 +77,7 @@ offering HTTP client capabilities to components of cloud to reach HTTP servers r
 				hostnameOverride = constants.DefaultHostnameOverride
 			}
 			localIP, _ := util.GetLocalIP(hostnameOverride)
-			if opts.EdgeClusterMode == false {
+			if !opts.EdgeClusterMode {
 				// Check the running environment by default
 				checkEnv := os.Getenv("CHECK_EDGECORE_ENVIRONMENT")
 				if checkEnv != "false" {

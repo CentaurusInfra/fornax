@@ -5,9 +5,10 @@ import (
 	"path/filepath"
 	"sync"
 
+	"k8s.io/klog/v2"
+
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
-	"k8s.io/klog/v2"
 )
 
 var Config Configure

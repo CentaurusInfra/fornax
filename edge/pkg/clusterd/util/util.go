@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	ShellToUse          = "bash"
-	COMMAND_TIMEOUT_SEC = 10
+	ShellToUse            = "bash"
+	CommandTimeoutSeconds = 10
 )
 
 func FileExists(filename string) bool {
@@ -38,7 +38,7 @@ func FileExists(filename string) bool {
 }
 
 func ExecCommandLine(commandline string) (string, error) {
-	return ExecCommandLineWithTimeOut(commandline, COMMAND_TIMEOUT_SEC)
+	return ExecCommandLineWithTimeOut(commandline, CommandTimeoutSeconds)
 }
 
 func ExecCommandLineWithTimeOut(commandline string, timeout int) (string, error) {

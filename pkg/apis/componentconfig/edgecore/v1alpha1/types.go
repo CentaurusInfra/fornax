@@ -506,7 +506,7 @@ type Clusterd struct {
 	// default true
 	RegisterCluster bool `json:"registerCluster,omitempty"`
 
-	RegisterNamespace string `json:"registerNamespace, omitempty"`
+	RegisterNamespace string `json:"registerNamespace,omitempty"`
 	// NodeIP indicates current node ip
 	// default get local host ip
 	NodeIP string `json:"nodeIP"`
