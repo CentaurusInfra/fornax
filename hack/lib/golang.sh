@@ -102,7 +102,9 @@ kubeedge::version::get_version_info() {
 
 # Get the value that needs to be passed to the -ldflags parameter of go build
 kubeedge::version::ldflags() {
+  echo "1 ======================="
   kubeedge::version::get_version_info
+  echo "2 ======================="
 
   local -a ldflags
   function add_ldflag() {
@@ -220,20 +222,19 @@ kubeedge::golang::build_binaries() {
 
   echo "3+++++++++++++++++++++"
   local goldflags gogcflags
+  echo "3.1 +++++++++++++++++++++"
   # If GOLDFLAGS is unset, then set it to the a default of "-s -w".
   goldflags="${GOLDFLAGS=-s -w -buildid=} $(kubeedge::version::ldflags)"
+  echo "3.2 +++++++++++++++++++++"
   gogcflags="${GOGCFLAGS:-}"
 
   mkdir -p ${KUBEEDGE_OUTPUT_BINPATH}
   for bin in ${binaries[@]}; do
     echo "building $bin"
     local name="${bin##*/}"
-    echo "3.1 +++++++++++++++++++++"
     set -x
     go build -o ${KUBEEDGE_OUTPUT_BINPATH}/${name} -gcflags="${gogcflags:-}" -ldflags "${goldflags:-}" $bin
     set +x
-
-    echo "3.2 +++++++++++++++++++++"
   done
 
   echo "4+++++++++++++++++++++"
