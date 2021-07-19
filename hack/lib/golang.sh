@@ -28,7 +28,10 @@ NO="n"
 
 kubeedge::version::get_version_info() {
 
+  echo "1-------------"
   GIT_COMMIT=$(git rev-parse "HEAD^{commit}" 2>/dev/null)
+
+  echo "2-------------"
 
   if git_status=$(git status --porcelain 2>/dev/null) && [[ -z ${git_status} ]]; then
     GIT_TREE_STATE="clean"
@@ -36,7 +39,10 @@ kubeedge::version::get_version_info() {
     GIT_TREE_STATE="dirty"
   fi
 
+  echo "3-------------"
   GIT_VERSION=$(git describe --tags --abbrev=14 "${GIT_COMMIT}^{commit}" 2>/dev/null)
+
+  echo "4-------------"
 
   # This translates the "git describe" to an actual semver.org
   # compatible semantic version that looks something like this:
@@ -59,12 +65,16 @@ kubeedge::version::get_version_info() {
       GIT_VERSION=$(echo "${GIT_VERSION}" | sed "s/-g\([0-9a-f]\{14\}\)$/+\1/")
   fi
 
+  echo "5-------------"
+
   if [[ "${GIT_TREE_STATE}" == "dirty" ]]; then
     # git describe --dirty only considers changes to existing files, but
     # that is problematic since new untracked .go files affect the build,
     # so use our idea of "dirty" from git status instead.
     GIT_VERSION+="-dirty"
   fi
+
+  echo "6-------------"
 
 
   # Try to match the "git describe" output to a regex to try to extract
@@ -78,12 +88,16 @@ kubeedge::version::get_version_info() {
     fi
   fi
 
+  echo "7-------------"
+
   # If GIT_VERSION is not a valid Semantic Version, then refuse to build.
   if ! [[ "${GIT_VERSION}" =~ ^v([0-9]+)\.([0-9]+)(\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
       echo "GIT_VERSION should be a valid Semantic Version. Current value: ${GIT_VERSION}"
       echo "Please see more details here: https://semver.org"
       exit 1
   fi
+
+  echo "8-------------"
 }
 
 # Get the value that needs to be passed to the -ldflags parameter of go build
