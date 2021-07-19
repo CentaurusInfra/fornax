@@ -202,6 +202,7 @@ IFS=" " read -ra KUBEEDGE_ALL_TARGETS <<< "$(kubeedge::golang::get_all_targets)"
 IFS=" " read -ra KUBEEDGE_ALL_BINARIES<<< "$(kubeedge::golang::get_all_binaries)"
 
 kubeedge::golang::build_binaries() {
+  echo "1+++++++++++++++++++++"
   kubeedge::check::env
   local -a targets=()
   local binArg
@@ -209,6 +210,7 @@ kubeedge::golang::build_binaries() {
     targets+=("$(kubeedge::golang::get_target_by_binary $binArg)")
   done
 
+  echo "2+++++++++++++++++++++"
   if [[ ${#targets[@]} -eq 0 ]]; then
     targets=("${KUBEEDGE_ALL_TARGETS[@]}")
   fi
@@ -216,6 +218,7 @@ kubeedge::golang::build_binaries() {
   local -a binaries
   while IFS="" read -r binary; do binaries+=("$binary"); done < <(kubeedge::golang::binaries_from_targets "${targets[@]}")
 
+  echo "3+++++++++++++++++++++"
   local goldflags gogcflags
   # If GOLDFLAGS is unset, then set it to the a default of "-s -w".
   goldflags="${GOLDFLAGS=-s -w -buildid=} $(kubeedge::version::ldflags)"
@@ -230,6 +233,7 @@ kubeedge::golang::build_binaries() {
     set +x
   done
 
+  echo "4+++++++++++++++++++++"
 }
 
 
