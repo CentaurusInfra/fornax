@@ -228,9 +228,12 @@ kubeedge::golang::build_binaries() {
   for bin in ${binaries[@]}; do
     echo "building $bin"
     local name="${bin##*/}"
+    echo "3.1 +++++++++++++++++++++"
     set -x
     go build -o ${KUBEEDGE_OUTPUT_BINPATH}/${name} -gcflags="${gogcflags:-}" -ldflags "${goldflags:-}" $bin
     set +x
+
+    echo "3.2 +++++++++++++++++++++"
   done
 
   echo "4+++++++++++++++++++++"
