@@ -224,6 +224,10 @@ kubeedge::golang::build_binaries() {
   local goldflags gogcflags
   echo "3.1 +++++++++++++++++++++"
   # If GOLDFLAGS is unset, then set it to the a default of "-s -w".
+  flags=$(kubeedge::version::ldflags)
+  echo "3.1.1 +++++++++++++++++++++ $flags"
+  flags_second=${GOLDFLAGS=-s -w -buildid=}
+  echo "3.1.2 +++++++++++++++++++++ $flags_second"
   goldflags="${GOLDFLAGS=-s -w -buildid=} $(kubeedge::version::ldflags)"
   echo "3.2 +++++++++++++++++++++"
   gogcflags="${GOGCFLAGS:-}"
