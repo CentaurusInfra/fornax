@@ -54,7 +54,7 @@ Users are now able to develop mappers based on the new design standard.([#2147](
 
 **Modbus Mapper Golang Implementation**
 
-A new modbus mapper with Golang implementation is provided, based on new Device Mapper Standard. ([#2282](https://github.com/kubeedge/kubeedge/pull/2282), [@sailorvii](https://github.com/sailorvii)). 
+A new modbus mapper with Golang implementation is provided, based on new Device Mapper Standard. ([#2282](https://github.com/kubeedge/kubeedge/pull/2282), [@sailorvii](https://github.com/sailorvii)).
 
 **Support Remote Exec to Pods on Edge From Cloud**
 
@@ -63,7 +63,7 @@ Users are now able to use `K8s exec api` or `kubectl exec` command to connect to
 **Support Keadm Debug Command for Trouble Shooting On Edge Nodes**
 
 A set of keadm debug subcommands are added for Trouble Shooting On Edge Nodes.
-Users are now able to use `keadm debug get` and `keadm debug collect` to get/collect KubeEdge local data for trouble shooting, 
+Users are now able to use `keadm debug get` and `keadm debug collect` to get/collect KubeEdge local data for trouble shooting,
 and use `keadm debug check` and `keadm debug diagnose` to check local environment configuration. ([#1939](https://github.com/kubeedge/kubeedge/pull/1939), [@shenkonghui](https://github.com/shenkonghui), [@qingchen1203](https://github.com/qingchen1203))
 
 **Kubernetes Dependencies Upgrade**

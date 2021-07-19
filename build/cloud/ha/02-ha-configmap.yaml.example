@@ -58,8 +58,8 @@ data:
         enable: true
         load:
           updateDeviceStatusWorkers: 1
-      dynamicController: 
-        enable: false      
+      dynamicController:
+        enable: false
       edgeController:
         buffer:
           configMapEvent: 1
