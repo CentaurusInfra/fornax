@@ -30,8 +30,6 @@ type CoreInterface interface {
 	PersistentVolumeClaimsGetter
 	VolumeAttachmentsGetter
 	ListenerGetter
-	EdgeClusterStatusGetter
-	MissionStateGetter
 }
 
 type metaClient struct {
@@ -52,14 +50,6 @@ func (m *metaClient) Nodes(namespace string) NodesInterface {
 
 func (m *metaClient) NodeStatus(namespace string) NodeStatusInterface {
 	return newNodeStatus(namespace, m.send)
-}
-
-func (m *metaClient) EdgeClusterStatus(namespace string) EdgeClusterStatusInterface {
-	return newEdgeClusterStatus(namespace, m.send)
-}
-
-func (m *metaClient) MissionState(namespace string) MissionStateInterface {
-	return newMissionState(namespace, m.send)
 }
 
 func (m *metaClient) Secrets(namespace string) SecretsInterface {
@@ -128,7 +118,7 @@ func (s *send) SendSync(message *model.Message) (*model.Message, error) {
 		resp, err = beehiveContext.SendSync(metamanager.MetaManagerModuleName, *message, syncMsgRespTimeout)
 		retries++
 		if err == nil {
-			klog.V(2).Infof("send sync message %s succeeded and response: %v", message.GetResource(), resp)
+			klog.V(2).Infof("send sync message %s successed and response: %v", message.GetResource(), resp)
 			return true, nil
 		}
 		if retries < 3 {

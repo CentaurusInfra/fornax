@@ -222,8 +222,7 @@ func (s *imitator) Event(msg *model.Message) []watch.Event {
 	obj := new(unstructured.Unstructured)
 	err = runtime.DecodeInto(s.codec, bytes, obj)
 	if err != nil {
-		// this error is expected for mission handling, so not logging it as an error
-		klog.V(3).Infof("failed to unmarshal message content to unstructured obj: %+v", err)
+		klog.Errorf("failed to unmarshal message content to unstructured obj: %+v", err)
 		return ret
 	}
 	if obj.IsList() {

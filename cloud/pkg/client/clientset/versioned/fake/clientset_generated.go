@@ -22,10 +22,6 @@ import (
 	clientset "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned"
 	devicesv1alpha2 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/devices/v1alpha2"
 	fakedevicesv1alpha2 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/devices/v1alpha2/fake"
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/edgeclusters/v1"
-	fakeedgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/edgeclusters/v1/fake"
-	networkingv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/networking/v1"
-	fakenetworkingv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/networking/v1/fake"
 	reliablesyncsv1alpha1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/reliablesyncs/v1alpha1"
 	fakereliablesyncsv1alpha1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/reliablesyncs/v1alpha1/fake"
 	rulesv1 "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned/typed/rules/v1"
@@ -87,16 +83,6 @@ var _ clientset.Interface = &Clientset{}
 // DevicesV1alpha2 retrieves the DevicesV1alpha2Client
 func (c *Clientset) DevicesV1alpha2() devicesv1alpha2.DevicesV1alpha2Interface {
 	return &fakedevicesv1alpha2.FakeDevicesV1alpha2{Fake: &c.Fake}
-}
-
-// EdgeclustersV1 retrieves the EdgeclustersV1Client
-func (c *Clientset) EdgeclustersV1() edgeclustersv1.EdgeclustersV1Interface {
-	return &fakeedgeclustersv1.FakeEdgeclustersV1{Fake: &c.Fake}
-}
-
-// NetworkingV1 retrieves the NetworkingV1Client
-func (c *Clientset) NetworkingV1() networkingv1.NetworkingV1Interface {
-	return &fakenetworkingv1.FakeNetworkingV1{Fake: &c.Fake}
 }
 
 // ReliablesyncsV1alpha1 retrieves the ReliablesyncsV1alpha1Client

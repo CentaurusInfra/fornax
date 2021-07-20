@@ -100,7 +100,6 @@ func WriteEdgeModulesYamlFile(path string) error {
 				"edged",
 				"twin",
 				"edgemesh",
-				"clusterd",
 			},
 		},
 	}

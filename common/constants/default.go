@@ -94,8 +94,6 @@ const (
 	DefaultQueryNodeWorkers                  = 4
 	DefaultUpdateNodeWorkers                 = 4
 	DefaultDeletePodWorkers                  = 4
-	DefaultUpdateEdgeClusterStatusWorkers    = 1
-	DefaultUpdateMissionStateWorkers         = 4
 
 	DefaultUpdatePodStatusBuffer            = 1024
 	DefaultUpdateNodeStatusBuffer           = 1024
@@ -109,8 +107,6 @@ const (
 	DefaultQueryNodeBuffer                  = 1024
 	DefaultUpdateNodeBuffer                 = 1024
 	DefaultDeletePodBuffer                  = 1024
-	DefaultUpdateEdgeClusterStatusBuffer    = 1024
-	DefaultUpdateMissionStateBuffer         = 1024
 
 	DefaultPodEventBuffer           = 1
 	DefaultConfigMapEventBuffer     = 1
@@ -119,9 +115,6 @@ const (
 	DefaultEndpointsEventBuffer     = 1
 	DefaultRulesEventBuffer         = 1
 	DefaultRuleEndpointsEventBuffer = 1
-
-	DefaultMissionsEventBuffer     = 1
-	DefaultEdgeClustersEventBuffer = 1
 
 	// DeviceController
 	DefaultUpdateDeviceStatusBuffer  = 1024
@@ -149,21 +142,7 @@ const (
 	CSIOperationTypeControllerUnpublishVolume = "controllerunpublishvolume"
 	CSISyncMsgRespTimeout                     = 1 * time.Minute
 
-	ResourceTypeMission     = "mission"
-	ResourceTypeMissionList = "missionlist"
-
 	// ServerPort is the default port for the edgecore server on each host machine.
 	// May be overridden by a flag at startup in the future.
 	ServerPort = 10350
-
-	// edgeCluster
-	DefaultEdgeClusterStatusUpdateInterval = 10
-	DefaultStateResyncInterval             = 1
-	DefaultMissionStateWatchWorkers        = 4
-	DefaultRegisterNamespace               = "default"
-	DefaultMissionStateUpdateInterval      = 10
-
-	//missionstatepruner
-	DefaultStateSyncInterval  = 60
-	DefaultEdgeClusterTimeout = 60
 )

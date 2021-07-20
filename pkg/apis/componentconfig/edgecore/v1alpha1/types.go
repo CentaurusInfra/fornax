@@ -105,9 +105,6 @@ type Modules struct {
 	// EdgeStream indicates edgestream module config
 	// +Required
 	EdgeStream *EdgeStream `json:"edgeStream,omitempty"`
-
-	// Clusterd indicates Clusterd module config
-	Clusterd *Clusterd `json:"clusterd,omitempty"`
 }
 
 // Edged indicates the config fo edged module
@@ -473,45 +470,4 @@ type EdgeStream struct {
 	// WriteDeadline indicates write dead line (second)
 	// default 15
 	WriteDeadline int32 `json:"writeDeadline,omitempty"`
-}
-
-// Clusterd indicates the clusterd config
-type Clusterd struct {
-	// Enable indicates whether edge cluster is enabled, if set to false, skip checking other configs.
-	// default true
-	Enable bool `json:"enable,omitempty"`
-
-	// Name of the edge cluster
-	// default os.Hostname()
-	Name string `json:"name,omitempty"`
-
-	// kubeconfig indicates the path to the edge cluster kubeconfig file
-	Kubeconfig string `json:"kubeconfig,omitempty"`
-
-	// Distribution of the cluster, supported value: arkots, to support in the furture: k3s,
-	KubeDistro string `json:"kubeDistro,omitempty"`
-
-	// labels of the cluster
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// EdgeClusterStatusUpdateFrequency indicates EdgeCluster status update frequency (second)
-	// default 10
-	EdgeClusterStatusUpdateInterval int32 `json:"edgeClusterStatusUpdateInterval,omitempty"`
-
-	// MissionStateUpdateFrequency indicates Mission status update frequency (second)
-	// default 10
-	MissionStateUpdateInterval int32 `json:"missionStateUpdateInterval,omitempty"`
-
-	// RegisterNode enables automatic registration
-	// default true
-	RegisterCluster bool `json:"registerCluster,omitempty"`
-
-	RegisterNamespace string `json:"registerNamespace, omitempty"`
-	// NodeIP indicates current node ip
-	// default get local host ip
-	NodeIP string `json:"nodeIP"`
-
-	ResyncInterval int32 `json:"resyncInterval,omitempty"`
-
-	MissionStateWatchWorkers int `json:"missionStateWatchWorkers,omitempty"`
 }

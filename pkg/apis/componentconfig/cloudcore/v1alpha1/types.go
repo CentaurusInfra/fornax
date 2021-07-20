@@ -76,8 +76,6 @@ type Modules struct {
 	CloudStream *CloudStream `json:"cloudStream,omitempty"`
 	// Router indicates router module config
 	Router *Router `json:"router,omitempty"`
-
-	MissionStatePruner *MissionStatePruner `json:"missionstatepruner,omitempty"`
 }
 
 // CloudHub indicates the config of CloudHub module.
@@ -256,16 +254,6 @@ type EdgeControllerBuffer struct {
 	// DeletePod indicates the buffer of delete pod message from edge
 	// default 1024
 	DeletePod int32 `json:"deletePod,omitempty"`
-	// UpdateMissionState indicates the buffer of update Mission status
-	// default 1024
-	UpdateMissionState int32 `json:"updateMissionState,omitempty"`
-	// default 1
-	MissionsEvent int32 `json:"missionsEvent,omitempty"`
-	// UpdateEdgeClusterStatus indicates the buffer of update EdgeCluster status
-	// default 1024
-	UpdateEdgeClusterStatus int32 `json:"updateEdgeClusterStatus,omitempty"`
-	// default 1
-	EdgeClustersEvent int32 `json:"edgeClustersEvent,omitempty"`
 }
 
 // ControllerContext indicates the message layer context for all controllers
@@ -318,12 +306,6 @@ type EdgeControllerLoad struct {
 	// DeletePodWorkers indicates the load of delete pod workers
 	// default 4
 	DeletePodWorkers int32 `json:"deletePodWorkers,omitempty"`
-	// UpdatEdgeClusterStatusWorkers indicates the load of update edgecluster status workers
-	// default 1
-	UpdateEdgeClusterStatusWorkers int32 `json:"updateEdgeClusterStatusWorkers,omitempty"`
-	// UpdatMissionStateWorkers indicates the load of update mission status workers
-	// default 4
-	UpdateMissionStateWorkers int32 `json:"updateMissionStateWorkers,omitempty"`
 }
 
 // DeviceController indicates the device controller
@@ -415,15 +397,4 @@ type Router struct {
 	Address     string `json:"address,omitempty"`
 	Port        uint32 `json:"port,omitempty"`
 	RestTimeout uint32 `json:"restTimeout,omitempty"`
-}
-
-type MissionStatePruner struct {
-	// default true
-	Enable bool `json:"enable,omitempty"`
-	// the interval (in seconds) that the pruner will prune the offline mission state
-	//default 60
-	SyncInterval int `json:"syncInterval,omitempty"`
-	//The seconds that an edgecluster will be deemed as 'offline' if it has not reported a heartbeat
-	//default 60
-	EdgeClusterTimeout int `json:"edgeClusterTimeout,omitempty"`
 }

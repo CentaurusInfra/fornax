@@ -29,10 +29,8 @@ import (
 	stderrors "errors"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +41,6 @@ import (
 
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
-	crdClientset "github.com/kubeedge/kubeedge/cloud/pkg/client/clientset/versioned"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/client"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/config"
@@ -83,7 +80,6 @@ func SortInitContainerStatuses(p *v1.Pod, statuses []v1.ContainerStatus) {
 // UpstreamController subscribe messages from edge and sync to k8s api server
 type UpstreamController struct {
 	kubeClient   kubernetes.Interface
-	crdClient    crdClientset.Interface
 	messageLayer messagelayer.MessageLayer
 
 	// message channel
@@ -99,8 +95,6 @@ type UpstreamController struct {
 	queryNodeChan             chan model.Message
 	updateNodeChan            chan model.Message
 	podDeleteChan             chan model.Message
-	edgeClusterStatusChan     chan model.Message
-	missionStateChan          chan model.Message
 
 	// lister
 	podLister       corelisters.PodLister
@@ -127,8 +121,6 @@ func (uc *UpstreamController) Start() error {
 	uc.queryNodeChan = make(chan model.Message, config.Config.Buffer.QueryNode)
 	uc.updateNodeChan = make(chan model.Message, config.Config.Buffer.UpdateNode)
 	uc.podDeleteChan = make(chan model.Message, config.Config.Buffer.DeletePod)
-	uc.edgeClusterStatusChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterStatus)
-	uc.missionStateChan = make(chan model.Message, config.Config.Buffer.UpdateMissionState)
 
 	go uc.dispatchMessage()
 
@@ -168,12 +160,6 @@ func (uc *UpstreamController) Start() error {
 	for i := 0; i < int(config.Config.Load.DeletePodWorkers); i++ {
 		go uc.deletePod()
 	}
-	for i := 0; i < int(config.Config.Load.UpdateEdgeClusterStatusWorkers); i++ {
-		go uc.updateEdgeClusterStatus()
-	}
-	for i := 0; i < int(config.Config.Load.UpdateMissionStateWorkers); i++ {
-		go uc.updateMissionState()
-	}
 	return nil
 }
 
@@ -196,7 +182,7 @@ func (uc *UpstreamController) dispatchMessage() {
 
 		resourceType, err := messagelayer.GetResourceType(msg)
 		if err != nil {
-			klog.Warningf("parse message: %s resource type with error: %s,", msg.GetID(), err)
+			klog.Warningf("parse message: %s resource type with error: %s", msg.GetID(), err)
 			continue
 		}
 
@@ -237,10 +223,6 @@ func (uc *UpstreamController) dispatchMessage() {
 			} else {
 				klog.Errorf("message: %s, operation type: %s unsupported", msg.GetID(), msg.GetOperation())
 			}
-		case model.ResourceTypeEdgeClusterStatus:
-			uc.edgeClusterStatusChan <- msg
-		case model.ResourceTypeMissionState:
-			uc.missionStateChan <- msg
 		default:
 			klog.Errorf("message: %s, resource type: %s unsupported", msg.GetID(), resourceType)
 		}
@@ -281,9 +263,9 @@ func (uc *UpstreamController) updatePodStatus() {
 						delMsg.Content = pod
 						delMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.DeleteOperation)
 						if err := uc.messageLayer.Send(*delMsg); err != nil {
-							klog.Warningf("Failed to send message, error: %s, operation: %s, resource: %s", err, delMsg.GetOperation(), delMsg.GetResource())
+							klog.Warningf("Send message failed with error: %s, operation: %s, resource: %s", err, delMsg.GetOperation(), delMsg.GetResource())
 						} else {
-							klog.V(4).Infof("Message sent successfully, operation: %s, resource: %s", delMsg.GetOperation(), delMsg.GetResource())
+							klog.V(4).Infof("Send message successfully, operation: %s, resource: %s", delMsg.GetOperation(), delMsg.GetResource())
 						}
 
 						continue
@@ -514,244 +496,6 @@ func (uc *UpstreamController) updateNodeStatus() {
 				klog.Warningf("message: %s process failure, node status operation: %s unsupported", msg.GetID(), msg.GetOperation())
 			}
 			klog.V(4).Infof("message: %s process successfully", msg.GetID())
-		}
-	}
-}
-
-// createEdgeCluster create new edge edgeCluster to kubernetes
-func (uc *UpstreamController) createEdgeCluster(name string, edgeCluster *edgeclustersv1.EdgeCluster) (*edgeclustersv1.EdgeCluster, error) {
-	edgeCluster.Name = name
-	return uc.crdClient.EdgeclustersV1().EdgeClusters().Create(context.Background(), edgeCluster, metaV1.CreateOptions{})
-}
-
-func (uc *UpstreamController) updateEdgeClusterStatus() {
-	for {
-		select {
-		case <-beehiveContext.Done():
-			klog.Warning("stop updateEdgeClusterStatus")
-			return
-		case msg := <-uc.edgeClusterStatusChan:
-			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
-
-			var data []byte
-			switch msg.Content.(type) {
-			case []byte:
-				data = msg.GetContent().([]byte)
-			default:
-				var err error
-				data, err = json.Marshal(msg.GetContent())
-				if err != nil {
-					klog.Warningf("message: %s process failure, marshal message content with error: %s", msg.GetID(), err)
-					continue
-				}
-			}
-
-			namespace, err := messagelayer.GetNamespace(msg)
-			if err != nil {
-				klog.Warningf("message: %s process failure, get namespace failed with error: %s", msg.GetID(), err)
-				continue
-			}
-			name, err := messagelayer.GetResourceName(msg)
-			if err != nil {
-				klog.Warningf("message: %s process failure, get resource name failed with error: %s", msg.GetID(), err)
-				continue
-			}
-
-			switch msg.GetOperation() {
-			case model.InsertOperation:
-				_, err := uc.crdClient.EdgeclustersV1().EdgeClusters().Get(context.Background(), name, metaV1.GetOptions{})
-				if err == nil {
-					uc.edgeClusterMsgResponse(name, namespace, "OK", msg)
-					continue
-				}
-
-				if !errors.IsNotFound(err) {
-					errLog := fmt.Sprintf("get edgeCluster %s info error: %v , register edgeCluster failed", name, err)
-					klog.Error(errLog)
-					uc.edgeClusterMsgResponse(name, namespace, errLog, msg)
-					continue
-
-				}
-
-				edgeCluster := &edgeclustersv1.EdgeCluster{}
-				err = json.Unmarshal(data, edgeCluster)
-				if err != nil {
-					errLog := fmt.Sprintf("message: %s process failure, unmarshal marshaled message content with error: %s", msg.GetID(), err)
-					klog.Error(errLog)
-					uc.edgeClusterMsgResponse(name, namespace, errLog, msg)
-					continue
-				}
-
-				if _, err = uc.createEdgeCluster(name, edgeCluster); err != nil {
-					errLog := fmt.Sprintf("create edgeCluster %s error: %v , register edgeCluster failed", name, err)
-					klog.Error(errLog)
-					uc.edgeClusterMsgResponse(name, namespace, errLog, msg)
-					continue
-				}
-
-				uc.edgeClusterMsgResponse(name, namespace, "OK", msg)
-
-			case model.UpdateOperation:
-				edgeClusterStatusRequest := &edgeapi.EdgeClusterStatusRequest{}
-				err := json.Unmarshal(data, edgeClusterStatusRequest)
-				if err != nil {
-					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
-					continue
-				}
-
-				existingEdgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().Get(context.Background(), name, metaV1.GetOptions{})
-				if errors.IsNotFound(err) {
-					klog.Warningf("message: %s process failure, edgeCluster %s not found", msg.GetID(), name)
-					continue
-				}
-
-				if err != nil {
-					klog.Warningf("message: %s process failure with error: %s, name: %s", msg.GetID(), err, name)
-					continue
-				}
-
-				edgeClusterStatusRequest.Status.LastHeartBeat = metaV1.NewTime(time.Now())
-				existingEdgeCluster.Status = edgeClusterStatusRequest.Status
-				edgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().UpdateStatus(context.Background(), existingEdgeCluster, metaV1.UpdateOptions{})
-				if err != nil {
-					klog.Warningf("message: %s process failure, update edgeCluster failed with error: %s, name: %s", msg.GetID(), err, existingEdgeCluster.Name)
-					continue
-				}
-				resMsg := model.NewMessage(msg.GetID())
-				resMsg.SetResourceVersion(edgeCluster.ResourceVersion)
-				resMsg.Content = "OK"
-				nodeID, err := messagelayer.GetNodeID(msg)
-				if err != nil {
-					klog.Warningf("Message: %s process failure, get node id failed with error: %s", msg.GetID(), err)
-					continue
-				}
-				resource, err := messagelayer.BuildResource(nodeID, namespace, model.ResourceTypeEdgeCluster, edgeCluster.Name)
-				if err != nil {
-					klog.Warningf("Message: %s process failure, build message resource failed with error: %s", msg.GetID(), err)
-					continue
-				}
-				resMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.ResponseOperation)
-				if err = uc.messageLayer.Response(*resMsg); err != nil {
-					klog.Warningf("Message: %s process failure, sending response failed with error: %s", msg.GetID(), err)
-					continue
-				}
-
-				klog.V(4).Infof("message: %s, update edgeCluster status successfully, name: %s", msg.GetID(), existingEdgeCluster.Name)
-
-			default:
-				klog.Warningf("message: %s process failure, edgeCluster status operation: %s unsupported", msg.GetID(), msg.GetOperation())
-			}
-			klog.V(4).Infof("message: %s processed successfully", msg.GetID())
-		}
-	}
-}
-
-func aggregateState(state *map[string]string, newState map[string]string, clusterName string) {
-	for key := range *state {
-		if key == clusterName || strings.HasPrefix(key, clusterName+"/") {
-			newVal, ok := newState[key]
-			if ok {
-				(*state)[key] = newVal
-				delete(newState, key)
-			} else {
-				delete(*state, key)
-			}
-		}
-	}
-
-	for key, val := range newState {
-		(*state)[key] = val
-	}
-}
-
-func (uc *UpstreamController) updateMissionState() {
-	for {
-		select {
-		case <-beehiveContext.Done():
-			klog.Warning("stop updateMissionState")
-			return
-		case msg := <-uc.missionStateChan:
-			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
-
-			var data []byte
-			switch msg.Content.(type) {
-			case []byte:
-				data = msg.GetContent().([]byte)
-			default:
-				var err error
-				data, err = json.Marshal(msg.GetContent())
-				if err != nil {
-					klog.Warningf("message: %s process failure, marshal message content with error: %s", msg.GetID(), err)
-					continue
-				}
-			}
-
-			namespace, err := messagelayer.GetNamespace(msg)
-			if err != nil {
-				klog.Warningf("message: %s process failure, get namespace failed with error: %s", msg.GetID(), err)
-				continue
-			}
-			name, err := messagelayer.GetResourceName(msg)
-			if err != nil {
-				klog.Warningf("message: %s process failure, get resource name failed with error: %s", msg.GetID(), err)
-				continue
-			}
-
-			switch msg.GetOperation() {
-			case model.UpdateOperation:
-				missionStateRequest := &edgeapi.MissionStateRequest{}
-				err := json.Unmarshal(data, missionStateRequest)
-				if err != nil {
-					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
-					continue
-				}
-
-				existingMission, err := uc.crdClient.EdgeclustersV1().Missions().Get(context.Background(), name, metaV1.GetOptions{})
-				if errors.IsNotFound(err) {
-					klog.Warningf("message: %s process failure, mission %s not found", msg.GetID(), name)
-					continue
-				}
-
-				if err != nil {
-					klog.Warningf("message: %s process failure with error: %s, name: %s", msg.GetID(), err, name)
-					continue
-				}
-
-				if existingMission.State == nil {
-					existingMission.State = map[string]string{}
-				}
-
-				aggregateState(&(existingMission.State), missionStateRequest.State, missionStateRequest.ClusterName)
-				mission, err := uc.crdClient.EdgeclustersV1().Missions().Update(context.Background(), existingMission, metaV1.UpdateOptions{})
-				if err != nil {
-					klog.Warningf("message: %s process failure, update mission failed with error: %s, name: %s", msg.GetID(), err, existingMission.Name)
-					continue
-				}
-				resMsg := model.NewMessage(msg.GetID())
-				resMsg.SetResourceVersion(mission.ResourceVersion)
-				resMsg.Content = "OK"
-				nodeID, err := messagelayer.GetNodeID(msg)
-				if err != nil {
-					klog.Warningf("Message: %s process failure, get node id failed with error: %s", msg.GetID(), err)
-					continue
-				}
-				resource, err := messagelayer.BuildResource(nodeID, namespace, model.ResourceTypeMission, mission.Name)
-				if err != nil {
-					klog.Warningf("Message: %s process failure, build message resource failed with error: %s", msg.GetID(), err)
-					continue
-				}
-				resMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.ResponseOperation)
-				if err = uc.messageLayer.Response(*resMsg); err != nil {
-					klog.Warningf("Message: %s process failure, sending response failed with error: %s", msg.GetID(), err)
-					continue
-				}
-
-				klog.V(4).Infof("message: %s, update mission state successfully, name: %s", msg.GetID(), existingMission.Name)
-
-			default:
-				klog.Warningf("message: %s process failure, mission state operation: %s unsupported", msg.GetID(), msg.GetOperation())
-			}
-			klog.V(4).Infof("message: %s processed successfully", msg.GetID())
 		}
 	}
 }
@@ -1227,34 +971,10 @@ func (uc *UpstreamController) nodeMsgResponse(nodeName, namespace, content strin
 	}
 }
 
-// edgeClusterMsgResponse response message of ResourceTypeEdgeCluster
-func (uc *UpstreamController) edgeClusterMsgResponse(edgeClusterName, namespace, content string, msg model.Message) {
-	resMsg := model.NewMessage(msg.GetID())
-	resMsg.Content = content
-	nodeID, err := messagelayer.GetNodeID(msg)
-	if err != nil {
-		klog.Warningf("Response message: %s failed, get node: %s id failed with error: %s", msg.GetID(), edgeClusterName, err)
-		return
-	}
-
-	resource, err := messagelayer.BuildResource(nodeID, namespace, model.ResourceTypeEdgeCluster, edgeClusterName)
-	if err != nil {
-		klog.Warningf("Response message: %s failed, build message resource failed with error: %s", msg.GetID(), err)
-		return
-	}
-
-	resMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, model.ResponseOperation)
-	if err = uc.messageLayer.Response(*resMsg); err != nil {
-		klog.Warningf("Response message: %s failed, response failed with error: %s", msg.GetID(), err)
-		return
-	}
-}
-
 // NewUpstreamController create UpstreamController from config
 func NewUpstreamController(factory k8sinformer.SharedInformerFactory) (*UpstreamController, error) {
 	uc := &UpstreamController{
 		kubeClient:   client.GetKubeClient(),
-		crdClient:    client.GetCRDClient(),
 		messageLayer: messagelayer.NewContextMessageLayer(),
 	}
 	uc.nodeLister = factory.Core().V1().Nodes().Lister()

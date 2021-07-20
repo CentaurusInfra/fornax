@@ -20,8 +20,6 @@ package scheme
 
 import (
 	devicesv1alpha2 "github.com/kubeedge/kubeedge/cloud/pkg/apis/devices/v1alpha2"
-	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
-	networkingv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/networking/v1"
 	reliablesyncsv1alpha1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/reliablesyncs/v1alpha1"
 	rulesv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/rules/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,8 +34,6 @@ var Codecs = serializer.NewCodecFactory(Scheme)
 var ParameterCodec = runtime.NewParameterCodec(Scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	devicesv1alpha2.AddToScheme,
-	edgeclustersv1.AddToScheme,
-	networkingv1.AddToScheme,
 	reliablesyncsv1alpha1.AddToScheme,
 	rulesv1.AddToScheme,
 }

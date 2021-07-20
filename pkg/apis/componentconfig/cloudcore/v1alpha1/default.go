@@ -95,16 +95,12 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					EndpointsEvent:             constants.DefaultEndpointsEventBuffer,
 					RulesEvent:                 constants.DefaultRulesEventBuffer,
 					RuleEndpointsEvent:         constants.DefaultRuleEndpointsEventBuffer,
-					MissionsEvent:              constants.DefaultMissionsEventBuffer,
 					QueryPersistentVolume:      constants.DefaultQueryPersistentVolumeBuffer,
 					QueryPersistentVolumeClaim: constants.DefaultQueryPersistentVolumeClaimBuffer,
 					QueryVolumeAttachment:      constants.DefaultQueryVolumeAttachmentBuffer,
 					QueryNode:                  constants.DefaultQueryNodeBuffer,
 					UpdateNode:                 constants.DefaultUpdateNodeBuffer,
 					DeletePod:                  constants.DefaultDeletePodBuffer,
-					UpdateEdgeClusterStatus:    constants.DefaultUpdateEdgeClusterStatusBuffer,
-					EdgeClustersEvent:          constants.DefaultEdgeClustersEventBuffer,
-					UpdateMissionState:         constants.DefaultUpdateMissionStateBuffer,
 				},
 				Context: &ControllerContext{
 					SendModule:       metaconfig.ModuleNameCloudHub,
@@ -125,8 +121,6 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					QueryNodeWorkers:                  constants.DefaultQueryNodeWorkers,
 					UpdateNodeWorkers:                 constants.DefaultUpdateNodeWorkers,
 					DeletePodWorkers:                  constants.DefaultDeletePodWorkers,
-					UpdateEdgeClusterStatusWorkers:    constants.DefaultUpdateEdgeClusterStatusWorkers,
-					UpdateMissionStateWorkers:         constants.DefaultUpdateMissionStateWorkers,
 				},
 			},
 			DeviceController: &DeviceController{
@@ -167,11 +161,6 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 				Address:     "0.0.0.0",
 				Port:        9443,
 				RestTimeout: 60,
-			},
-			MissionStatePruner: &MissionStatePruner{
-				Enable:             false,
-				SyncInterval:       constants.DefaultStateSyncInterval,
-				EdgeClusterTimeout: constants.DefaultEdgeClusterTimeout,
 			},
 		},
 		LeaderElection: &componentbaseconfig.LeaderElectionConfiguration{

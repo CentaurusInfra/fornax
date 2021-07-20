@@ -22,7 +22,6 @@ import (
 	"github.com/kubeedge/kubeedge/cloud/pkg/dynamiccontroller"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller"
 	kele "github.com/kubeedge/kubeedge/cloud/pkg/leaderelection"
-	"github.com/kubeedge/kubeedge/cloud/pkg/missionstatepruner"
 	"github.com/kubeedge/kubeedge/cloud/pkg/router"
 	"github.com/kubeedge/kubeedge/cloud/pkg/synccontroller"
 	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/cloudcore/v1alpha1"
@@ -114,5 +113,4 @@ func registerModules(c *v1alpha1.CloudCoreConfig) {
 	cloudstream.Register(c.Modules.CloudStream)
 	router.Register(c.Modules.Router)
 	dynamiccontroller.Register(c.Modules.DynamicController)
-	missionstatepruner.Register(c.Modules.MissionStatePruner)
 }

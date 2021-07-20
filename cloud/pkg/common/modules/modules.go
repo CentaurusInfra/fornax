@@ -22,8 +22,5 @@ const (
 	RouterModuleName = "router"
 	RouterGroupName  = "router"
 
-	MissionStatePrunerModuleName = "missionstatepruner"
-	MissionStatePrunerGroupName  = "missionstatepruner"
-
 	UserGroup = "user"
 )
