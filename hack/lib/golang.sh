@@ -88,7 +88,10 @@ kubeedge::version::get_version_info() {
 
 # Get the value that needs to be passed to the -ldflags parameter of go build
 kubeedge::version::ldflags() {
+
+  echo "1 ##############"
   kubeedge::version::get_version_info
+  echo "2 ##############"
 
   local -a ldflags
   function add_ldflag() {
@@ -99,24 +102,29 @@ kubeedge::version::ldflags() {
       "-X ${KUBEEDGE_GO_PACKAGE}/pkg/version.${key}=${val}"
     )
   }
+  echo "3 ##############"
 
   add_ldflag "buildDate" "$(date ${SOURCE_DATE_EPOCH:+"--date=@${SOURCE_DATE_EPOCH}"} -u +'%Y-%m-%dT%H:%M:%SZ')"
   if [[ -n ${GIT_COMMIT-} ]]; then
     add_ldflag "gitCommit" "${GIT_COMMIT}"
     add_ldflag "gitTreeState" "${GIT_TREE_STATE}"
   fi
+  echo "4 ##############"
 
   if [[ -n ${GIT_VERSION-} ]]; then
     add_ldflag "gitVersion" "${GIT_VERSION}"
   fi
+  echo "5 ##############"
 
   if [[ -n ${GIT_MAJOR-} && -n ${GIT_MINOR-} ]]; then
     add_ldflag "gitMajor" "${GIT_MAJOR}"
     add_ldflag "gitMinor" "${GIT_MINOR}"
   fi
+  echo "6 ##############"
 
   # The -ldflags parameter takes a single string, so join the output.
   echo "${ldflags[*]-}"
+  echo "7 ##############"
 }
 
 
