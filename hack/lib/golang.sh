@@ -89,7 +89,7 @@ kubeedge::version::get_version_info() {
 # Get the value that needs to be passed to the -ldflags parameter of go build
 kubeedge::version::ldflags() {
   echo "1 ##############"
-  # kubeedge::version::get_version_info
+  kubeedge::version::get_version_info
   echo "2 ##############"
 
   local -a ldflags
@@ -216,10 +216,13 @@ kubeedge::golang::build_binaries() {
 
   echo "5 +++++++++++++++++ "
 
+  set -x
   local goldflags gogcflags
   # If GOLDFLAGS is unset, then set it to the a default of "-s -w".
-  #goldflags="${GOLDFLAGS=-s -w -buildid=} $(kubeedge::version::ldflags)"
+  goldflags="${GOLDFLAGS=-s -w -buildid=} $(kubeedge::version::ldflags)"
   gogcflags="${GOGCFLAGS:-}"
+
+  set +x
 
   echo "6 +++++++++++++++++ "
 
