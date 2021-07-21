@@ -20,7 +20,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+echo "1 -----------------"
 KUBEEDGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+echo "2 -----------------"
 source "${KUBEEDGE_ROOT}/hack/lib/init.sh"
-
+echo "3 -----------------"
 kubeedge::golang::build_binaries "$@"
+echo "4 -----------------"
