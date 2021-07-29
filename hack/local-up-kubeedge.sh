@@ -86,6 +86,12 @@ function create_rule_crd {
   kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/router/router_v1_ruleEndpoint.yaml
 }
 
+function create_edgecluster_crd {
+  echo "creating the edgecluster crd..."
+  kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/edgecluster/edgecluster_v1.yaml
+  kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/edgecluster/mission_v1.yaml
+}
+
 function build_cloudcore {
   echo "building the cloudcore..."
   make -C "${KUBEEDGE_ROOT}" WHAT="cloudcore"
@@ -219,6 +225,7 @@ kubectl create ns kubeedge
 create_device_crd
 create_objectsync_crd
 create_rule_crd
+create_edgecluster_crd
 
 generate_streamserver_cert
 
