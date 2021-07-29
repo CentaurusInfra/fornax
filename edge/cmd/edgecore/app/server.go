@@ -15,6 +15,7 @@ import (
 	"github.com/kubeedge/beehive/pkg/core"
 	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/edge/cmd/edgecore/app/options"
+	"github.com/kubeedge/kubeedge/edge/pkg/clusterd"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/dbm"
 	"github.com/kubeedge/kubeedge/edge/pkg/devicetwin"
 	"github.com/kubeedge/kubeedge/edge/pkg/edged"
@@ -70,30 +71,34 @@ offering HTTP client capabilities to components of cloud to reach HTTP servers r
 			// To help debugging, immediately log version
 			klog.Infof("Version: %+v", version.Get())
 
-			// Check the running environment by default
-			checkEnv := os.Getenv("CHECK_EDGECORE_ENVIRONMENT")
-			// Force skip check if enable metaserver
-			if config.Modules.MetaManager.MetaServer.Enable {
-				checkEnv = "false"
+			hostnameOverride, err := os.Hostname()
+			if err != nil {
+				hostnameOverride = constants.DefaultHostnameOverride
 			}
-			if checkEnv != "false" {
-				// Check running environment before run edge core
-				if err := environmentCheck(); err != nil {
-					klog.Fatal(fmt.Errorf("Failed to check the running environment: %v", err))
+			localIP, _ := util.GetLocalIP(hostnameOverride)
+			if !opts.EdgeClusterMode {
+				// Check the running environment by default
+				checkEnv := os.Getenv("CHECK_EDGECORE_ENVIRONMENT")
+				if checkEnv != "false" {
+					// Check running environment before run edge core
+					if err := environmentCheck(); err != nil {
+						klog.Fatal(fmt.Errorf("Failed to check the running environment: %v", err))
+					}
+				}
+				// get edge node local ip
+				if config.Modules.Edged.NodeIP == "" {
+					config.Modules.Edged.NodeIP = localIP
+				}
+			} else {
+				if config.Modules.Clusterd.NodeIP == "" {
+					config.Modules.Clusterd.NodeIP = localIP
+				}
+				if config.Modules.Clusterd.Name == "" {
+					config.Modules.Clusterd.Name = hostnameOverride
 				}
 			}
 
-			// get edge node local ip
-			if config.Modules.Edged.NodeIP == "" {
-				hostnameOverride, err := os.Hostname()
-				if err != nil {
-					hostnameOverride = constants.DefaultHostnameOverride
-				}
-				localIP, _ := util.GetLocalIP(hostnameOverride)
-				config.Modules.Edged.NodeIP = localIP
-			}
-
-			registerModules(config)
+			registerModules(config, opts.EdgeClusterMode)
 			// start all modules
 			core.Run()
 		},
@@ -145,14 +150,21 @@ func environmentCheck() error {
 }
 
 // registerModules register all the modules started in edgecore
-func registerModules(c *v1alpha1.EdgeCoreConfig) {
-	devicetwin.Register(c.Modules.DeviceTwin, c.Modules.Edged.HostnameOverride)
-	edged.Register(c.Modules.Edged)
+func registerModules(c *v1alpha1.EdgeCoreConfig, edgeClusterMode bool) {
 	edgehub.Register(c.Modules.EdgeHub, c.Modules.Edged.HostnameOverride)
-	eventbus.Register(c.Modules.EventBus, c.Modules.Edged.HostnameOverride)
-	metamanager.Register(c.Modules.MetaManager)
-	servicebus.Register(c.Modules.ServiceBus)
-	edgestream.Register(c.Modules.EdgeStream, c.Modules.Edged.HostnameOverride, c.Modules.Edged.NodeIP)
+	metamanager.Register(c.Modules.MetaManager, edgeClusterMode)
+
+	if edgeClusterMode {
+		clusterd.Register(c.Modules.Clusterd)
+		edgestream.Register(c.Modules.EdgeStream, c.Modules.Clusterd.Name, c.Modules.Clusterd.NodeIP)
+	} else {
+		devicetwin.Register(c.Modules.DeviceTwin, c.Modules.Edged.HostnameOverride)
+		edged.Register(c.Modules.Edged)
+		eventbus.Register(c.Modules.EventBus, c.Modules.Edged.HostnameOverride)
+		servicebus.Register(c.Modules.ServiceBus)
+		edgestream.Register(c.Modules.EdgeStream, c.Modules.Edged.HostnameOverride, c.Modules.Edged.NodeIP)
+	}
+
 	test.Register(c.Modules.DBTest)
 	// Note: Need to put it to the end, and wait for all models to register before executing
 	dbm.InitDBConfig(c.DataBase.DriverName, c.DataBase.AliasName, c.DataBase.DataSource)

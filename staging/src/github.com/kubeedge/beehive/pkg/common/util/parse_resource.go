@@ -20,6 +20,19 @@ func ParseResourceEdge(resource string, operation string) (string, string, strin
 	}
 }
 
+// ParseResourceEdgeCluster parses resource at edge cluster and returns namespace, resource_type, resource_id.
+// If operation of msg is query list, return namespace, pod.
+func ParseResourceEdgeCluster(resource string, operation string) (string, string, string, error) {
+	resourceSplits := strings.Split(resource, "/")
+	if len(resourceSplits) == 3 {
+		return resourceSplits[0], resourceSplits[1], resourceSplits[2], nil
+	} else if operation == model.QueryOperation || operation == model.ResponseOperation || operation == model.UpdateOperation && len(resourceSplits) == 2 {
+		return resourceSplits[0], resourceSplits[1], "", nil
+	} else {
+		return "", "", "", fmt.Errorf("Resource: %s format incorrect, or Operation: %s is not query/response/update", resource, operation)
+	}
+}
+
 // ParseResourceMaster parses resource at master and returns cluster_id, node_id, namespace, resource_type, resource_id.
 // If operation of msg is query list, return cluster_id, node_id, namespace, pod.
 func ParseResourceMaster(resource string, operation string) (string, string, string, string, string, error) {
