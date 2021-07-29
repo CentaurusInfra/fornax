@@ -28,4 +28,7 @@ const (
 	TunnelPort      string = "tunnelport"
 
 	TunnelPortRecordAnnotationKey string = "tunnelportrecord.kubeedge.io"
+
+	MissionStatePrunerModuleName = "missionstatepruner"
+	MissionStatePrunerGroupName  = "missionstatepruner"
 )
