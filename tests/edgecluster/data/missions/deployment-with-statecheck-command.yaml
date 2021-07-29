@@ -1,0 +1,30 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: deployment-state-working
+spec:
+  statecheck:
+    command: "echo working"
+  content: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: deployment-state-working
+      namespace: default
+      labels:
+        app: nginx
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: nginx
+      template:
+        metadata:
+          labels:
+            app: nginx
+        spec:
+          containers:
+          - name: nginx
+            image: nginx:1.7.9
+            ports:
+            - containerPort: 80
