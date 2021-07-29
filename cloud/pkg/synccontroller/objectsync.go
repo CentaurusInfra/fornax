@@ -3,6 +3,7 @@ package synccontroller
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -26,14 +27,35 @@ import (
 func (sctl *SyncController) manageObject(sync *v1alpha1.ObjectSync) {
 	var object metav1.Object
 
-	gv, err := schema.ParseGroupVersion(sync.Spec.ObjectAPIVersion)
-	if err != nil {
-		return
+	var gvr schema.GroupVersionResource
+	var resourceNamespace string
+	// A workaround to get the GVR for the CRD types in edgeclusters.kubeedge.io group
+	// A better solution is to register the CRD types with the scheme
+	if strings.Contains(sync.Spec.ObjectAPIVersion, "kubeedge.io") {
+		klog.V(4).Infof("Managing kubeedge CRD object: (%v)", sync.Spec)
+		oavParts := strings.Split(sync.Spec.ObjectAPIVersion, "/")
+		if len(oavParts) != 2 {
+			klog.Errorf("Invalid ObjectAPIVersion (%v)", sync.Spec.ObjectAPIVersion)
+		}
+		gvr = schema.GroupVersionResource{
+			Group:    oavParts[0],
+			Version:  oavParts[1],
+			Resource: sync.Spec.ObjectKind,
+		}
+		if sync.Spec.ObjectKind == "missions" || sync.Spec.ObjectKind == "edgeclusters" {
+			resourceNamespace = metav1.NamespaceNone
+		}
+	} else {
+		gv, err := schema.ParseGroupVersion(sync.Spec.ObjectAPIVersion)
+		if err != nil {
+			return
+		}
+		gvr = gv.WithResource(sync.Spec.ObjectKind)
+		resourceNamespace = sync.Namespace
 	}
-	gvr := gv.WithResource(sync.Spec.ObjectKind)
 
 	//ret, err := informers.GetInformersManager().GetDynamicSharedInformerFactory().ForResource(gvr).Lister().ByNamespace(sync.Namespace).Get(sync.Spec.ObjectName)
-	ret, err := sctl.kubeclient.Resource(gvr).Namespace(sync.Namespace).Get(context.TODO(), sync.Spec.ObjectName, metav1.GetOptions{})
+	ret, err := sctl.kubeclient.Resource(gvr).Namespace(resourceNamespace).Get(context.TODO(), sync.Spec.ObjectName, metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("failed to get obj(gvr:%v,namespace:%v,name:%v), %v", gvr, sync.Namespace, sync.Spec.ObjectName, err)
 		return
@@ -71,6 +93,12 @@ func (sctl *SyncController) manageObject(sync *v1alpha1.ObjectSync) {
 
 func sendEvents(err error, nodeName string, sync *v1alpha1.ObjectSync, resourceType string,
 	objectResourceVersion string, obj interface{}) {
+	// some workaround to keep the CRD resource type consistent with the edge side
+	// TODO: investigate to have a more systematic way to handle.
+	if resourceType == "missions" {
+		resourceType = "mission"
+	}
+
 	runtimeObj := obj.(runtime.Object)
 	if err := util.SetMetaType(runtimeObj); err != nil {
 		klog.Warningf("failed to set metatype :%v", err)

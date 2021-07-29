@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
@@ -32,12 +33,30 @@ func SetMetaType(obj runtime.Object) error {
 		return err
 	}
 	//gvr,_,_ := apiserverlite.ParseKey(accessor.GetSelfLink())
-	kinds, _, err := scheme.Scheme.ObjectKinds(obj)
-	if err != nil {
-		return fmt.Errorf("%v", err)
+	var gvk schema.GroupVersionKind
+	switch {
+	case fmt.Sprintf("%T", obj) == "v1.Mission" || fmt.Sprintf("%T", obj) == "*v1.Mission":
+		gvk = schema.GroupVersionKind{
+			Group:   "edgeclusters.kubeedge.io",
+			Version: "v1",
+			Kind:    "Mission",
+		}
+	case fmt.Sprintf("%T", obj) == "v1.EdgeCluster" || fmt.Sprintf("%T", obj) == "*v1.EdgeCluster":
+		gvk = schema.GroupVersionKind{
+			Group:   "edgeclusters.kubeedge.io",
+			Version: "v1",
+			Kind:    "EdgeCluster",
+		}
+	default:
+		kinds, _, err := scheme.Scheme.ObjectKinds(obj)
+		if err != nil {
+			return fmt.Errorf("%v", err)
+		}
+		gvk = kinds[0]
 	}
-	gvk := kinds[0]
+
 	obj.GetObjectKind().SetGroupVersionKind(gvk)
+
 	klog.V(4).Infof("[metaserver]successfully set MetaType for obj %v, %+v", obj.GetObjectKind(), accessor.GetName())
 	return nil
 }
