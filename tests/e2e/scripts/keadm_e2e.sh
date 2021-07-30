@@ -32,9 +32,17 @@ function build_keadm() {
 }
 
 function prepare_cluster() {
+
   kind create cluster --name test
 
+  # re-install flannel as we run into kubeletNotReady issues from time to time due to NetPlugin not ready
+  sudo rm -rf /opt/cni/bin/
+  sudo rm -rf /etc/cni/net.d/
+  kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+  sleep 10
+
   echo "wait the control-plane ready..."
+
   kubectl wait --for=condition=Ready node/test-control-plane --timeout=60s
 
   kubectl create clusterrolebinding system:anonymous --clusterrole=cluster-admin --user=system:anonymous
