@@ -36,6 +36,12 @@ function check_prerequisites {
 function kind_up_cluster {
   echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT}]"
   kind create cluster ${CLUSTER_CONTEXT}
+
+  # re-install flannel as we run into kubeletNotReady issues from time to time due to NetPlugin not ready
+  sudo rm -rf /opt/cni/bin/
+  sudo rm -rf /etc/cni/net.d/
+  kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+  sleep 10
 }
 
 function uninstall_kubeedge {
