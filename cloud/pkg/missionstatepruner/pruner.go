@@ -121,7 +121,7 @@ func (msp *MissionStatePruner) checkAndPrune() {
 			}
 		}
 		if changed {
-			klog.V(3).Infof("Pruning the state of mission %v ...", mission.Name)
+			klog.V(3).Infof("Updating the state of mission %v ...", mission.Name)
 			_, err := msp.crdClient.EdgeclustersV1().Missions().Update(context.Background(), &mission, metav1.UpdateOptions{})
 			if err != nil {
 				klog.Warningf("Error in updating the state of mission %v: %v", mission.Name, err)

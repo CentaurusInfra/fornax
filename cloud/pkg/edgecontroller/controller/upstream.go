@@ -560,7 +560,6 @@ func (uc *UpstreamController) updateNodeStatus() {
 	}
 }
 
-// createEdgeCluster create a new edgeCluster
 func (uc *UpstreamController) createEdgeCluster(name string, edgeCluster *edgeclustersv1.EdgeCluster) (*edgeclustersv1.EdgeCluster, error) {
 	edgeCluster.Name = name
 	return uc.crdClient.EdgeclustersV1().EdgeClusters().Create(context.Background(), edgeCluster, metaV1.CreateOptions{})
