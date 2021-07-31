@@ -11,6 +11,7 @@ import (
 	"github.com/kubeedge/beehive/pkg/common/util"
 	beehiveContext "github.com/kubeedge/beehive/pkg/core/context"
 	"github.com/kubeedge/beehive/pkg/core/model"
+	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	cloudmodules "github.com/kubeedge/kubeedge/cloud/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/common/constants"
 	connect "github.com/kubeedge/kubeedge/edge/pkg/common/cloudconnection"
@@ -43,19 +44,31 @@ func feedbackError(err error, info string, request model.Message) {
 		errInfo = fmt.Sprintf(info+": %v", err)
 	}
 	errResponse := model.NewErrorMessage(&request, errInfo).SetRoute(MetaManagerModuleName, request.GetGroup())
-	if request.GetSource() == modules.EdgedModuleName {
+	source := request.GetSource()
+	switch source {
+	case modules.EdgedModuleName:
 		sendToEdged(errResponse, request.IsSync())
-	} else {
+	case modules.ClusterdModuleName:
+		sendToClusterd(errResponse, request.IsSync())
+	default:
 		sendToCloud(errResponse)
 	}
 }
 
-func sendToEdged(message *model.Message, sync bool) {
+func sendToEdgeModules(message *model.Message, sync bool, moduleName string) {
 	if sync {
 		beehiveContext.SendResp(*message)
 	} else {
-		beehiveContext.Send(modules.EdgedModuleName, *message)
+		beehiveContext.Send(moduleName, *message)
 	}
+}
+
+func sendToEdged(message *model.Message, sync bool) {
+	sendToEdgeModules(message, sync, modules.EdgedModuleName)
+}
+
+func sendToClusterd(message *model.Message, sync bool) {
+	sendToEdgeModules(message, sync, modules.ClusterdModuleName)
 }
 
 func sendToCloud(message *model.Message) {
@@ -89,6 +102,14 @@ func requireRemoteQuery(resType string) bool {
 		resType == model.ResourceTypeNode
 }
 
+// if resource type is clusterd related
+func isClusterdResource(resType string) bool {
+	return resType == constants.ResourceTypeMission ||
+		resType == constants.ResourceTypeMissionList ||
+		resType == constants.ResourceTypeEdgeCluster ||
+		resType == constants.ResourceTypeEdgeClusterList
+}
+
 func isConnected() bool {
 	return metaManagerConfig.Connected
 }
@@ -109,7 +130,19 @@ func resourceUnchanged(resType string, resKey string, content []byte) bool {
 }
 
 func (m *metaManager) processInsert(message model.Message) {
+	resKey, resType, _ := parseResource(message.GetResource())
 	var err error
+	// If DB already has the item, update it instead of inserting
+	// seems to me this logic should apply to both edged mode and edge-cluster mode
+	// however, I limited to edgecluster mode only to avoid breaking the tests (from chenqianfzh)
+	if isClusterdResource(resType) {
+		dbRecord, err := dao.QueryMeta("key", resKey)
+		if err == nil && len(*dbRecord) > 0 {
+			m.processUpdate(message)
+			return
+		}
+	}
+
 	var content []byte
 	switch message.GetContent().(type) {
 	case []uint8:
@@ -122,8 +155,8 @@ func (m *metaManager) processInsert(message model.Message) {
 			return
 		}
 	}
+
 	imitator.DefaultV2Client.Inject(message)
-	resKey, resType, _ := parseResource(message.GetResource())
 
 	meta := &dao.Meta{
 		Key:   resKey,
@@ -136,11 +169,62 @@ func (m *metaManager) processInsert(message model.Message) {
 		return
 	}
 
-	// Notify edged
-	sendToEdged(&message, false)
+	if isClusterdResource(resType) {
+		sendToClusterd(&message, false)
+	} else {
+		// Notify edged
+		sendToEdged(&message, false)
+	}
 
 	resp := message.NewRespByMessage(&message, OK)
 	sendToCloud(resp)
+}
+
+func processMissionList(content []byte) error {
+	missionRecords, err := dao.QueryAllMetaByType(constants.ResourceTypeMission)
+	if err != nil {
+		return fmt.Errorf("Error in getting mission records in db: %v", err)
+	}
+
+	strayKeys := map[string]bool{}
+	for _, record := range *missionRecords {
+		strayKeys[record.Key] = true
+	}
+	var missionList []edgeclustersv1.Mission
+	err = json.Unmarshal(content, &missionList)
+	if err != nil {
+		return fmt.Errorf("Unmarshal update message content failed, %s", content)
+	}
+
+	for _, mission := range missionList {
+		data, err := json.Marshal(mission)
+		if err != nil {
+			klog.Errorf("Marshal mission content failed, %v", mission)
+			continue
+		}
+
+		daoKey := fmt.Sprintf("%s/%s/%s", "default", constants.ResourceTypeMission, mission.Name)
+		meta := &dao.Meta{
+			Key:   daoKey,
+			Type:  constants.ResourceTypeMission,
+			Value: string(data)}
+		err = dao.InsertOrUpdate(meta)
+		if err != nil {
+			klog.Errorf("Update meta failed, %v", meta)
+			continue
+		}
+
+		delete(strayKeys, daoKey)
+	}
+
+	for k := range strayKeys {
+		err = dao.DeleteMetaByKey(k)
+		if err != nil {
+			klog.Errorf("Error in delete meta %v", k)
+		}
+	}
+
+	return nil
 }
 
 func (m *metaManager) processUpdate(message model.Message) {
@@ -163,7 +247,12 @@ func (m *metaManager) processUpdate(message model.Message) {
 
 	if resourceUnchanged(resType, resKey, content) {
 		resp := message.NewRespByMessage(&message, OK)
-		sendToEdged(resp, message.IsSync())
+		if isClusterdResource(resType) {
+			sendToClusterd(resp, message.IsSync())
+		} else {
+			sendToEdged(resp, message.IsSync())
+		}
+
 		klog.Infof("resource[%s] unchanged, no notice", resKey)
 		return
 	}
@@ -186,8 +275,16 @@ func (m *metaManager) processUpdate(message model.Message) {
 		sendToCloud(&message)
 		resp := message.NewRespByMessage(&message, OK)
 		sendToEdged(resp, message.IsSync())
+	case modules.ClusterdModuleName:
+		sendToCloud(&message)
+		resp := message.NewRespByMessage(&message, OK)
+		sendToClusterd(resp, message.IsSync())
 	case cloudmodules.EdgeControllerModuleName, cloudmodules.DynamicControllerModuleName:
-		sendToEdged(&message, message.IsSync())
+		if isClusterdResource(resType) {
+			sendToClusterd(&message, message.IsSync())
+		} else {
+			sendToEdged(&message, message.IsSync())
+		}
 		resp := message.NewRespByMessage(&message, OK)
 		sendToCloud(resp)
 	case CloudFunctionModel:
@@ -228,7 +325,11 @@ func (m *metaManager) processResponse(message model.Message) {
 
 	// Notify edged if the data is coming from cloud
 	if message.GetSource() == CloudControlerModel {
-		sendToEdged(&message, message.IsSync())
+		if isClusterdResource(resType) {
+			sendToClusterd(&message, message.IsSync())
+		} else {
+			sendToEdged(&message, message.IsSync())
+		}
 	} else {
 		// Send to cloud if the update request is coming from edged
 		sendToCloud(&message)
@@ -251,8 +352,13 @@ func (m *metaManager) processDelete(message model.Message) {
 		return
 	}
 
-	// Notify edged
-	sendToEdged(&message, false)
+	if isClusterdResource(resType) {
+		sendToClusterd(&message, message.IsSync())
+	} else {
+		// Notify edged
+		sendToEdged(&message, false)
+	}
+
 	resp := message.NewRespByMessage(&message, OK)
 	sendToCloud(resp)
 }
@@ -268,7 +374,11 @@ func (m *metaManager) processQuery(message model.Message) {
 		} else {
 			resp := message.NewRespByMessage(&message, *metas)
 			resp.SetRoute(MetaManagerModuleName, resp.GetGroup())
-			sendToEdged(resp, message.IsSync())
+			if m.edgeClusterMode {
+				sendToClusterd(resp, message.IsSync())
+			} else {
+				sendToEdged(resp, message.IsSync())
+			}
 		}
 		return
 	}
@@ -285,7 +395,11 @@ func (m *metaManager) processQuery(message model.Message) {
 	} else {
 		resp := message.NewRespByMessage(&message, *metas)
 		resp.SetRoute(MetaManagerModuleName, resp.GetGroup())
-		sendToEdged(resp, message.IsSync())
+		if m.edgeClusterMode {
+			sendToClusterd(resp, message.IsSync())
+		} else {
+			sendToEdged(resp, message.IsSync())
+		}
 	}
 }
 
@@ -329,7 +443,11 @@ func (m *metaManager) processRemoteQuery(message model.Message) {
 		}
 		resp.BuildHeader(resp.GetID(), originalID, resp.GetTimestamp())
 
-		sendToEdged(&resp, message.IsSync())
+		if isClusterdResource(resType) {
+			sendToClusterd(&message, message.IsSync())
+		} else {
+			sendToEdged(&resp, message.IsSync())
+		}
 
 		respToCloud := message.NewRespByMessage(&resp, OK)
 		sendToCloud(respToCloud)

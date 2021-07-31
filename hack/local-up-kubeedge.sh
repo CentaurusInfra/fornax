@@ -36,6 +36,12 @@ function check_prerequisites {
 function kind_up_cluster {
   echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT}]"
   kind create cluster ${CLUSTER_CONTEXT}
+
+  # re-install flannel as we run into kubeletNotReady issues from time to time due to NetPlugin not ready
+  sudo rm -rf /opt/cni/bin/
+  sudo rm -rf /etc/cni/net.d/
+  kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+  sleep 10
 }
 
 function uninstall_kubeedge {
@@ -84,6 +90,12 @@ function create_rule_crd {
   echo "creating the rule crd..."
   kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/router/router_v1_rule.yaml
   kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/router/router_v1_ruleEndpoint.yaml
+}
+
+function create_edgecluster_crd {
+  echo "creating the edgecluster crd..."
+  kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/edgecluster/edgecluster_v1.yaml
+  kubectl apply -f ${KUBEEDGE_ROOT}/build/crds/edgecluster/mission_v1.yaml
 }
 
 function build_cloudcore {
@@ -219,6 +231,7 @@ kubectl create ns kubeedge
 create_device_crd
 create_objectsync_crd
 create_rule_crd
+create_edgecluster_crd
 
 generate_streamserver_cert
 

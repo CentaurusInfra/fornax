@@ -160,6 +160,19 @@ func NewDefaultEdgeCoreConfig() *EdgeCoreConfig {
 				TunnelServer:            net.JoinHostPort("127.0.0.1", strconv.Itoa(constants.DefaultTunnelPort)),
 				WriteDeadline:           15,
 			},
+			Clusterd: &Clusterd{
+				Enable:                          true,
+				Name:                            "",
+				Kubeconfig:                      "",
+				KubeDistro:                      "k8s",
+				Labels:                          map[string]string{},
+				EdgeClusterStatusUpdateInterval: constants.DefaultEdgeClusterStatusUpdateInterval,
+				MissionStateUpdateInterval:      constants.DefaultMissionStateUpdateInterval,
+				ResyncInterval:                  constants.DefaultStateResyncInterval,
+				RegisterCluster:                 true,
+				RegisterNamespace:               constants.DefaultRegisterNamespace,
+				MissionStateWatchWorkers:        constants.DefaultMissionStateWatchWorkers,
+			},
 		},
 	}
 }

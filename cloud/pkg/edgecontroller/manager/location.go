@@ -18,6 +18,8 @@ type LocationCache struct {
 	secretNode sync.Map
 	// endpoints is a map, key is namespace/endpointsName, value is v1.endpoints
 	endpoints sync.Map
+
+	EdgeClusters sync.Map
 }
 
 // PodConfigMapsAndSecrets return configmaps and secrets used by pod
@@ -196,4 +198,14 @@ func (lc *LocationCache) GetAllEndpoints() []v1.Endpoints {
 		return true
 	})
 	return endpoints
+}
+
+// UpdateEdgeCluster is to maintain the edge cluster name in the cache up-to-date
+func (lc *LocationCache) UpdateEdgeCluster(clustereName string, ready bool) {
+	lc.EdgeClusters.Store(clustereName, ready)
+}
+
+// Delete EdgeCluster from cache
+func (lc *LocationCache) DeleteEdgeCluster(clusterName string) {
+	lc.EdgeClusters.Delete(clusterName)
 }
