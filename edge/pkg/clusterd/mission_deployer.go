@@ -28,7 +28,6 @@ import (
 	edgeclustersv1 "github.com/kubeedge/kubeedge/cloud/pkg/apis/edgeclusters/v1"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
-	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 )
 
 var cacheLock sync.Mutex
@@ -51,10 +50,10 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 	missionYaml, err := buildMissionYaml(mission)
 	if err != nil {
 		// log the error and move on to apply the mission content
-		klog.Errorf("Error in applying mission CRD: %v. Moving on.", err)
+		klog.Errorf("Error in building mission yaml: %v. Moving on.", err)
 	} else {
 		ddeployMissionCmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", missionYaml, config.Config.KubectlCli, config.Config.Kubeconfig)
-		output, err := util.ExecCommandLine(ddeployMissionCmd)
+		output, err := helper.ExecCommandToCluster(ddeployMissionCmd)
 		if err != nil {
 			klog.Errorf("Failed to apply mission %v: %v", mission.Name, err)
 		} else {
@@ -71,7 +70,7 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 	} else {
 		if strings.TrimSpace(mission.Spec.Content) != "" {
 			deployContentCmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
-			output, err := util.ExecCommandLine(deployContentCmd)
+			output, err := helper.ExecCommandToCluster(deployContentCmd)
 			if err != nil {
 				klog.Errorf("Failed to apply the content of mission %v: %v", mission.Name, err)
 			} else {
@@ -98,7 +97,7 @@ func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
 	} else {
 		if strings.TrimSpace(mission.Spec.Content) != "" {
 			deployContentCmd := fmt.Sprintf("printf \"%s\" | %s delete --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
-			_, err := util.ExecCommandLine(deployContentCmd)
+			_, err := helper.ExecCommandToCluster(deployContentCmd)
 			if err != nil {
 				klog.Errorf("Failed to revert the content of mission %v: %v", mission.Name, err)
 			} else {
@@ -108,7 +107,7 @@ func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
 	}
 
 	deleteMissionCmd := fmt.Sprintf("%s delete mission %s --kubeconfig=%s", config.Config.KubectlCli, mission.Name, config.Config.Kubeconfig)
-	if _, err := util.ExecCommandLine(deleteMissionCmd); err != nil {
+	if _, err := helper.ExecCommandToCluster(deleteMissionCmd); err != nil {
 		return fmt.Errorf("Failed to delete mission %v: %v", mission.Name, err)
 	}
 
@@ -183,10 +182,9 @@ func (m *MissionDeployer) AlignMissionList(missionList []*edgeclustersv1.Mission
 
 // create a yaml to use by "kubectl apply" command
 func buildMissionYaml(input *edgeclustersv1.Mission) (string, error) {
-	// probably due to the json encoder in arktos, the commmnd "kubectl apply missiong" in arktos
+	// probably due to the json encoder in arktos, the commmnd "kubectl apply mission" in arktos
 	// fails if the mission.StateCheck.Command is nil or empty.
 	// We trick it with a string with one space.
-	// TODO: We need a non-hacky way.
 	if input.Spec.StateCheck.Command == "" {
 		input.Spec.StateCheck.Command = " "
 	}
@@ -212,7 +210,7 @@ func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo 
 	statePatch := fmt.Sprintf("{\"state\":{\"%s\": %s}}", LocalEdgeCluster, stateInfo)
 
 	stateUpdateCommand := fmt.Sprintf("%s patch mission %s --kubeconfig=%s --patch '%s' --type=merge", config.Config.KubectlCli, missionName, config.Config.Kubeconfig, statePatch)
-	_, err := util.ExecCommandLine(stateUpdateCommand)
+	_, err := helper.ExecCommandToCluster(stateUpdateCommand)
 	if err != nil {
 		if strings.Contains(err.Error(), "Error from server (NotFound):") {
 			klog.V(3).Infof("Mission %v is deleted.", missionName)
@@ -256,7 +254,7 @@ func (m *MissionDeployer) UpdateState(mission *edgeclustersv1.Mission, force boo
 	}
 
 	stateCommand := m.GetStateCheckCommand(mission)
-	output, err := util.ExecCommandLine(stateCommand)
+	output, err := helper.ExecCommandToCluster(stateCommand)
 	if err != nil {
 		if strings.Contains(err.Error(), "Error from server (NotFound):") {
 			klog.V(3).Infof("Mission %v is deleted. Return", mission.Name)

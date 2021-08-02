@@ -22,7 +22,7 @@ spec:
       type: date
       JSONPath: .status.lastheartbeat
     - name: Healthy
-      type: boolean
+      type: string
       description: Whether the cluster is healthy and accessible
       JSONPath: .status.healthy
     - name: Nodes

@@ -33,7 +33,6 @@ import (
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
-	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/edge/pkg/edgehub"
@@ -89,20 +88,16 @@ func (esr *EdgeClusterStatusReporter) initialEdgeCluster() (*edgeclustersv1.Edge
 }
 
 func (esr *EdgeClusterStatusReporter) prepareCluster() error {
-	if !helper.TestClusterReady() {
-		return fmt.Errorf("the cluster is not reacheable")
-	}
-
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	missionCrdFilePath := filepath.Join(basedir, MissionCrdFile)
 	deployMissioCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, missionCrdFilePath)
-	if _, err := util.ExecCommandLine(deployMissioCrdCmd); err != nil {
+	if _, err := helper.ExecCommandToCluster(deployMissioCrdCmd); err != nil {
 		return fmt.Errorf("Failed to deploy mission crd: %v", err)
 	}
 
 	edgeClusterCrdFilePath := filepath.Join(basedir, EdgeClusterCrdFile)
 	deployEdgeClusterCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, edgeClusterCrdFilePath)
-	if _, err := util.ExecCommandLine(deployEdgeClusterCrdCmd); err != nil {
+	if _, err := helper.ExecCommandToCluster(deployEdgeClusterCrdCmd); err != nil {
 		return fmt.Errorf("Failed to deploy edgecluster crd: %v", err)
 	}
 
@@ -158,23 +153,34 @@ func (esr *EdgeClusterStatusReporter) getEdgeClusterStatusRequest(edgeCluster *e
 	var edgeClusterStatus = &edgeapi.EdgeClusterStatusRequest{}
 	edgeClusterStatus.UID = esr.clusterd.uid
 	edgeClusterStatus.Status = *edgeCluster.Status.DeepCopy()
-	edgeClusterStatus.Status.Healthy = helper.TestClusterReady()
 
-	edgeClusterStatus.Status.EdgeClusters = helper.GetLocalClusterScopeResourceNames("edgeclusters", "")
-	edgeClusterStatus.Status.Nodes = helper.GetLocalClusterScopeResourceNames("nodes", "")
-	edgeClusterStatus.Status.EdgeNodes = helper.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge")
+	clusterHealthy := helper.TestClusterReady()
 
-	var receivedMissions []string
-	var matchededMissions []string
-	for k, v := range esr.missionDeployer.MissionMatch {
-		receivedMissions = append(receivedMissions, k)
-		if v {
-			matchededMissions = append(matchededMissions, k)
+	if clusterHealthy {
+		edgeClusterStatus.Status.Healthy = "healthy"
+		edgeClusterStatus.Status.EdgeClusters = helper.GetLocalClusterScopeResourceNames("edgeclusters", "")
+		edgeClusterStatus.Status.Nodes = helper.GetLocalClusterScopeResourceNames("nodes", "")
+		edgeClusterStatus.Status.EdgeNodes = helper.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge")
+
+		var receivedMissions []string
+		var matchededMissions []string
+		for k, v := range esr.missionDeployer.MissionMatch {
+			receivedMissions = append(receivedMissions, k)
+			if v {
+				matchededMissions = append(matchededMissions, k)
+			}
 		}
-	}
 
-	edgeClusterStatus.Status.ReceivedMissions = receivedMissions
-	edgeClusterStatus.Status.ActiveMissions = matchededMissions
+		edgeClusterStatus.Status.ReceivedMissions = receivedMissions
+		edgeClusterStatus.Status.ActiveMissions = matchededMissions
+	} else {
+		edgeClusterStatus.Status.Healthy = "unreachable"
+		edgeClusterStatus.Status.EdgeClusters = []string{}
+		edgeClusterStatus.Status.Nodes = []string{}
+		edgeClusterStatus.Status.EdgeNodes = []string{}
+		edgeClusterStatus.Status.ReceivedMissions = []string{}
+		edgeClusterStatus.Status.ActiveMissions = []string{}
+	}
 
 	klog.V(4).Infof("EdgeCluster Status %#v", edgeClusterStatus)
 
