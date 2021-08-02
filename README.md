@@ -1,115 +1,39 @@
-# KubeEdge
-[![Build Status](https://travis-ci.org/kubeedge/kubeedge.svg?branch=master)](https://travis-ci.org/kubeedge/kubeedge)
-[![Go Report Card](https://goreportcard.com/badge/github.com/kubeedge/kubeedge)](https://goreportcard.com/report/github.com/kubeedge/kubeedge)
-[![LICENSE](https://img.shields.io/github/license/kubeedge/kubeedge.svg?style=flat-square)](/LICENSE)
-[![Releases](https://img.shields.io/github/release/kubeedge/kubeedge/all.svg?style=flat-square)](https://github.com/kubeedge/kubeedge/releases)
-[![Documentation Status](https://readthedocs.org/projects/kubeedge/badge/?version=latest)](https://kubeedge.readthedocs.io/en/latest/?badge=latest)
+# Fornax 
 
-<img src="./docs/images/kubeedge-logo-only.png">
+Fornax is an open source edge-computing framework for managing compute resources on the edge environment. As one of the pillar projects of Centaurus, Fornax is designed to solve some of the key edge computing challenges such as limited computing resources, heterogeneous resource types, layered topology, unreliable network, and long latency. With Fornax, end-user's edge application workloads could be easily deployed in a distributed hierarchical edge environment with topologies that best matches the physical and logical structure. Fornax also offers high performance virtualized networking for workload communication within and between edge clusters. 
 
-KubeEdge is built upon Kubernetes and extends native containerized application orchestration and device management to hosts at the Edge.
-It consists of cloud part and edge part, provides core infrastructure support for networking, application deployment and metadata synchronization
-between cloud and edge. It also supports **MQTT** which enables edge devices to access through edge nodes.
+## Key Features  
+Here are some of the distinguishing features of Fornax:
 
-With KubeEdge it is easy to get and deploy existing complicated machine learning, image recognition, event processing and other high level applications to the Edge.
-With business logic running at the Edge, much larger volumes of data can be secured & processed locally where the data is produced.
-With data processed at the Edge, the responsiveness is increased dramatically and data privacy is protected.
+1. **Computing nodes and clusters on the edge**: Both computing nodes and clusters can run on the edge.  
+2. **Hierarchical topology**: Edge clusters can be structured in multi-layer tree-like topologies, providing best mapping to end-user scenarios. 
+3. **Flexible flavors**: Supports multiple flavors of clusters on the edge, e.g. Arktos, K8s and K3s.
+4. **Edge networking**: Multi-tenant edge cluster networking (Supporting concepts like VPC, Subnet) and high performance inter-cluster communication.
 
-KubeEdge is an incubation-level hosted project by the [Cloud Native Computing Foundation](https://cncf.io) (CNCF). KubeEdge incubation [announcement](https://www.cncf.io/blog/2020/09/16/toc-approves-kubeedge-as-incubating-project/) by CNCF.
+## Design 
+Fornax models edge as an [m-ary tree](https://en.wikipedia.org/wiki/M-ary_tree) where an [Arktos](https://github.com/CentaurusInfra/arktos) control plane sits at the root of the tree in the cloud, and leaf tree nodes represent computing nodes on the edge. The sub-trees in the m-ary tree are standalone clusters, and the roots of the sub-trees are control planes for edge clusters. As usual with Arktos clusters, there are also compute nodes in the cloud managed by the root level Arktos control plane.
 
-**Note**:
+The following graph is an example of such an edge model.
 
-The versions before *1.4* have not been supported, please try upgrade.
+<img src="docs/fornax-design/images/centaurus-edge-model.png"
+     width="50%"
+     align="center"/>
 
-## Advantages
+For detailed design please see the [design doc](docs/fornax-design/530_design.md)
 
-- **Kubernetes-native support**: Managing edge applications and edge devices in the cloud with fully compatible Kubernetes APIs.
-- **Cloud-Edge Reliable Collaboration**: Ensure reliable messages delivery without loss over unstable cloud-edge network.
-- **Edge Autonomy**: Ensure edge nodes run autonomously and the applications in edge run normally, when the cloud-edge network is unstable or edge is offline and restarted.
-- **Edge Devices Management**: Managing edge devices through Kubernetes native APIs implemented by CRD.
-- **Extremely Lightweight Edge Agent**: Extremely lightweight Edge Agent(EdgeCore) to run on resource constrained edge.
-
-
-## How It Works
-
-KubeEdge consists of cloud part and edge part.
-
-### Architecture
-
-<div  align="center">
-<img src="./docs/images/kubeedge_arch.png" width = "85%" align="center">
-</div>
-
-### In the Cloud
-- [CloudHub](https://kubeedge.io/en/docs/architecture/cloud/cloudhub): a web socket server responsible for watching changes at the cloud side, caching and sending messages to EdgeHub.
-- [EdgeController](https://kubeedge.io/en/docs/architecture/cloud/edge_controller): an extended kubernetes controller which manages edge nodes and pods metadata so that the data can be targeted to a specific edge node.
-- [DeviceController](https://kubeedge.io/en/docs/architecture/cloud/device_controller): an extended kubernetes controller which manages devices so that the device metadata/status data can be synced between edge and cloud.
-
-
-### On the Edge
-- [EdgeHub](https://kubeedge.io/en/docs/architecture/edge/edgehub): a web socket client responsible for interacting with Cloud Service for the edge computing (like Edge Controller as in the KubeEdge Architecture). This includes syncing cloud-side resource updates to the edge, and reporting edge-side host and device status changes to the cloud.
-- [Edged](https://kubeedge.io/en/docs/architecture/edge/edged): an agent that runs on edge nodes and manages containerized applications.
-- [EventBus](https://kubeedge.io/en/docs/architecture/edge/eventbus): a MQTT client to interact with MQTT servers (mosquitto), offering publish and subscribe capabilities to other components.
-- [ServiceBus](https://kubeedge.io/en/docs/architecture/edge/servicebus): a HTTP client to interact with HTTP servers (REST), offering HTTP client capabilities to components of cloud to reach HTTP servers running at edge.
-- [DeviceTwin](https://kubeedge.io/en/docs/architecture/edge/devicetwin): responsible for storing device status and syncing device status to the cloud. It also provides query interfaces for applications.
-- [MetaManager](https://kubeedge.io/en/docs/architecture/edge/metamanager): the message processor between edged and edgehub. It is also responsible for storing/retrieving metadata to/from a lightweight database (SQLite).
-
-## Kubernetes compatibility
-
-|                        | Kubernetes 1.13 | Kubernetes 1.14 | Kubernetes 1.15 | Kubernetes 1.16 | Kubernetes 1.17 | Kubernetes 1.18 | Kubernetes 1.19 |
-|------------------------|-----------------|-----------------|-----------------|-----------------|-----------------|-----------------|-----------------|
-| KubeEdge 1.5           | ✓               | ✓               | ✓               | ✓               | ✓             | ✓               | ✓               |
-| KubeEdge 1.6           | ✓               | ✓               | ✓               | ✓               | ✓             | ✓               | ✓               |
-| KubeEdge 1.7           | ✓               | ✓               | ✓               | ✓               | ✓             | ✓               | ✓               |
-| KubeEdge HEAD (master) | ✓               | ✓               | ✓               | ✓               | ✓             | ✓               | ✓               |
-
-Key:
-* `✓` KubeEdge and the Kubernetes version are exactly compatible.
-* `+` KubeEdge has features or API objects that may not be present in the Kubernetes version.
-* `-` The Kubernetes version has features or API objects that KubeEdge can't use.
-
-## Guides
-
-Get start with this [doc](https://kubeedge.io/en/docs).
-
-See our documentation on [kubeedge.io](https://kubeedge.io) for more details.
-
-To learn deeply about KubeEdge, try some examples on [examples](https://github.com/kubeedge/examples).
-
-## Roadmap
-
-* [2021 Roadmap](./docs/roadmap.md#roadmap)
-
-## Meeting
-
-Regular Community Meeting:
-- Europe Time: **Wednesdays at 16:30-17:30 Beijing Time** (biweekly, starting from Feb. 19th 2020).
-([Convert to your timezone.](https://www.thetimezoneconverter.com/?t=16%3A30&tz=GMT%2B8&))
-- Pacific Time: **Wednesdays at 10:00-11:00 Beijing Time** (biweekly, starting from Feb. 26th 2020).
-([Convert to your timezone.](https://www.thetimezoneconverter.com/?t=10%3A00&tz=GMT%2B8&))
+## Release Plan
+Fornax is targeting its first release in the later summer of 2021. Release plan can be found in the [release plan](docs/fornax-design/release_plan.md).
 
 Resources:
-- [Meeting notes and agenda](https://docs.google.com/document/d/1Sr5QS_Z04uPfRbA7PrXr3aPwCRpx7EtsyHq7mp6CnHs/edit)
-- [Meeting recordings](https://www.youtube.com/playlist?list=PLQtlO1kVWGXkRGkjSrLGEPJODoPb8s5FM)
-- [Meeting link](https://zoom.us/j/4167237304)
-- [Meeting Calendar](https://calendar.google.com/calendar/embed?src=8rjk8o516vfte21qibvlae3lj4%40group.calendar.google.com) | [Subscribe](https://calendar.google.com/calendar?cid=OHJqazhvNTE2dmZ0ZTIxcWlidmxhZTNsajRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ)
 
-## Contact
-
-If you need support, start with the [troubleshooting guide](https://kubeedge.io/en/docs/developer/troubleshooting), and work your way through the process that we've outlined.
-
-If you have questions, feel free to reach out to us in the following ways:
-
-- [mailing list](https://groups.google.com/forum/#!forum/kubeedge)
-- [slack](https://join.slack.com/t/kubeedge/shared_invite/enQtNjc0MTg2NTg2MTk0LWJmOTBmOGRkZWNhMTVkNGU1ZjkwNDY4MTY4YTAwNDAyMjRkMjdlMjIzYmMxODY1NGZjYzc4MWM5YmIxZjU1ZDI)
-- [twitter](https://twitter.com/kubeedge)
+- [Meeting notes and agenda](docs/meeting-notes)
+- [Online meeting link](https://futurewei.zoom.us/j/93051877352?from=addon)
+- [slack](https://arktosworkspace.slack.com/archives/C01AWKCCNLA)
 
 ## Contributing
 
-If you're interested in being a contributor and want to get involved in
-developing the KubeEdge code, please see [CONTRIBUTING](./CONTRIBUTING.md) for
-details on submitting patches and the contribution workflow.
+If you're interested in being a contributor and want to get involved in the Fornax code, please see [CONTRIBUTING](./CONTRIBUTING.md) for details on submitting patches and the contribution workflow.
 
 ## License
 
-KubeEdge is under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
+Fornax is under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
