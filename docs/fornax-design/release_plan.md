@@ -1,9 +1,9 @@
 ## 8/30 Release
 
-### Project Name
-
 ### Features
-The key featues for the 830 release. For detailed design please see [this](https://github.com/CentaurusInfra/fornax/tree/main/docs/fornax-design/530_design.md)
+1. Edge clusters
+1. Cascading edge clusters
+2. Inter-cluster communication
 
 #### Edge Cluster
 The goal of this feature is to allow running K8s-flavored cluster on the edge and can both tolerate network and node failure. In specific:
@@ -18,7 +18,7 @@ The goal of this feature is to allow running K8s-flavored cluster on the edge an
   - Edge clusters and workloads resume status and workload syncing when network connection recovers
   - Edge workloads continue functioning if resource allows when edge cluster nodes fail (K8s cluster behavior)
 
-#### Cascading Cluster
+#### Cascading Edge Cluster
 The goal of this feature is to allow multiple edge clusters to be cascaded in hierarchical form. In specific:
 
 - K8s flavored clusters (vanilla K8s, Arktos & K3s) running on the edge can be attached to another edge cluster
@@ -28,28 +28,6 @@ The goal of this feature is to allow multiple edge clusters to be cascaded in hi
   - Change-based reporting
 
 #### Edge Cluster Communication
-The goal of this feature is to allow workloads (pods, VMs) to communicate with each other when distrubted into multiple edge clusters. In specific:
-
-- Pods from the same VPC and in different physical clusters to communicate
-- (Stretch goal) Pods from different VPCs in different physical clusters to communicate
-
-### Demo Application
-- MEC
-  - TBD
-- UWB
-  - TBD
-
-### Validation
-
-#### Edge Cluster
-- Start cloud control plane with Arktos
-- Start the edge control components for the cloud side
-- Start an edge cluster of choiced flavor with edge agent
-- Attach the edge cluster to the cloud control plane
-
-#### Cascading Edge Clusters
-
-
-
-#### Edge Cluster Communication
+The goal of this feature is to allow workloads (pods) to communicate with each other when distrubted into multiple edge clusters. In specific:
+- Pods from the same VPC and in different physical clusters to communicate using Pod IPs
 
