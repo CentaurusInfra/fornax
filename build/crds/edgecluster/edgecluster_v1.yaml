@@ -21,10 +21,10 @@ spec:
     - name: LastHearbeat
       type: date
       JSONPath: .status.lastheartbeat
-    - name: Healthy
-      type: boolean
+    - name: HealthStatus
+      type: string
       description: Whether the cluster is healthy and accessible
-      JSONPath: .status.healthy
+      JSONPath: .status.healthstatus
     - name: Nodes
       type: string
       description: nodes
@@ -35,9 +35,9 @@ spec:
     - name: EdgeClusters
       type: string
       JSONPath: .status.edgeclusters
-    - name: ReceivedMissions
+    - name: Received_Missions
       type: string
       JSONPath: .status.receivedmissions
-    - name: MatchedMissions
+    - name: Matched_Missions
       type: string
       JSONPath: .status.activemissions

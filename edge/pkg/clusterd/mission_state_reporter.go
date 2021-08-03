@@ -29,7 +29,6 @@ import (
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
-	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
 )
 
 const (
@@ -91,7 +90,7 @@ func (m *MissionStateReporter) Run() {
 
 func (m *MissionStateReporter) stateSyncer() {
 	getMissionCmd := fmt.Sprintf(" %s get missions -o json --kubeconfig=%s | jq .items ", config.Config.KubectlCli, config.Config.Kubeconfig)
-	output, err := util.ExecCommandLine(getMissionCmd)
+	output, err := helper.ExecCommandToCluster(getMissionCmd)
 	if err != nil {
 		klog.Errorf("Failed to get mission: %v", err)
 		return
@@ -99,7 +98,7 @@ func (m *MissionStateReporter) stateSyncer() {
 
 	var missionList []edgeclustersv1.Mission
 	if err = json.Unmarshal([]byte(output), &missionList); err != nil {
-		klog.Errorf("Failed to unmarshal mission list: %v", err)
+		klog.Errorf("Failed to unmarshal mission list: %v, output : (%v)", err, output)
 	}
 
 	newmissionCache := map[string]edgeclustersv1.Mission{}
@@ -128,6 +127,11 @@ func (m *MissionStateReporter) stateSyncer() {
 // syncQueue processes the queue of mission objects.
 func (m *MissionStateReporter) syncQueue() {
 	workFunc := func() bool {
+		if !helper.TestClusterReady() {
+			klog.V(3).Infof("Cluster is unhealthy, skipping mission status checking.")
+			return false
+		}
+
 		key, quit := m.queue.Get()
 		if quit {
 			return true

@@ -33,7 +33,7 @@ func GetLocalClusterScopeResourceNames(resType string, label string) []string {
 		labelOption = "-l " + label
 	}
 	getResourceCmd := fmt.Sprintf(" %s get %s -o json %s --kubeconfig=%s | jq -r '.items[] | [.metadata.name] | @tsv' ", config.Config.KubectlCli, resType, labelOption, config.Config.Kubeconfig)
-	output, err := util.ExecCommandLine(getResourceCmd)
+	output, err := ExecCommandToCluster(getResourceCmd)
 	if err != nil {
 		klog.Errorf("Failed to get %v: %v", resType, err)
 		return []string{err.Error()}
@@ -52,7 +52,7 @@ func GetLocalClusterScopeResourceNames(resType string, label string) []string {
 
 func GetMissionByName(name string) (*edgeclustersv1.Mission, error) {
 	getMissionCmd := fmt.Sprintf("%s get mission %s --kubeconfig=%s -o json ", config.Config.KubectlCli, name, config.Config.Kubeconfig)
-	output, err := util.ExecCommandLine(getMissionCmd)
+	output, err := ExecCommandToCluster(getMissionCmd)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get mission %v: %v", name, err)
 	}
@@ -126,8 +126,8 @@ func EqualMaps(a map[string]string, b map[string]string) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// for some reason we still need to find out, the same mission spec objects may be no longer deep-equal.
-// For instance, a null array turns into an empty array. This function aims to detect two spec objects are truly equal.
+// As Json encoder may turn an empty array into nil, two same mission spec object may no long deep-equal.
+// This function aims to detect two spec objects are truly equal.
 func EqualMissionSpec(a edgeclustersv1.MissionSpec, b edgeclustersv1.MissionSpec) bool {
 	if strings.TrimSpace(a.Content) != strings.TrimSpace(b.Content) {
 		return false
@@ -146,4 +146,12 @@ func EqualMissionSpec(a edgeclustersv1.MissionSpec, b edgeclustersv1.MissionSpec
 	}
 
 	return true
+}
+
+func ExecCommandToCluster(commandline string) (string, error) {
+	if !TestClusterReady() {
+		return "", fmt.Errorf("cluster unreachable")
+	}
+
+	return util.ExecCommandLine(commandline)
 }
