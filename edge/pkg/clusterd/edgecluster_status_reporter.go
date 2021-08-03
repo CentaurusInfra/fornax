@@ -41,6 +41,8 @@ import (
 const (
 	MissionCrdFile     = "mission_v1.yaml"
 	EdgeClusterCrdFile = "edgecluster_v1.yaml"
+	HealthyStatus      = "healthy"
+	UnreachableStatus  = "unreachable"
 )
 
 var initEdgeCluster edgeclustersv1.EdgeCluster
@@ -157,7 +159,7 @@ func (esr *EdgeClusterStatusReporter) getEdgeClusterStatusRequest(edgeCluster *e
 	clusterHealthy := helper.TestClusterReady()
 
 	if clusterHealthy {
-		edgeClusterStatus.Status.Healthy = "healthy"
+		edgeClusterStatus.Status.HealthStatus = HealthyStatus
 		edgeClusterStatus.Status.EdgeClusters = helper.GetLocalClusterScopeResourceNames("edgeclusters", "")
 		edgeClusterStatus.Status.Nodes = helper.GetLocalClusterScopeResourceNames("nodes", "")
 		edgeClusterStatus.Status.EdgeNodes = helper.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge")
@@ -174,7 +176,7 @@ func (esr *EdgeClusterStatusReporter) getEdgeClusterStatusRequest(edgeCluster *e
 		edgeClusterStatus.Status.ReceivedMissions = receivedMissions
 		edgeClusterStatus.Status.ActiveMissions = matchededMissions
 	} else {
-		edgeClusterStatus.Status.Healthy = "unreachable"
+		edgeClusterStatus.Status.HealthStatus = UnreachableStatus
 		edgeClusterStatus.Status.EdgeClusters = []string{}
 		edgeClusterStatus.Status.Nodes = []string{}
 		edgeClusterStatus.Status.EdgeNodes = []string{}

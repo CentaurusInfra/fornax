@@ -20,6 +20,7 @@ import (
 
 const (
 	EdgeClusterOffline = "cluster unreacheable"
+	HealthyStatus      = "healthy"
 )
 
 //Mission state pruner periodically update the mission state when some edgeclusters become offline
@@ -76,7 +77,7 @@ func (msp *MissionStatePruner) checkAndPrune() {
 	deadEdgeClusters := map[string]bool{}
 	newDeadEdgeClusters := false
 	for _, ec := range allEdgeClusters.Items {
-		if time.Since(ec.Status.LastHeartBeat.Time) > msp.edgeclusterTimeout || ec.Status.Healthy != "healthy" {
+		if time.Since(ec.Status.LastHeartBeat.Time) > msp.edgeclusterTimeout || ec.Status.HealthStatus != HealthyStatus {
 			deadEdgeClusters[ec.Name] = true
 			if _, ok := msp.deadEdgeClustersCache[ec.Name]; !ok {
 				newDeadEdgeClusters = true

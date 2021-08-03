@@ -100,7 +100,7 @@ type EdgeClusterSpec struct {
 
 // EdgeClusterStatus is a description of Mission status
 type EdgeClusterStatus struct {
-	Healthy string `json:"healthy,omitempty"`
+	HealthStatus string `json:"healthstatus,omitempty"`
 
 	EdgeClusters []string `json:"edgeclusters,omitempty"`
 
