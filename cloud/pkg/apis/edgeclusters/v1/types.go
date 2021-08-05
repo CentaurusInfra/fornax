@@ -83,7 +83,7 @@ type EdgeCluster struct {
 	// +optional
 	Spec EdgeClusterSpec `json:"spec"`
 
-	Status EdgeClusterStatus `json:"status,omitempty"`
+	State EdgeClusterState `json:"state,omitempty"`
 }
 
 // EdgeCluster indicates the edge cluster config
@@ -98,11 +98,11 @@ type EdgeClusterSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// EdgeClusterStatus is a description of Mission status
-type EdgeClusterStatus struct {
+// EdgeClusterState is a description of Mission status
+type EdgeClusterState struct {
 	HealthStatus string `json:"healthstatus,omitempty"`
 
-	EdgeClusters []string `json:"edgeclusters,omitempty"`
+	EdgeClusters map[string]string `json:"edgeclusters,omitempty"`
 
 	Nodes []string `json:"nodes,omitempty"`
 

@@ -106,7 +106,7 @@ type UpstreamController struct {
 	updateNodeChan            chan model.Message
 	podDeleteChan             chan model.Message
 	ruleStatusChan            chan model.Message
-	edgeClusterStatusChan     chan model.Message
+	edgeClusterStateChan      chan model.Message
 	missionStateChan          chan model.Message
 
 	// lister
@@ -157,8 +157,8 @@ func (uc *UpstreamController) Start() error {
 	for i := 0; i < int(config.Config.Load.UpdateRuleStatusWorkers); i++ {
 		go uc.updateRuleStatus()
 	}
-	for i := 0; i < int(config.Config.Load.UpdateEdgeClusterStatusWorkers); i++ {
-		go uc.updateEdgeClusterStatus()
+	for i := 0; i < int(config.Config.Load.UpdateEdgeClusterStateWorkers); i++ {
+		go uc.updateEdgeClusterState()
 	}
 	for i := 0; i < int(config.Config.Load.UpdateMissionStateWorkers); i++ {
 		go uc.updateMissionState()
@@ -224,8 +224,8 @@ func (uc *UpstreamController) dispatchMessage() {
 			}
 		case model.ResourceTypeRuleStatus:
 			uc.ruleStatusChan <- msg
-		case model.ResourceTypeEdgeClusterStatus:
-			uc.edgeClusterStatusChan <- msg
+		case model.ResourceTypeEdgeClusterState:
+			uc.edgeClusterStateChan <- msg
 		case model.ResourceTypeMissionState:
 			uc.missionStateChan <- msg
 
@@ -565,13 +565,13 @@ func (uc *UpstreamController) createEdgeCluster(name string, edgeCluster *edgecl
 	return uc.crdClient.EdgeclustersV1().EdgeClusters().Create(context.Background(), edgeCluster, metaV1.CreateOptions{})
 }
 
-func (uc *UpstreamController) updateEdgeClusterStatus() {
+func (uc *UpstreamController) updateEdgeClusterState() {
 	for {
 		select {
 		case <-beehiveContext.Done():
-			klog.Warning("stop updateEdgeClusterStatus")
+			klog.Warning("stop updateEdgeClusterState")
 			return
-		case msg := <-uc.edgeClusterStatusChan:
+		case msg := <-uc.edgeClusterStateChan:
 			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
 
 			var data []byte
@@ -632,8 +632,8 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 				uc.edgeClusterMsgResponse(name, namespace, "OK", msg)
 
 			case model.UpdateOperation:
-				edgeClusterStatusRequest := &edgeapi.EdgeClusterStatusRequest{}
-				err := json.Unmarshal(data, edgeClusterStatusRequest)
+				edgeClusterStateRequest := &edgeapi.EdgeClusterStateRequest{}
+				err := json.Unmarshal(data, edgeClusterStateRequest)
 				if err != nil {
 					klog.Warningf("message: %s process failure, unmarshal content error: %s", msg.GetID(), err)
 					continue
@@ -650,9 +650,9 @@ func (uc *UpstreamController) updateEdgeClusterStatus() {
 					continue
 				}
 
-				edgeClusterStatusRequest.Status.LastHeartBeat = metaV1.NewTime(time.Now())
-				existingEdgeCluster.Status = edgeClusterStatusRequest.Status
-				edgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().UpdateStatus(context.Background(), existingEdgeCluster, metaV1.UpdateOptions{})
+				edgeClusterStateRequest.State.LastHeartBeat = metaV1.NewTime(time.Now())
+				existingEdgeCluster.State = edgeClusterStateRequest.State
+				edgeCluster, err := uc.crdClient.EdgeclustersV1().EdgeClusters().Update(context.Background(), existingEdgeCluster, metaV1.UpdateOptions{})
 				if err != nil {
 					klog.Warningf("message: %s process failure, update edgeCluster failed with error: %s, name: %s", msg.GetID(), err, existingEdgeCluster.Name)
 					continue
@@ -1252,7 +1252,7 @@ func NewUpstreamController(factory k8sinformer.SharedInformerFactory) (*Upstream
 	uc.updateNodeChan = make(chan model.Message, config.Config.Buffer.UpdateNode)
 	uc.podDeleteChan = make(chan model.Message, config.Config.Buffer.DeletePod)
 	uc.ruleStatusChan = make(chan model.Message, config.Config.Buffer.UpdateNodeStatus)
-	uc.edgeClusterStatusChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterStatus)
+	uc.edgeClusterStateChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterState)
 	uc.missionStateChan = make(chan model.Message, config.Config.Buffer.UpdateMissionState)
 	return uc, nil
 }

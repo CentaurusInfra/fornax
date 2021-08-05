@@ -17,9 +17,11 @@ limitations under the License.
 package clusterd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -42,28 +44,28 @@ const (
 	MissionCrdFile     = "mission_v1.yaml"
 	EdgeClusterCrdFile = "edgecluster_v1.yaml"
 	HealthyStatus      = "healthy"
-	UnreachableStatus  = "unreachable"
+	UnhealthyStatus    = "unhealthy"
 )
 
 var initEdgeCluster edgeclustersv1.EdgeCluster
 
-type EdgeClusterStatusReporter struct {
-	clusterd                        *clusterd
-	edgeClusterStatusUpdateInterval time.Duration
-	missionDeployer                 *MissionDeployer
-	registrationCompleted           bool
+type EdgeClusterStateReporter struct {
+	clusterd                       *clusterd
+	edgeClusterStateUpdateInterval time.Duration
+	missionDeployer                *MissionDeployer
+	registrationCompleted          bool
 }
 
-func NewEdgeClusterStatusReporter(c *clusterd, md *MissionDeployer) *EdgeClusterStatusReporter {
-	return &EdgeClusterStatusReporter{
-		clusterd:                        c,
-		missionDeployer:                 md,
-		edgeClusterStatusUpdateInterval: time.Duration(config.Config.EdgeClusterStatusUpdateInterval) * time.Second,
-		registrationCompleted:           false,
+func NewEdgeClusterStateReporter(c *clusterd, md *MissionDeployer) *EdgeClusterStateReporter {
+	return &EdgeClusterStateReporter{
+		clusterd:                       c,
+		missionDeployer:                md,
+		edgeClusterStateUpdateInterval: time.Duration(config.Config.EdgeClusterStateUpdateInterval) * time.Second,
+		registrationCompleted:          false,
 	}
 }
 
-func (esr *EdgeClusterStatusReporter) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
+func (esr *EdgeClusterStateReporter) initialEdgeCluster() (*edgeclustersv1.EdgeCluster, error) {
 	var ec = &edgeclustersv1.EdgeCluster{}
 
 	if err := esr.prepareCluster(); err != nil {
@@ -89,7 +91,7 @@ func (esr *EdgeClusterStatusReporter) initialEdgeCluster() (*edgeclustersv1.Edge
 	return ec, nil
 }
 
-func (esr *EdgeClusterStatusReporter) prepareCluster() error {
+func (esr *EdgeClusterStateReporter) prepareCluster() error {
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	missionCrdFilePath := filepath.Join(basedir, MissionCrdFile)
 	deployMissioCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, missionCrdFilePath)
@@ -106,18 +108,18 @@ func (esr *EdgeClusterStatusReporter) prepareCluster() error {
 	return nil
 }
 
-func (esr *EdgeClusterStatusReporter) setInitEdgeClusterStatus(ec *edgeclustersv1.EdgeCluster) {
-	initEdgeCluster.Status = *ec.Status.DeepCopy()
+func (esr *EdgeClusterStateReporter) setInitEdgeClusterState(ec *edgeclustersv1.EdgeCluster) {
+	initEdgeCluster.State = *ec.State.DeepCopy()
 }
 
-func (esr *EdgeClusterStatusReporter) registerEdgeCluster() error {
+func (esr *EdgeClusterStateReporter) registerEdgeCluster() error {
 	ec, err := esr.initialEdgeCluster()
 	if err != nil {
 		klog.Errorf("Unable to construct edgeclustersv1.EdgeCluster object for edge: %v", err)
 		return err
 	}
 
-	esr.setInitEdgeClusterStatus(ec)
+	esr.setInitEdgeClusterState(ec)
 
 	if !config.Config.RegisterCluster {
 		//when register-edgeCluster set to false, do not auto register edgeCluster
@@ -126,7 +128,7 @@ func (esr *EdgeClusterStatusReporter) registerEdgeCluster() error {
 		return nil
 	}
 
-	resource := fmt.Sprintf("%s/%s/%s", esr.clusterd.namespace, model.ResourceTypeEdgeClusterStatus, ec.Name)
+	resource := fmt.Sprintf("%s/%s/%s", esr.clusterd.namespace, model.ResourceTypeEdgeClusterState, ec.Name)
 	klog.Infof("Attempting to register edgeCluster (%s), %s", ec.Name, resource)
 	edgeClusterInfoMsg := message.BuildMsg(modules.MetaGroup, "", modules.ClusterdModuleName, resource, model.InsertOperation, ec)
 
@@ -151,18 +153,18 @@ func (esr *EdgeClusterStatusReporter) registerEdgeCluster() error {
 	return nil
 }
 
-func (esr *EdgeClusterStatusReporter) getEdgeClusterStatusRequest(edgeCluster *edgeclustersv1.EdgeCluster) (*edgeapi.EdgeClusterStatusRequest, error) {
-	var edgeClusterStatus = &edgeapi.EdgeClusterStatusRequest{}
-	edgeClusterStatus.UID = esr.clusterd.uid
-	edgeClusterStatus.Status = *edgeCluster.Status.DeepCopy()
+func (esr *EdgeClusterStateReporter) getEdgeClusterStateRequest(edgeCluster *edgeclustersv1.EdgeCluster) (*edgeapi.EdgeClusterStateRequest, error) {
+	var edgeClusterState = &edgeapi.EdgeClusterStateRequest{}
+	edgeClusterState.UID = esr.clusterd.uid
+	edgeClusterState.State = *edgeCluster.State.DeepCopy()
 
-	clusterHealthy := helper.TestClusterReady()
+	edgeClusterState.State.HealthStatus = GetLocalClusterStatus()
 
-	if clusterHealthy {
-		edgeClusterStatus.Status.HealthStatus = HealthyStatus
-		edgeClusterStatus.Status.EdgeClusters = helper.GetLocalClusterScopeResourceNames("edgeclusters", "")
-		edgeClusterStatus.Status.Nodes = helper.GetLocalClusterScopeResourceNames("nodes", "")
-		edgeClusterStatus.Status.EdgeNodes = helper.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge")
+	if edgeClusterState.State.HealthStatus == HealthyStatus {
+		//edgeClusterState.State.EdgeClusters = helper.GetLocalClusterScopeResourceNames("edgeclusters", "")
+		edgeClusterState.State.EdgeClusters = GetEdgeClusterStates()
+		edgeClusterState.State.Nodes = helper.GetLocalClusterScopeResourceNames("nodes", "")
+		edgeClusterState.State.EdgeNodes = helper.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge")
 
 		var receivedMissions []string
 		var matchededMissions []string
@@ -173,30 +175,29 @@ func (esr *EdgeClusterStatusReporter) getEdgeClusterStatusRequest(edgeCluster *e
 			}
 		}
 
-		edgeClusterStatus.Status.ReceivedMissions = receivedMissions
-		edgeClusterStatus.Status.ActiveMissions = matchededMissions
+		edgeClusterState.State.ReceivedMissions = receivedMissions
+		edgeClusterState.State.ActiveMissions = matchededMissions
 	} else {
-		edgeClusterStatus.Status.HealthStatus = UnreachableStatus
-		edgeClusterStatus.Status.EdgeClusters = []string{}
-		edgeClusterStatus.Status.Nodes = []string{}
-		edgeClusterStatus.Status.EdgeNodes = []string{}
-		edgeClusterStatus.Status.ReceivedMissions = []string{}
-		edgeClusterStatus.Status.ActiveMissions = []string{}
+		edgeClusterState.State.EdgeClusters = map[string]string{}
+		edgeClusterState.State.Nodes = []string{}
+		edgeClusterState.State.EdgeNodes = []string{}
+		edgeClusterState.State.ReceivedMissions = []string{}
+		edgeClusterState.State.ActiveMissions = []string{}
 	}
 
-	klog.V(4).Infof("EdgeCluster Status %#v", edgeClusterStatus)
+	klog.V(4).Infof("EdgeCluster Status %#v", edgeClusterState)
 
-	return edgeClusterStatus, nil
+	return edgeClusterState, nil
 }
 
-func (esr *EdgeClusterStatusReporter) updateEdgeClusterStatus() error {
-	edgeClusterStatus, err := esr.getEdgeClusterStatusRequest(&initEdgeCluster)
+func (esr *EdgeClusterStateReporter) updateEdgeClusterState() error {
+	edgeClusterState, err := esr.getEdgeClusterStateRequest(&initEdgeCluster)
 	if err != nil {
-		klog.Errorf("Unable to construct api.EdgeClusterStatusRequest object for edge: %v", err)
+		klog.Errorf("Unable to construct api.EdgeClusterStateRequest object for edge: %v", err)
 		return err
 	}
 
-	err = esr.clusterd.metaClient.EdgeClusterStatus(esr.clusterd.namespace).Update(config.Config.Name, *edgeClusterStatus)
+	err = esr.clusterd.metaClient.EdgeClusterState(esr.clusterd.namespace).Update(config.Config.Name, *edgeClusterState)
 	if err != nil {
 		klog.Errorf("update edgeCluster status failed, error: %v", err)
 		return err
@@ -205,21 +206,66 @@ func (esr *EdgeClusterStatusReporter) updateEdgeClusterStatus() error {
 	return nil
 }
 
-func (esr *EdgeClusterStatusReporter) syncEdgeClusterStatus() {
+func (esr *EdgeClusterStateReporter) syncEdgeClusterState() {
 	if !esr.registrationCompleted {
 		if err := esr.registerEdgeCluster(); err != nil {
 			klog.Errorf("Register edgeCluster failed: %v", err)
 		}
 	}
 
-	if err := esr.updateEdgeClusterStatus(); err != nil {
+	if err := esr.updateEdgeClusterState(); err != nil {
 		klog.Errorf("Unable to update edgeCluster status: %v", err)
 	}
 }
 
-func (esr *EdgeClusterStatusReporter) Run() {
+func (esr *EdgeClusterStateReporter) Run() {
 	klog.Infof("Starting edgecluster state reporter.")
 	defer klog.Infof("Shutting down edgecluster state reporter")
 
-	go utilwait.Until(esr.syncEdgeClusterStatus, esr.edgeClusterStatusUpdateInterval, utilwait.NeverStop)
+	go utilwait.Until(esr.syncEdgeClusterState, esr.edgeClusterStateUpdateInterval, utilwait.NeverStop)
+}
+
+func GetEdgeClusterStates() map[string]string {
+	aggregatedState := map[string]string{}
+
+	getEcStatesCmd := fmt.Sprintf(" %s get edgeclusters -o json --kubeconfig=%s | jq -r '.items[] | {(.metadata.name): .state}' ", config.Config.KubectlCli, config.Config.Kubeconfig)
+	output, err := helper.ExecCommandToCluster(getEcStatesCmd)
+	if err != nil {
+		klog.Errorf("Failed to get edgecluster states: %v", err)
+		return aggregatedState
+	}
+
+	if strings.TrimSpace(output) == "" {
+		klog.V(4).Infof("There is no edge clusters.")
+		return aggregatedState
+	}
+
+	var ecState map[string]edgeclustersv1.EdgeClusterState
+
+	if err := json.Unmarshal([]byte(output), &ecState); err != nil {
+		klog.Errorf("Error in unmarshall edgecluster state json: (%s), error: %v", output, err)
+		return aggregatedState
+	}
+
+	for edgeCluster, ecState := range ecState {
+		aggregatedState[edgeCluster] = ecState.HealthStatus
+		for subCluster, state := range ecState.EdgeClusters {
+			aggregatedState[edgeCluster+"/"+subCluster] = state
+		}
+	}
+
+	return aggregatedState
+}
+
+func GetLocalClusterStatus() string {
+	clusterHealthy := helper.TestClusterReady()
+
+	var status string
+	if clusterHealthy {
+		status = HealthyStatus
+	} else {
+		status = UnhealthyStatus
+	}
+
+	return status
 }

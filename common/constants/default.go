@@ -92,7 +92,7 @@ const (
 	DefaultUpdateNodeWorkers                 = 4
 	DefaultDeletePodWorkers                  = 4
 	DefaultUpdateRuleStatusWorkers           = 4
-	DefaultUpdateEdgeClusterStatusWorkers    = 1
+	DefaultUpdateEdgeClusterStateWorkers     = 1
 	DefaultUpdateMissionStateWorkers         = 4
 
 	DefaultUpdatePodStatusBuffer            = 1024
@@ -107,7 +107,7 @@ const (
 	DefaultQueryNodeBuffer                  = 1024
 	DefaultUpdateNodeBuffer                 = 1024
 	DefaultDeletePodBuffer                  = 1024
-	DefaultUpdateEdgeClusterStatusBuffer    = 1024
+	DefaultUpdateEdgeClusterStateBuffer     = 1024
 	DefaultUpdateMissionStateBuffer         = 1024
 
 	DefaultPodEventBuffer           = 1
@@ -155,11 +155,11 @@ const (
 	ServerPort = 10350
 
 	// edgeCluster
-	DefaultEdgeClusterStatusUpdateInterval = 10
-	DefaultStateResyncInterval             = 1
-	DefaultMissionStateWatchWorkers        = 4
-	DefaultRegisterNamespace               = "default"
-	DefaultMissionStateUpdateInterval      = 10
+	DefaultEdgeClusterStateUpdateInterval = 10
+	DefaultStateResyncInterval            = 1
+	DefaultMissionStateWatchWorkers       = 4
+	DefaultRegisterNamespace              = "default"
+	DefaultMissionStateUpdateInterval     = 10
 
 	//missionstatepruner
 	DefaultStateSyncInterval  = 60

@@ -270,9 +270,9 @@ type EdgeControllerBuffer struct {
 	UpdateMissionState int32 `json:"updateMissionState,omitempty"`
 	// default 1
 	MissionsEvent int32 `json:"missionsEvent,omitempty"`
-	// UpdateEdgeClusterStatus indicates the buffer of update EdgeCluster status
+	// UpdateEdgeClusterState indicates the buffer of update EdgeCluster status
 	// default 1024
-	UpdateEdgeClusterStatus int32 `json:"updateEdgeClusterStatus,omitempty"`
+	UpdateEdgeClusterState int32 `json:"updateEdgeClusterState,omitempty"`
 	// default 1
 	EdgeClustersEvent int32 `json:"edgeClustersEvent,omitempty"`
 }
@@ -330,9 +330,9 @@ type EdgeControllerLoad struct {
 	// UpdateRuleStatusWorkers indicates the load of update rule status
 	// default 4
 	UpdateRuleStatusWorkers int32 `json:"UpdateRuleStatusWorkers,omitempty"`
-	// UpdateEdgeClusterStatusWorkers indicates the load of update edgecluster status
+	// UpdateEdgeClusterStateWorkers indicates the load of update edgecluster status
 	// default 1
-	UpdateEdgeClusterStatusWorkers int32 `json:"updateEdgeClusterStatusWorkers,omitempty"`
+	UpdateEdgeClusterStateWorkers int32 `json:"updateEdgeClusterStateWorkers,omitempty"`
 	// UpdateMissionStatusWorkers indicates the load of update mission status
 	// default 4
 	UpdateMissionStateWorkers int32 `json:"updateMissionStatusWorkers,omitempty"`

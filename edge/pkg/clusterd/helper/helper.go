@@ -69,7 +69,7 @@ func GetMissionByName(name string) (*edgeclustersv1.Mission, error) {
 func TestClusterReady() bool {
 	testClusterCommand := fmt.Sprintf("%s cluster-info --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
 	if _, err := util.ExecCommandLine(testClusterCommand); err != nil {
-		klog.Errorf("The cluster is unreachable: %v", err)
+		klog.Errorf("The cluster is unhealthy: %v", err)
 		return false
 	}
 
@@ -150,7 +150,7 @@ func EqualMissionSpec(a edgeclustersv1.MissionSpec, b edgeclustersv1.MissionSpec
 
 func ExecCommandToCluster(commandline string) (string, error) {
 	if !TestClusterReady() {
-		return "", fmt.Errorf("cluster unreachable")
+		return "", fmt.Errorf("cluster unhealthy")
 	}
 
 	return util.ExecCommandLine(commandline)

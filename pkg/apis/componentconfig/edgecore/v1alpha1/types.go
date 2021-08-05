@@ -464,9 +464,9 @@ type Clusterd struct {
 	// labels of the cluster
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// EdgeClusterStatusUpdateFrequency indicates EdgeCluster status update frequency (second)
+	// EdgeClusterStateUpdateFrequency indicates EdgeCluster status update frequency (second)
 	// default 10
-	EdgeClusterStatusUpdateInterval int32 `json:"edgeClusterStatusUpdateInterval,omitempty"`
+	EdgeClusterStateUpdateInterval int32 `json:"edgeClusterStateUpdateInterval,omitempty"`
 
 	// MissionStateUpdateFrequency indicates Mission status update frequency (second)
 	// default 10
