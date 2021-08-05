@@ -161,8 +161,7 @@ func (esr *EdgeClusterStateReporter) getEdgeClusterStateRequest(edgeCluster *edg
 	edgeClusterState.State.HealthStatus = GetLocalClusterStatus()
 
 	if edgeClusterState.State.HealthStatus == HealthyStatus {
-		//edgeClusterState.State.EdgeClusters = helper.GetLocalClusterScopeResourceNames("edgeclusters", "")
-		edgeClusterState.State.EdgeClusters = GetEdgeClusterStates()
+		edgeClusterState.State.SubEdgeClusterStates = GetSubEdgeClusterStates()
 		edgeClusterState.State.Nodes = helper.GetLocalClusterScopeResourceNames("nodes", "")
 		edgeClusterState.State.EdgeNodes = helper.GetLocalClusterScopeResourceNames("nodes", "node-role.kubernetes.io/edge")
 
@@ -178,7 +177,7 @@ func (esr *EdgeClusterStateReporter) getEdgeClusterStateRequest(edgeCluster *edg
 		edgeClusterState.State.ReceivedMissions = receivedMissions
 		edgeClusterState.State.ActiveMissions = matchededMissions
 	} else {
-		edgeClusterState.State.EdgeClusters = map[string]string{}
+		edgeClusterState.State.SubEdgeClusterStates = map[string]string{}
 		edgeClusterState.State.Nodes = []string{}
 		edgeClusterState.State.EdgeNodes = []string{}
 		edgeClusterState.State.ReceivedMissions = []string{}
@@ -225,7 +224,7 @@ func (esr *EdgeClusterStateReporter) Run() {
 	go utilwait.Until(esr.syncEdgeClusterState, esr.edgeClusterStateUpdateInterval, utilwait.NeverStop)
 }
 
-func GetEdgeClusterStates() map[string]string {
+func GetSubEdgeClusterStates() map[string]string {
 	aggregatedState := map[string]string{}
 
 	getEcStatesCmd := fmt.Sprintf(" %s get edgeclusters -o json --kubeconfig=%s | jq -r '.items[] | {(.metadata.name): .state}' ", config.Config.KubectlCli, config.Config.Kubeconfig)
@@ -249,7 +248,7 @@ func GetEdgeClusterStates() map[string]string {
 
 	for edgeCluster, ecState := range ecState {
 		aggregatedState[edgeCluster] = ecState.HealthStatus
-		for subCluster, state := range ecState.EdgeClusters {
+		for subCluster, state := range ecState.SubEdgeClusterStates {
 			aggregatedState[edgeCluster+"/"+subCluster] = state
 		}
 	}

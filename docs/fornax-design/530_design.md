@@ -123,7 +123,7 @@ type EdgeCluster struct {
 	// Spec defines desired state of network
 	// +optional
 	Spec EdgeClusterSpec `json:"spec"`
-	State EdgeClusterState `json:"status,omitempty"`
+	State EdgeClusterState `json:"state,omitempty"`
 } 
 ```
 
@@ -221,7 +221,7 @@ For edge cluster status, reporting is carried out in "heartbeat" fashion, simila
 ```golang
 type EdgeClusterState struct {
 	HealthStatus string `json:"healthstatus,omitempty"`
-	EdgeClusters map[string]string `json:"edgeclusters,omitempty"`
+	SubEdgeClusterStates map[string]string `json:"subedgeclusterstates,omitempty"`
 	Nodes []string `json:"nodes,omitempty"`
 	EdgeNodes []string `json:"edgenodes,omitempty"`
 	ReceivedMissions []string `json:"receivedmissions,omitempty"`

@@ -81,7 +81,7 @@ func (msp *MissionStatePruner) checkAndPrune() {
 		if time.Since(ec.State.LastHeartBeat.Time) > msp.edgeclusterTimeout {
 			if ec.State.HealthStatus != DisconnectedStatus {
 				ec.State.HealthStatus = DisconnectedStatus
-				ec.State.EdgeClusters = map[string]string{}
+				ec.State.SubEdgeClusterStates = map[string]string{}
 				ec.State.Nodes = []string{}
 				ec.State.EdgeNodes = []string{}
 				ec.State.ReceivedMissions = []string{}

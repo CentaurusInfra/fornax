@@ -32,9 +32,9 @@ spec:
     - name: EdgeNodes
       type: string
       JSONPath: .state.edgenodes
-    - name: EdgeClusters
+    - name: SubEdgeClusters
       type: string
-      JSONPath: .state.edgeclusters
+      JSONPath: .state.subedgeclusterstates
     - name: Received_Missions
       type: string
       JSONPath: .state.receivedmissions
