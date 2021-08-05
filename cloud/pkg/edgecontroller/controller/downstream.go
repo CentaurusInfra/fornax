@@ -402,7 +402,7 @@ func (dc *DownstreamController) syncEdgeClusters() {
 			case watch.Added:
 				fallthrough
 			case watch.Modified:
-				missionsInEdge := edgeCluster.Status.ReceivedMissions
+				missionsInEdge := edgeCluster.State.ReceivedMissions
 				missionsInEdgeSet := map[string]bool{}
 				for _, m := range missionsInEdge {
 					missionsInEdgeSet[m] = true

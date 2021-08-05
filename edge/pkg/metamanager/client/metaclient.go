@@ -21,7 +21,7 @@ type CoreInterface interface {
 	PodsGetter
 	PodStatusGetter
 	ConfigMapsGetter
-	EdgeClusterStatusGetter
+	EdgeClusterStateGetter
 	MissionStateGetter
 	NodesGetter
 	NodeStatusGetter
@@ -51,8 +51,8 @@ func (m *metaClient) NodeStatus(namespace string) NodeStatusInterface {
 	return newNodeStatus(namespace, m.send)
 }
 
-func (m *metaClient) EdgeClusterStatus(namespace string) EdgeClusterStatusInterface {
-	return newEdgeClusterStatus(namespace, m.send)
+func (m *metaClient) EdgeClusterState(namespace string) EdgeClusterStateInterface {
+	return newEdgeClusterState(namespace, m.send)
 }
 
 func (m *metaClient) MissionState(namespace string) MissionStateInterface {

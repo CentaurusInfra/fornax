@@ -49,13 +49,13 @@ const (
 
 // clusterd is the implementation to manage an edge cluster.
 type clusterd struct {
-	missionDeployer           *MissionDeployer
-	missionStateRepoter       *MissionStateReporter
-	edgeClusterStatusReporter *EdgeClusterStatusReporter
-	uid                       types.UID
-	namespace                 string
-	enable                    bool
-	metaClient                client.CoreInterface
+	missionDeployer          *MissionDeployer
+	missionStateRepoter      *MissionStateReporter
+	edgeClusterStateReporter *EdgeClusterStateReporter
+	uid                      types.UID
+	namespace                string
+	enable                   bool
+	metaClient               client.CoreInterface
 }
 
 // Register register clusterd module
@@ -101,10 +101,10 @@ func newClusterd(enable bool) (*clusterd, error) {
 	}
 
 	c.missionStateRepoter = NewMissionStateReporter(c, missionDeployer)
-	c.edgeClusterStatusReporter = NewEdgeClusterStatusReporter(c, missionDeployer)
+	c.edgeClusterStateReporter = NewEdgeClusterStateReporter(c, missionDeployer)
 
 	go c.missionStateRepoter.Run()
-	go c.edgeClusterStatusReporter.Run()
+	go c.edgeClusterStateReporter.Run()
 
 	return c, nil
 }

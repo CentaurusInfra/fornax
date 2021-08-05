@@ -123,16 +123,16 @@ type EdgeCluster struct {
 	// Spec defines desired state of network
 	// +optional
 	Spec EdgeClusterSpec `json:"spec"`
-	Status EdgeClusterStatus `json:"status,omitempty"`
+	State EdgeClusterState `json:"state,omitempty"`
 } 
 ```
 
-The EdgeCluster object is similar to the Node object in terms of the level of abstraction. An EdgeCluster object is created for each edge cluster. This new abstraction allows the expression of a group of edge clusters connected in a tree structure. Each edge cluster, just like a regular K8s cluster, maintains its pool of nodes. Furthermore, it also maintains an array of subordinate clusters that connect to it. The state of each subordinate edge clusters are stored in the EdgeClusterStatus struct:
+The EdgeCluster object is similar to the Node object in terms of the level of abstraction. An EdgeCluster object is created for each edge cluster. This new abstraction allows the expression of a group of edge clusters connected in a tree structure. Each edge cluster, just like a regular K8s cluster, maintains its pool of nodes. Furthermore, it also maintains an array of subordinate clusters that connect to it. The state of each subordinate edge clusters are stored in the EdgeClusterState struct:
 
 ```golang
-type EdgeClusterStatus struct {
-	EdgeClusters []string `json:"edgeclusters,omitempty"`	// subordinate clusters
-	Healthy bool `json:"healthy,omitempty"`
+type EdgeClusterState struct {
+	EdgeClusters map[string]string `json:"edgeclusters,omitempty"`	// subordinate clusters and their states
+	HealthStatus string `json:"healthstatus,omitempty"`
 	Nodes []string `json:"nodes,omitempty"`
 	EdgeNodes []string `json:"edgenodes,omitempty"`
 	ReceivedMissions []string `json:"receivedmissions,omitempty"`
@@ -219,9 +219,9 @@ Each *Mission* can be deployed to multiple clusters, so the status is a collecti
 For edge cluster status, reporting is carried out in "heartbeat" fashion, similar to the node status update in "vanilla" K8s. Edge cluster status includes the health of the cluster and states of workloads running on it, defined as:
 
 ```golang
-type EdgeClusterStatus struct {
-	Healthy bool `json:"healthy,omitempty"`
-	EdgeClusters []string `json:"edgeclusters,omitempty"`
+type EdgeClusterState struct {
+	HealthStatus string `json:"healthstatus,omitempty"`
+	SubEdgeClusterStates map[string]string `json:"subedgeclusterstates,omitempty"`
 	Nodes []string `json:"nodes,omitempty"`
 	EdgeNodes []string `json:"edgenodes,omitempty"`
 	ReceivedMissions []string `json:"receivedmissions,omitempty"`

@@ -29,10 +29,10 @@ type NodeStatusRequest struct {
 	ExtendResources map[v1.ResourceName][]ExtendResource
 }
 
-// EdgeClusterStatusRequest is Message.Content which come from edge
-type EdgeClusterStatusRequest struct {
-	UID    types.UID
-	Status edgeclustersv1.EdgeClusterStatus
+// EdgeClusterStateRequest is Message.Content which come from edge
+type EdgeClusterStateRequest struct {
+	UID   types.UID
+	State edgeclustersv1.EdgeClusterState
 }
 
 // MissionStateRequest is Message.Content which come from edge
