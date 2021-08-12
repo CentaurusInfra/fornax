@@ -4,8 +4,8 @@ metadata:
   name: deployment-to-label-smart
 spec:
   placement:    
-    matchLabels:
-      smart_edge: true
+    matchlabels:
+      "company" : "futurewei"
   content: |
     apiVersion: apps/v1
     kind: Deployment
