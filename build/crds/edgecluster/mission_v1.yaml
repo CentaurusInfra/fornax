@@ -40,13 +40,6 @@ spec:
                     type: object
                 matchlabels:
                   type: object
-                  additionalProperties:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                      text:
-                        type: string
             statecheck:
               type: object
               properties:
