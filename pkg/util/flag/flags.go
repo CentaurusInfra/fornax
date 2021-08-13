@@ -74,10 +74,12 @@ func Config(name string, value ConfigValue, usage string) *ConfigValue {
 
 const minConfigFlagName = "minconfig"
 const defaultConfigFlagName = "defaultconfig"
+const edgeclusterConfigFlagName = "edgeclusterconfig"
 
 var (
-	minConfigFlag     = Config(minConfigFlagName, ConfigFalse, "Print min configuration for reference, users can refer to it to create their own configuration files, it is suitable for beginners.")
-	defaultConfigFlag = Config(defaultConfigFlagName, ConfigFalse, "Print default configuration for reference, users can refer to it to create their own configuration files, it is suitable for advanced users.")
+	minConfigFlag         = Config(minConfigFlagName, ConfigFalse, "Print min configuration for reference, users can refer to it to create their own configuration files, it is suitable for beginners.")
+	defaultConfigFlag     = Config(defaultConfigFlagName, ConfigFalse, "Print default configuration for reference, users can refer to it to create their own configuration files, it is suitable for advanced users.")
+	edgeclusterConfigFlag = Config(edgeclusterConfigFlagName, ConfigFalse, "Print edgecluster configuration for reference, users can refer to it to create their own configuration files, it is suitable for advanced users.")
 )
 
 // AddFlags registers this package's flags on arbitrary FlagSets, such that they point to the
@@ -85,6 +87,7 @@ var (
 func AddFlags(fs *pflag.FlagSet) {
 	fs.AddFlag(pflag.Lookup(minConfigFlagName))
 	fs.AddFlag(pflag.Lookup(defaultConfigFlagName))
+	fs.AddFlag(pflag.Lookup(edgeclusterConfigFlagName))
 }
 
 // PrintMinConfigAndExitIfRequested will check if the -minconfig flag was passed
@@ -116,6 +119,22 @@ func PrintDefaultConfigAndExitIfRequested(config interface{}) {
 		fmt.Println("# With --defaultconfig flag, users can easily get a default full config file as reference, with all fields (and field descriptions) included and default values set. ")
 		fmt.Println("# Users can modify/create their own configs accordingly as reference. ")
 		fmt.Println("# Because it is a full configuration, it is more suitable for advanced users.")
+		fmt.Printf("\n%v\n\n", string(data))
+		os.Exit(0)
+	}
+}
+
+// PrintEdgeClusterConfigAndExitIfRequested will check if the -edgeclusterconfig flag was passed
+// and, if so, print the default edgecluster config and exit.
+func PrintEdgeClusterConfigAndExitIfRequested(config interface{}) {
+	if *edgeclusterConfigFlag == ConfigTrue {
+		data, err := yaml.Marshal(config)
+		if err != nil {
+			fmt.Printf("Marshal default config to yaml error %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("# With --edgeclusterConfigFlag flag, users can easily get a edgecluster config as reference. ")
+		fmt.Println("# Users can modify/create their own configs accordingly as reference. ")
 		fmt.Printf("\n%v\n\n", string(data))
 		os.Exit(0)
 	}
