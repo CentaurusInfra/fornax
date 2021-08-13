@@ -23,15 +23,7 @@ spec:
       JSONPath: .state.lastheartbeat
     - name: HealthStatus
       type: string
-      description: Whether the cluster is healthy and accessible
       JSONPath: .state.healthstatus
-    - name: Nodes
-      type: string
-      description: nodes
-      JSONPath: .state.nodes
-    - name: EdgeNodes
-      type: string
-      JSONPath: .state.edgenodes
     - name: SubEdgeClusters
       type: string
       JSONPath: .state.subedgeclusterstates
