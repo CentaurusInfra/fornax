@@ -1,6 +1,6 @@
 # Fornax End-to-End Test for 2021-8-30 Release
 
-This test suite verifies the features for 2021-8-30 release. Detaile explanation about these features are given in [design doc](https://github.com/CentaurusInfra/fornax/tree/main/docs/fornax-design/530_design.md). 
+This test suite verifies the features for 2021-8-30 release. Detailed explanation about these features are given in [design doc](https://github.com/CentaurusInfra/fornax/tree/main/docs/fornax-design/530_design.md). 
 
 The following tests assume four clusters, denoted as A,B,C and D, are created and configured for tests. A,B,C are kubernetes clusters created using kubeadm, while cluster D is an arktos cluster started by running script arktos-up.sh (https://github.com/CentaurusInfra/arktos/blob/master/hack/arktos-up.sh). These clusters are configured in a hierarchical topology, where Cluster B is an edge cluster to Cluster A, C edge to B, and D edge to C. Detailed instructions on how to configure the hierarchical connection among these clusters are given in the doc test_cluster_setup.md in the same directory as this doc. 
 
@@ -15,7 +15,7 @@ Test Case 1: Register Hierarchical Edge Clusters with Cloud
 
 Test Case 3: An edge cluster re-connects to the cloud
 
-Test Case 5: An edge cluster continue to work when disconnected from the cloud
+Test Case 5: An edge cluster continues to work when disconnected from the cloud
 
 Test Case 6: An edge cluster conintues to monintor its sub-edge-clusters when disconnected from cloud
 
@@ -35,15 +35,15 @@ Test Case 10: The mission status of a cluster is "cluster unreachable" if cluste
 
 Test Case 11: Delete workload to edge clusters using mission
 
-Test Case 12: Deploy workload to an edge cluster with specific name
+Test Case 12: Deploy workload to an edge cluster with a specific name
 
 Test Case 13: Deploy workload to selective edge clusters with given labels
 
 Test Case 15: An edge cluster picks up the new mission added during its disconnection when reconnected to the cloud
 
-Test Case 16: An edge cluster updates the mission updated during its disconnection when reconnected to the cloud
+Test Case 16: An edge cluster picks up the change when reconnected if the mission is updated during its disconnection
 
-Test Case 17: An edge cluster deletes the mission deleted during its disconnection when reconnected to the cloud
+Test Case 17: An edge cluster deletes a mission when reconnected if the mission is deleted during its disconnection 
 
 Test Case 18: The mission content deleted in edge cluster will be re-instated
 
@@ -61,10 +61,10 @@ Test Case 20: The status of edge cluster is "Unhealthy" if the clusterd is conne
 
 ## Test Cases
 
-**Note: By default, the commands in this doc are run from the root directory of the fornax repo. If not specified, the command is run on the operating machine of Cluster A, which will be referred as "root operator machine" in the rest of this document.**
+**Note: By default, the commands in this doc are run from the root directory of the fornax repo. If not specified, the command is run on the machine of Cluster A, which will be referred as "root operator machine" in the rest of this document.**
 
 
-**Test Case 1: Register Cascading Edge Clusters with Cloud**
+**Test Case 1: Register Hierarchical Edge Clusters with Cloud**
 
 Step 1: start kubeedge cloudcore in the root operator machine, using command:
 ```
@@ -169,7 +169,7 @@ kubectl get deployment --kubeconfig=[edge_cluster_kubeconfig]
 Verify that the deployment specified in the mission content is created in the edge clusters of B, C, D. 
 
 
-**Test Case 5: An edge cluster continue to work when disconnected from the cloud**
+**Test Case 5: An edge cluster continues to work when disconnected from the cloud**
 
 Continuing from the previous test case, do the following:
 
@@ -286,7 +286,7 @@ kubectl get deployment --kubeconfig=[edge_cluster_kubeconfig]
 ```
 Verify that the deployment specified in the mission content is gone in each edge cluster. 
 
-**Test Case 12: Deploy workload to an edge cluster with specific name**
+**Test Case 12: Deploy workload to an edge cluster with a specific name**
 
 Step 1. update tests/edgecluster/data/missions/deployment-to-given-clusters.yaml to change the value of spec/placement/cluster/Name to be the name of cluster C.
 
@@ -427,7 +427,7 @@ kubectl get deployment --kubeconfig=[edge_cluster_kubeconfig]
 ```
 Verify that the deployment specified in the mission content is created in the edge clusters B, C and D.  
 
-**Test Case 16: An edge cluster updates the mission updated during its disconnection when reconnected to the cloud**
+**Test Case 16: An edge cluster picks up the change when reconnected if the mission is updated during its disconnection**
 
 Continuing from the previous test case, do the following:
 
@@ -468,7 +468,7 @@ kubectl get deployment --kubeconfig=[edge_cluster_kubeconfig]
 Verify that the number of replicas in the deployment is updated in the edge clusters B, C and D. 
 
 
-**Test Case 17: An edge cluster deletes the mission deleted during its disconnection when reconnected to the cloud**
+**Test Case 17: An edge cluster deletes a mission when reconnected if the mission is deleted during its disconnection **
 
 Continuing from the previous test case, do the following:
 

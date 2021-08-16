@@ -77,9 +77,9 @@ const defaultConfigFlagName = "defaultconfig"
 const edgeclusterConfigFlagName = "edgeclusterconfig"
 
 var (
-	minConfigFlag         = Config(minConfigFlagName, ConfigFalse, "Print min configuration for reference, users can refer to it to create their own configuration files, it is suitable for beginners.")
-	defaultConfigFlag     = Config(defaultConfigFlagName, ConfigFalse, "Print default configuration for reference, users can refer to it to create their own configuration files, it is suitable for advanced users.")
-	edgeclusterConfigFlag = Config(edgeclusterConfigFlagName, ConfigFalse, "Print edgecluster configuration for reference, users can refer to it to create their own configuration files, it is suitable for advanced users.")
+	minConfigFlag         = Config(minConfigFlagName, ConfigFalse, "Print min configuration for reference. Users can refer to it to create their own configuration files. It is suitable for beginners.")
+	defaultConfigFlag     = Config(defaultConfigFlagName, ConfigFalse, "Print default configuration for reference. Users can refer to it to create their own configuration files. It is suitable for advanced users.")
+	edgeclusterConfigFlag = Config(edgeclusterConfigFlagName, ConfigFalse, "Print edgecluster configuration for reference. Users can refer to it to create their own configuration files. It is suitable for advanced users.")
 )
 
 // AddFlags registers this package's flags on arbitrary FlagSets, such that they point to the

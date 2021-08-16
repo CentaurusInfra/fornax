@@ -31,7 +31,7 @@ Copy the kubeconfig files of cluster A, B, C and D to the root operator machine.
 ### In machine A, do the following
 
 
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to latest version of main branch.
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test.
 
 Build the binaries of edgecore and cloudcore using the commands
 ```
@@ -75,7 +75,7 @@ kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
 
 
 ### In machine B
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to latest version of main branch.
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test.
 
 Build the binaries of edgecore and cloudcore using the commands
 ```
@@ -96,7 +96,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_A_kubeconfig_file]
 ```
 
 ### In machine C
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to latest version of main branch.
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test.
 
 Build the binaries of edgecore and cloudcore using the commands
 ```
@@ -117,7 +117,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 ```
 
 ### In machine D
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to latest version of main branch.
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test.
 
 Build the binary of edgecore 
 ```
