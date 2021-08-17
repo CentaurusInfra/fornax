@@ -53,6 +53,7 @@ offering HTTP client capabilities to components of cloud to reach HTTP servers r
 			verflag.PrintAndExitIfRequested()
 			flag.PrintMinConfigAndExitIfRequested(v1alpha1.NewMinEdgeCoreConfig())
 			flag.PrintDefaultConfigAndExitIfRequested(v1alpha1.NewDefaultEdgeCoreConfig())
+			flag.PrintEdgeClusterConfigAndExitIfRequested(v1alpha1.NewEdgeClusterEdgeCoreConfig())
 			flag.PrintFlags(cmd.Flags())
 
 			if errs := opts.Validate(); len(errs) > 0 {

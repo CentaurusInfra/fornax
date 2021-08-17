@@ -196,6 +196,7 @@ func NewMinCloudCoreConfig() *CloudCoreConfig {
 		},
 		Modules: &Modules{
 			CloudHub: &CloudHub{
+				Enable:            true,
 				NodeLimit:         1000,
 				TLSCAFile:         constants.DefaultCAFile,
 				TLSCAKeyFile:      constants.DefaultCAKeyFile,

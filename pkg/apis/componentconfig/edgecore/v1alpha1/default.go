@@ -237,3 +237,48 @@ func NewMinEdgeCoreConfig() *EdgeCoreConfig {
 		},
 	}
 }
+
+// NewEdgeClusterEdgeCoreConfig returns a common EdgeCoreConfig object
+func NewEdgeClusterEdgeCoreConfig() *EdgeCoreConfig {
+	hostnameOverride, err := os.Hostname()
+	if err != nil {
+		hostnameOverride = constants.DefaultHostnameOverride
+	}
+	localIP, _ := util.GetLocalIP(hostnameOverride)
+	return &EdgeCoreConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       Kind,
+			APIVersion: path.Join(GroupName, APIVersion),
+		},
+		DataBase: &DataBase{
+			DataSource: DataBaseDataSource,
+		},
+		Modules: &Modules{
+			Clusterd: &Clusterd{
+				Enable:     true,
+				Kubeconfig: "/root/edgecluster.kubeconfig",
+				KubeDistro: "k8s",
+				NodeIP:     localIP,
+			},
+			EdgeHub: &EdgeHub{
+				Enable:            true,
+				Heartbeat:         15,
+				TLSCAFile:         constants.DefaultCAFile,
+				TLSCertFile:       constants.DefaultCertFile,
+				TLSPrivateKeyFile: constants.DefaultKeyFile,
+				WebSocket: &EdgeHubWebSocket{
+					Enable:           true,
+					HandshakeTimeout: 30,
+					ReadDeadline:     15,
+					Server:           net.JoinHostPort(localIP, "10000"),
+					WriteDeadline:    15,
+				},
+				HTTPServer: (&url.URL{
+					Scheme: "https",
+					Host:   net.JoinHostPort(localIP, "10002"),
+				}).String(),
+				Token: "",
+			},
+		},
+	}
+}

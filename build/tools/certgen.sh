@@ -8,9 +8,20 @@ readonly certPath=${CERT_PATH:-/etc/kubeedge/certs}
 readonly subject=${SUBJECT:-/C=CN/ST=Zhejiang/L=Hangzhou/O=KubeEdge/CN=kubeedge.io}
 
 genCA() {
+    IPs=$@
     openssl genrsa -des3 -out ${caPath}/rootCA.key -passout pass:kubeedge.io 4096
-    openssl req -x509 -new -nodes -key ${caPath}/rootCA.key -sha256 -days 3650 \
-    -subj ${subject} -passin pass:kubeedge.io -out ${caPath}/rootCA.crt
+
+    if  [ -z "$IPs" ] ;then
+        openssl req -x509 -new -nodes -key ${caPath}/rootCA.key -sha256 -days 3650 \
+        -subj ${subject} -passin pass:kubeedge.io -out ${caPath}/rootCA.crt
+    else
+        SAN="IP.1:127.0.0.1"
+        for ip in ${IPs[*]}; do
+            SAN="${SAN},IP:${ip}"
+        done
+        openssl req -x509 -new -nodes -key ${caPath}/rootCA.key -sha256 -days 3650 \
+        -subj ${subject} -passin pass:kubeedge.io -out ${caPath}/rootCA.crt -addext "subjectAltName=${SAN}"
+    fi
 }
 
 ensureCA() {
@@ -58,7 +69,7 @@ genCertAndKey() {
     ensureCA
     local name=$1
     genCsr $name
-    genCert $name
+    genCert $name ${@:2}
 }
 
 stream() {
