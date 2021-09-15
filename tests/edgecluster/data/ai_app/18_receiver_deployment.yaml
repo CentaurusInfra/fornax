@@ -1,0 +1,45 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-receiver-deployment
+spec:
+  missionresource: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: receiver-deployment
+      namespace: face
+    spec:
+      selector:
+        matchLabels:
+          app: receiver
+      replicas: 1
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 1
+          maxUnavailable: 1
+      template:
+        metadata:
+          labels:
+            app: receiver
+        spec:
+          terminationGracePeriodSeconds: 15
+          containers:
+          - name: receiver
+            image: skarlso/kube-receiver-alpine:1.1.3
+            ports:
+            - containerPort: 8000
+              hostPort: 8000
+            args:
+              - --db-host=mysql.face.svc.cluster.local
+              - --db-username-password=$(MYSQL_USERPASSWORD)
+              - --db-port=3306
+              - --db-dbname=kube
+              - --producer-address=nsqd.face.svc.cluster.local:4150
+            env:
+            - name: MYSQL_USERPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kube-face-secret
+                  key: mysql_userpassword

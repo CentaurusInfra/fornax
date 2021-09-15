@@ -1,0 +1,24 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-nsqlookup-service
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: nsqlookup
+      namespace: face
+    spec:
+      ports:
+      - name: main
+        protocol: TCP
+        port: 4160
+        targetPort: 4160
+      - name: secondary
+        protocol: TCP
+        port: 4161
+        targetPort: 4161
+      selector:
+        app: nsqlookup
+      clusterIP: None

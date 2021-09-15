@@ -1,0 +1,24 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-nsqd-svc
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: nsqd
+      namespace: face
+    spec:
+      ports:
+      - name: main
+        protocol: TCP
+        port: 4150
+        targetPort: 4150
+      - name: secondary
+        protocol: TCP
+        port: 4151
+        targetPort: 4151
+      selector:
+        app: nsqd
+      clusterIP: None

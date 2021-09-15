@@ -1,0 +1,10 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: command-create-configmap
+spec:
+  statecheck:
+    command: "[kubectl] get configmap db-bootstrap -n face --kubeconfig [kubeconfig] > /dev/null 2>&1 && echo created || echo not_found"
+  missioncommand: 
+    command: "[kubectl] get configmap db-bootstrap -n face --kubeconfig [kubeconfig] > /dev/null 2>&1 || cd /tmp && curl -O https://raw.githubusercontent.com/chenqianfzh/kube-cluster-sample/master/database_setup.sql && [kubectl] create configmap db-bootstrap -n face --from-file=/tmp/database_setup.sql --kubeconfig [kubeconfig]"
+    reversecommand: "[kubectl] delete configmap db-bootstrap -n face  --kubeconfig [kubeconfig] & rm database_setup.sql"

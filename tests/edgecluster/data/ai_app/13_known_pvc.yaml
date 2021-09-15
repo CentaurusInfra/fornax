@@ -1,0 +1,19 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-known-pvc
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: face-recognition-pvc-known
+      namespace: face
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      volumeMode: Filesystem
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: local-storage

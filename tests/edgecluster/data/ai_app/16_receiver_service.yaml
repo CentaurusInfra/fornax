@@ -1,0 +1,19 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-receiver-svc
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: receiver-service
+      namespace: face
+    spec:
+      ports:
+      - protocol: TCP
+        port: 8000
+        targetPort: 8000
+      selector:
+        app: receiver
+      type: NodePort

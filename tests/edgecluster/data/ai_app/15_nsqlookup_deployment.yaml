@@ -1,0 +1,32 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-nsqlookup-deployment
+spec:
+  missionresource: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nsqlookup
+      namespace: face
+    spec:
+      selector:
+        matchLabels:
+          app: nsqlookup
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            app: nsqlookup
+        spec:
+          containers:
+          - name: nsqlookup
+            image: nsqio/nsq
+            imagePullPolicy: Always
+            command: ["/nsqlookupd"]
+            args: ["--broadcast-address=nsqlookup.face.svc.cluster.local"]
+            ports:
+            - containerPort: 4160
+              hostPort: 4160
+            - containerPort: 4161
+              hostPort: 4161

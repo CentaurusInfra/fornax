@@ -1,0 +1,11 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: command-label-node
+spec:
+  statecheck:
+    command: "[kubectl] get nodes --show-labels --no-headers --kubeconfig [kubeconfig] | grep local-pvc=true  > /dev/null 2>&1 && echo labeled || echo not_labeled"
+  missioncommand:   
+    trigger: "kubectl get nodes  -l local-pvc=true --kubeconfig [kubeconfig] | grep -v 'No resources found'"
+    command: "[kubectl] label nodes  $([kubectl] get nodes -o json --kubeconfig [kubeconfig] | jq -r .items[0].metadata.name) local-pvc=true --kubeconfig [kubeconfig] --overwrite"
+    reversecommand: "[kubectl] label nodes  $([kubectl] get nodes -o json --kubeconfig [kubeconfig] | jq -r .items[0].metadata.name)  local-pvc=true- --kubeconfig [kubeconfig]"
