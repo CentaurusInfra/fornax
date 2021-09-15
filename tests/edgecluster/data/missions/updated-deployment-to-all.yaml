@@ -3,7 +3,7 @@ kind: Mission
 metadata:
   name: deployment-to-all
 spec:
-  content: |
+  missionresource: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:

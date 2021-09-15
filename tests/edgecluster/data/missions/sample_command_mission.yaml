@@ -1,0 +1,10 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: command-test
+spec:
+  statecheck:
+    command: if [ -f /tmp/bbb.log ] ; then echo done ; else echo not_done ; fi
+  missioncommand: 
+    command: if [ ! -f /tmp/bbb.log ] ; then echo testtest > /tmp/bbb.log ; fi
+    reversecommand: rm /tmp/bbb.log

@@ -5,7 +5,7 @@ metadata:
 spec:
   statecheck:
     command: "echo working"
-  content: |
+  missionresource: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:

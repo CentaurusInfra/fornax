@@ -6,7 +6,7 @@ spec:
   placement:
     clusters:
     - name: arktos2
-  content: |
+  missionresource: |
     apiVersion: apps/v1
     kind: Deployment
     metadata:
