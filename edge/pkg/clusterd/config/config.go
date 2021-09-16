@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/util"
@@ -48,5 +49,11 @@ func InitConfigure(c *v1alpha1.Clusterd) {
 		}
 
 		Config.KubectlCli = DistroToKubectl[c.KubeDistro]
+
+		// Kubernetes built-in labels
+		Config.Labels[v1.LabelHostname] = c.Name
+		// KubeEdge specific labels
+		Config.Labels["role.kubernetes.io/edgecluster"] = ""
+		Config.Labels["edgeclusters.kubeedge.io/kubedistro"] = c.KubeDistro
 	})
 }
