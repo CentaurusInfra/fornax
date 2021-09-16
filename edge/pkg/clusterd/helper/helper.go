@@ -129,7 +129,23 @@ func EqualMaps(a map[string]string, b map[string]string) bool {
 // As Json encoder may turn an empty array into nil, two same mission spec object may no long deep-equal.
 // This function aims to detect two spec objects are truly equal.
 func EqualMissionSpec(a edgeclustersv1.MissionSpec, b edgeclustersv1.MissionSpec) bool {
-	if strings.TrimSpace(a.Content) != strings.TrimSpace(b.Content) {
+	if strings.TrimSpace(a.MissionResource) != strings.TrimSpace(b.MissionResource) {
+		return false
+	}
+
+	if strings.TrimSpace(a.MissionCommand.Trigger) != strings.TrimSpace(b.MissionCommand.Trigger) {
+		return false
+	}
+
+	if a.MissionCommand.RunIfTriggerSucceed != b.MissionCommand.RunIfTriggerSucceed {
+		return false
+	}
+
+	if strings.TrimSpace(a.MissionCommand.Command) != strings.TrimSpace(b.MissionCommand.Command) {
+		return false
+	}
+
+	if strings.TrimSpace(a.MissionCommand.ReverseCommand) != strings.TrimSpace(b.MissionCommand.ReverseCommand) {
 		return false
 	}
 

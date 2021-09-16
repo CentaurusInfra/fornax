@@ -29,8 +29,19 @@ spec:
          spec:
           type: object
           properties:
-            content: 
+            missionresource:
               type: string
+            missioncommand:
+              type: object
+              properties:
+                trigger:
+                  type: string
+                runiftriggersucceed:
+                  type: boolean
+                command:
+                  type: string
+                reversecommand:
+                  type: string
             placement:
               type: object
               properties:

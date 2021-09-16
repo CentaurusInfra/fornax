@@ -37,11 +37,27 @@ type Mission struct {
 
 // MissionSpec is a description of Mission
 type MissionSpec struct {
-	Content string `json:"content,omitempty"`
+	MissionResource string `json:"missionresource,omitempty"`
+
+	MissionCommand MissionCommandSpec `json:"missioncommand,omitempty"`
 
 	Placement GenericPlacementFields `json:"placement,omitempty"`
 
 	StateCheck StateCheckFields `json:"statecheck"`
+}
+
+// MissionSpec is a description of Mission
+type MissionCommandSpec struct {
+	// a  test to run before running the mission command
+	Trigger string `json:"trigger,omitempty"`
+
+	// default false, which means the mission command will run when the trigger command fails.
+	// if it is true, the mission command will run when the trigger command succeeds.
+	RunIfTriggerSucceed bool `json:"runiftriggersucceed"`
+
+	Command string `json:"command,omitempty"`
+
+	ReverseCommand string `json:"reversecommand,omitempty"`
 }
 
 type GenericClusterReference struct {
