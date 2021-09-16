@@ -13,6 +13,7 @@ spec:
       accessModes:
         - ReadWriteOnce
       volumeMode: Filesystem
+      volumeName: face-recognition-pv-unknown
       resources:
         requests:
           storage: 5Gi
