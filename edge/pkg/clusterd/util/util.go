@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -43,6 +44,13 @@ func ExecCommandLine(commandline string) (string, error) {
 
 func ExecCommandLineWithTimeOut(commandline string, timeout int) (string, error) {
 	var cmd *exec.Cmd
+
+	background := false
+	if strings.HasSuffix(commandline, " &") {
+		background = true
+		timeout = 0
+	}
+
 	if timeout > 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 		defer cancel()
@@ -56,9 +64,16 @@ func ExecCommandLineWithTimeOut(commandline string, timeout int) (string, error)
 	var output []byte
 	var err error
 
-	if output, err = cmd.CombinedOutput(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			exitCode = exitError.ExitCode()
+	if background {
+		if err := cmd.Start(); err != nil {
+			output = []byte("Failed to start the command")
+			exitCode = 1
+		}
+	} else {
+		if output, err = cmd.CombinedOutput(); err != nil {
+			if exitError, ok := err.(*exec.ExitError); ok {
+				exitCode = exitError.ExitCode()
+			}
 		}
 	}
 
