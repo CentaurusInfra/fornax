@@ -17,6 +17,7 @@ package clusterd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,7 +97,13 @@ func (m *MissionStateReporter) stateSyncer() {
 		return
 	}
 
+	if strings.Contains(output, "the server could not find the requested resource") {
+		klog.Infof("Looks like the mission CRD is not applied in the edge cluster yet, we got the error: %v", output)
+		return
+	}
+
 	var missionList []edgeclustersv1.Mission
+
 	if err = json.Unmarshal([]byte(output), &missionList); err != nil {
 		klog.Errorf("Failed to unmarshal mission list: %v, output : (%v)", err, output)
 	}
@@ -110,14 +117,15 @@ func (m *MissionStateReporter) stateSyncer() {
 			m.queue.Add(mission.Name)
 		} else {
 			// if the state has been idle for a long time, we send an update
-			if i, ok := m.stateIdleCycles[mission.Name]; ok {
-				stateCycleLock.Lock()
+			stateCycleLock.Lock()
+			if missionIdleCycles, exists := m.stateIdleCycles[mission.Name]; exists {
 				m.stateIdleCycles[mission.Name]++
-				stateCycleLock.Unlock()
-				if i > m.maxStateIdleCycles {
+
+				if missionIdleCycles > m.maxStateIdleCycles {
 					m.queue.Add(mission.Name)
 				}
 			}
+			stateCycleLock.Unlock()
 		}
 	}
 

@@ -17,6 +17,8 @@ package clusterd
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,24 +45,86 @@ func NewMissionDeployer() *MissionDeployer {
 	}
 }
 
+func resolveCommand(input string) string {
+	output := strings.ReplaceAll(input, "[kubectl]", config.Config.KubectlCli)
+	output = strings.ReplaceAll(output, "[kubeconfig]", config.Config.Kubeconfig)
+
+	return output
+}
+
+func deployMisionContent(mission *edgeclustersv1.Mission) {
+	if strings.TrimSpace(mission.Spec.MissionResource) != "" {
+		deployContentCmd := fmt.Sprintf("printf '%s' | %s apply --kubeconfig=%s -f - ", mission.Spec.MissionResource, config.Config.KubectlCli, config.Config.Kubeconfig)
+		output, err := helper.ExecCommandToCluster(deployContentCmd)
+		if err != nil {
+			klog.Errorf("Failed to deploy the resource of mission %v: %v", mission.Name, err)
+			return
+		}
+
+		if strings.Contains(output, "unchanged") {
+			klog.V(2).Infof("The content of mission %v is unchanged ", mission.Name)
+		} else {
+			klog.V(2).Infof("The content of mission %v applied successfully ", mission.Name)
+		}
+
+		return
+	}
+
+	if strings.TrimSpace(mission.Spec.MissionCommand.Command) == "" {
+		klog.Errorf("No command or resource is specified in mission %s", mission.Name)
+		return
+	}
+
+	if strings.TrimSpace(mission.Spec.MissionCommand.Trigger) != "" {
+		_, err := helper.ExecCommandToCluster(resolveCommand(mission.Spec.MissionCommand.Trigger))
+		if (err != nil && mission.Spec.MissionCommand.RunWhenTriggerSucceed) || (err == nil && !mission.Spec.MissionCommand.RunWhenTriggerSucceed) {
+			klog.V(3).Infof("Not running the mission command in %v as the trigger condition is not met.", mission.Name)
+			return
+		}
+	}
+
+	_, err := helper.ExecCommandToCluster(resolveCommand(mission.Spec.MissionCommand.Command))
+	if err != nil {
+		klog.Errorf("Failed to run the mission command of mission %v: %v", mission.Name, err)
+	} else {
+		klog.V(2).Infof("The command of mission %v succeeded ", mission.Name)
+	}
+}
+
+func getDeleteContentCmd(mission *edgeclustersv1.Mission) (string, error) {
+	if strings.TrimSpace(mission.Spec.MissionResource) != "" {
+		deleteContentCmd := fmt.Sprintf("printf '%s' | %s delete --kubeconfig=%s -f - ", mission.Spec.MissionResource, config.Config.KubectlCli, config.Config.Kubeconfig)
+		return deleteContentCmd, nil
+	}
+
+	if strings.TrimSpace(mission.Spec.MissionCommand.ReverseCommand) == "" {
+		// it is ok to have an empty reverse command for now.
+		// may change in the future.
+		return "", nil
+	}
+
+	return resolveCommand(mission.Spec.MissionCommand.ReverseCommand), nil
+}
+
 func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 	cacheLock.Lock()
 	m.MissionMatch[mission.Name] = m.isMatchingMission(mission)
 	cacheLock.Unlock()
 	missionYaml, err := buildMissionYaml(mission)
+	defer os.Remove(missionYaml)
 	if err != nil {
 		// log the error and move on to apply the mission content
 		klog.Errorf("Error in building mission yaml: %v. Moving on.", err)
 	} else {
-		ddeployMissionCmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", missionYaml, config.Config.KubectlCli, config.Config.Kubeconfig)
-		output, err := helper.ExecCommandToCluster(ddeployMissionCmd)
+		deployMissionCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, missionYaml)
+		output, err := helper.ExecCommandToCluster(deployMissionCmd)
 		if err != nil {
 			klog.Errorf("Failed to apply mission %v: %v", mission.Name, err)
 		} else {
 			if strings.Contains(output, "created") {
 				klog.Infof("Mission %v is created ", mission.Name)
 			} else {
-				klog.V(4).Infof("Mission %v is configured.", mission.Name)
+				klog.V(3).Infof("Mission %v is configured.", mission.Name)
 			}
 		}
 	}
@@ -68,19 +132,7 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 	if !m.isMatchingMission(mission) {
 		klog.V(3).Infof("Mission %v does not match this cluster, skip the content applying", mission.Name)
 	} else {
-		if strings.TrimSpace(mission.Spec.Content) != "" {
-			deployContentCmd := fmt.Sprintf("printf \"%s\" | %s apply --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
-			output, err := helper.ExecCommandToCluster(deployContentCmd)
-			if err != nil {
-				klog.Errorf("Failed to apply the content of mission %v: %v", mission.Name, err)
-			} else {
-				if strings.Contains(output, "unchanged") {
-					klog.V(4).Infof("The content of mission %v is unchanged ", mission.Name)
-				} else {
-					klog.Infof("The content of mission %v applied successfully ", mission.Name)
-				}
-			}
-		}
+		deployMisionContent(mission)
 	}
 
 	m.UpdateState(mission, false)
@@ -95,9 +147,11 @@ func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
 	if !m.isMatchingMission(mission) {
 		klog.V(4).Infof("Mission %v does not match this cluster", mission.Name)
 	} else {
-		if strings.TrimSpace(mission.Spec.Content) != "" {
-			deployContentCmd := fmt.Sprintf("printf \"%s\" | %s delete --kubeconfig=%s -f - ", mission.Spec.Content, config.Config.KubectlCli, config.Config.Kubeconfig)
-			_, err := helper.ExecCommandToCluster(deployContentCmd)
+		deleteContentCmd, err := getDeleteContentCmd(mission)
+		if err != nil {
+			klog.Errorf("Failed to get the content delete command of mission %v: %v", mission.Name, err)
+		} else {
+			_, err = helper.ExecCommandToCluster(deleteContentCmd)
 			if err != nil {
 				klog.Errorf("Failed to revert the content of mission %v: %v", mission.Name, err)
 			} else {
@@ -180,13 +234,29 @@ func (m *MissionDeployer) AlignMissionList(missionList []*edgeclustersv1.Mission
 	return fmt.Errorf("Hit the errors in mission align: %v", errs)
 }
 
-// create a yaml to use by "kubectl apply" command
+// create a mission yaml file to use by "kubectl apply" command
 func buildMissionYaml(input *edgeclustersv1.Mission) (string, error) {
 	// probably due to the json encoder in arktos, the commmnd "kubectl apply mission" in arktos
 	// fails if the mission.StateCheck.Command is nil or empty.
 	// We trick it with a string with one space.
 	if input.Spec.StateCheck.Command == "" {
 		input.Spec.StateCheck.Command = " "
+	}
+
+	if input.Spec.MissionResource == "" {
+		input.Spec.MissionResource = " "
+	}
+
+	if input.Spec.MissionCommand.Command == "" {
+		input.Spec.MissionCommand.Command = " "
+	}
+
+	if input.Spec.MissionCommand.ReverseCommand == "" {
+		input.Spec.MissionCommand.ReverseCommand = " "
+	}
+
+	if input.Spec.MissionCommand.Trigger == "" {
+		input.Spec.MissionCommand.Trigger = " "
 	}
 
 	yamlPart1Template := `apiVersion: edgeclusters.kubeedge.io/v1
@@ -201,7 +271,21 @@ spec:
 	}
 
 	output := fmt.Sprintf(yamlPart1Template, input.Name, strings.ReplaceAll(string(specStr), "\n", "\n  "))
-	return output, nil
+
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "mission-")
+	if err != nil {
+		return "", fmt.Errorf("Failed to create mission temp file: %v", err)
+	}
+
+	if _, err = tmpFile.Write([]byte(output)); err != nil {
+		return "", fmt.Errorf("Failed to write to temp file: %v", err)
+	}
+
+	if err = tmpFile.Close(); err != nil {
+		return "", fmt.Errorf("error in file closing: %v", err)
+	}
+
+	return tmpFile.Name(), nil
 }
 
 func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo string) error {
@@ -224,12 +308,13 @@ func (m *MissionDeployer) UpdateMissionLocalState(missionName string, stateInfo 
 }
 
 func (m *MissionDeployer) GetStateCheckCommand(mission *edgeclustersv1.Mission) string {
-	command := strings.TrimSpace(mission.Spec.StateCheck.Command)
-	if command != "" {
-		return strings.ReplaceAll(command, "${kubectl}", config.Config.KubectlCli)
+	command := resolveCommand(mission.Spec.StateCheck.Command)
+	// we will try to guess the state check command if the mission resource is specified
+	if strings.TrimSpace(command) != "" || strings.TrimSpace(mission.Spec.MissionResource) == "" {
+		return command
 	}
 
-	kind, name, namespace := helper.AnalyzeMissionContent(mission.Spec.Content)
+	kind, name, namespace := helper.AnalyzeMissionContent(mission.Spec.MissionResource)
 
 	command = fmt.Sprintf("%v get %v %v -n \"%v\" --kubeconfig %v --no-headers", config.Config.KubectlCli, kind, name, namespace, config.Config.Kubeconfig)
 

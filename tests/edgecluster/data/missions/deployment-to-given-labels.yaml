@@ -3,7 +3,7 @@ kind: Mission
 metadata:
   name: deployment-to-label-smart
 spec:
-  placement:    
+  placement:
     matchlabels:
       "company" : "futurewei"
   missionresource: |

@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 
@@ -75,18 +74,7 @@ func (esr *EdgeClusterStateReporter) initialEdgeCluster() (*edgeclustersv1.EdgeC
 	ec.Name = config.Config.Name
 	ec.Spec.Kubeconfig = config.Config.Kubeconfig
 	ec.Spec.KubeDistro = config.Config.KubeDistro
-
-	ec.Labels = map[string]string{
-		// Kubernetes built-in labels
-		v1.LabelHostname: ec.Name,
-
-		// KubeEdge specific labels
-		"role.kubernetes.io/edgecluster": "",
-	}
-
-	for k, v := range config.Config.Labels {
-		ec.Labels[k] = v
-	}
+	ec.Labels = config.Config.Labels
 
 	return ec, nil
 }
