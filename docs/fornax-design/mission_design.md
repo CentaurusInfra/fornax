@@ -20,7 +20,7 @@ type MissionSpec struct {
 
 type MissionCommandSpec struct {
 	Trigger string `json:"trigger,omitempty"`
-	RunIfTriggerSucceed bool `json:"runiftriggersucceed"`
+	RunWhenTriggerSucceed bool `json:"runwhentriggersucceed"`
 	Command string `json:"command,omitempty"`
 	ReverseCommand string `json:"reversecommand,omitempty"`
 }
@@ -58,7 +58,7 @@ We use MissionCommand if MissionResource is insufficient, for example:
 
 The Content of the MssionCommand is defined via multiple fields:
 1. Trigger: the command to check whether or not we need to run the mission command. By default, the mission command will be run only if the trigger command fails.
-2. RunIfTriggerSucceed: by default it is false, which means the mission command will be run only if the trigger command fails. The mission command will run if the trigger command succeeds, if this value is set to true.
+2. RunWhenTriggerSucceed: by default it is false, which means the mission command will be run only if the trigger command fails. The mission command will run if the trigger command succeeds, if this value is set to true.
 3. Command: the command to deploy the mission content.
 4. ReverseCOmmand: the command to delete the mission content. 
 
