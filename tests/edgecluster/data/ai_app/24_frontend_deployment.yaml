@@ -1,0 +1,42 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-frontend-deployment
+spec:
+  missionresource: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: frontend
+      namespace: face
+    spec:
+      selector:
+        matchLabels:
+          app: frontend
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            app: frontend
+        spec:
+          containers:
+          - name: frontend
+            image: skarlso/kube-frontend-alpine:1.1.0
+            imagePullPolicy: Always
+            env:
+            - name: MYSQL_CONNECTION
+              value: "mysql.face.svc.cluster.local"
+            - name: MYSQL_USERPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kube-face-secret
+                  key: mysql_userpassword
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: MYSQL_DBNAME
+              value: kube
+            - name: FRONTEND_PORT
+              value: "8081"
+            ports:
+            - containerPort: 8081
+              hostPort: 8081

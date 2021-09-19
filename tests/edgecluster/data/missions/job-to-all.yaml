@@ -3,7 +3,7 @@ kind: Mission
 metadata:
   name: job-to-all
 spec:
-  content: |
+  missionresource: |
     apiVersion: batch/v1
     kind: Job
     metadata:

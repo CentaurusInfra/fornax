@@ -1,0 +1,17 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-mysql-service
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: mysql
+      namespace: face
+    spec:
+      ports:
+      - port: 3306
+      selector:
+        app: mysql
+      clusterIP: None

@@ -1,0 +1,44 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-face-recog-deployment
+spec:
+  missionresource: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: face-recog
+      namespace: face
+    spec:
+      selector:
+        matchLabels:
+          app: face-recog
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            app: face-recog
+        spec:
+          containers:
+          - name: face-recog
+            image: skarlso/kube-face-recog:1.0.0
+            imagePullPolicy: Always
+            ports:
+            - containerPort: 50051
+              hostPort: 50051
+              name: face-recog
+            env:
+            - name: KNOWN_PEOPLE
+              value: "/known_people"
+            volumeMounts:
+            - name: known-people-storage
+              mountPath: /known_people
+            - name: unknown-people-storage
+              mountPath: /unknown_people
+          volumes:
+          - name: known-people-storage
+            persistentVolumeClaim:
+              claimName: face-recognition-pvc-known
+          - name: unknown-people-storage
+            persistentVolumeClaim:
+              claimName: face-recognition-pvc-unknown

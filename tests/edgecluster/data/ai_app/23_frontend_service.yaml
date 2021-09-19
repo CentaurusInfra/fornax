@@ -1,0 +1,17 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-frontend-svc
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: frontend
+      namespace: face
+    spec:
+      ports:
+      - port: 8081
+      selector:
+        app: frontend
+      type: NodePort

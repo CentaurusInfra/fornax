@@ -1,0 +1,38 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-nsqd-deployment
+spec:
+  missionresource: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nsqd
+      namespace: face
+    spec:
+      selector:
+        matchLabels:
+          app: nsqd
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            app: nsqd
+        spec:
+          containers:
+          # Note, since nsq persists information on disk via .dat file it might be advicable to store those
+          # in a mount.
+          - name: nsqd
+            image: nsqio/nsq
+            ports:
+            - containerPort: 4150
+              hostPort: 4150
+            - containerPort: 4151
+              hostPort: 4151
+            env:
+            - name: NSQLOOKUP_ADDRESS
+              value: nsqlookup.face.svc.cluster.local
+            - name: NSQ_BROADCAST_ADDRESS
+              value: nsqd.face.svc.cluster.local
+            command: ["/nsqd"]
+            args: ["--lookupd-tcp-address=$(NSQLOOKUP_ADDRESS):4160", "--broadcast-address=$(NSQ_BROADCAST_ADDRESS)"]

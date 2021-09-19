@@ -1,0 +1,19 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-face-recog-svc
+spec:
+  missionresource: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: face-recog
+      namespace: face
+    spec:
+      ports:
+      - protocol: TCP
+        port: 50051
+        targetPort: 50051
+      selector:
+        app: face-recog
+      clusterIP: None

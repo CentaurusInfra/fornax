@@ -1,0 +1,11 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: command-cp-known
+spec:
+  statecheck:
+    command: echo $(ls /tmp/known_people/*jpg | wc -l ) jpg files
+  missioncommand: 
+    trigger: ls /tmp/known_people/*.jpg
+    command: mkdir -p /tmp/known_people && for jpg in audrey_1.jpg gergely_01.jpg hannibal_1.jpg hannibal_2.jpg taylor_1.jpg;  do wget https://raw.githubusercontent.com/chenqianfzh/kube-cluster-sample/master/face_recognition/known_people/${jpg} -O /tmp/known_people/${jpg} ; done
+    reversecommand: rm -rf /tmp/known_people

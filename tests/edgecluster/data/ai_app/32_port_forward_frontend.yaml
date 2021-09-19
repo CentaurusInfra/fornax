@@ -1,0 +1,16 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: command-frontend-port-forward
+spec:
+  placement:
+    matchlabels:
+      "edgeclusters.kubeedge.io/kubedistro" : "arktos"
+  statecheck:
+    command: netstat -tulpn | grep LISTEN | grep 8081 > /dev/null 2>&1 || echo not_configured && echo configured
+  missioncommand: 
+    trigger: netstat -tulpn | grep LISTEN | grep 8081
+    command: "netstat -tulpn | grep LISTEN | grep 8081 || [kubectl] port-forward $([kubectl] get pods -l app=frontend -n face --kubeconfig [kubeconfig] -o json |  jq -r .items[0].metadata.name) 8081:8081  -n face --kubeconfig [kubeconfig] &"
+    reversecommand: pgrep -f '.*kubectl port-forward.*8081:8081' | xargs kill -9
+
+

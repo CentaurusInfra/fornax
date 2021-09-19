@@ -1,0 +1,53 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: resource-mysql-deployment
+spec:
+  missionresource: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: mysql
+      namespace: face
+    spec:
+      selector:
+        matchLabels:
+          app: mysql
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          labels:
+            app: mysql
+        spec:
+          containers:
+          - image: mysql:8.0
+            name: mysql
+            env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kube-face-secret
+                  key: mysql_password
+            - name: MYSQL_DATABASE
+              value: kube
+            ports:
+            - containerPort: 3306
+              hostPort: 3306
+              name: mysql
+            - containerPort: 33060
+              hostPort: 33060
+              name: mysqlx
+            volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: bootstrap-script
+              mountPath: /docker-entrypoint-initdb.d/database_setup.sql
+              subPath: database_setup.sql
+          volumes:
+          - name: mysql-persistent-storage
+            persistentVolumeClaim:
+              claimName: mysql-pv-claim
+          - name: bootstrap-script
+            configMap:
+              name: db-bootstrap

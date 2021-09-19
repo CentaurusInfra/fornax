@@ -1,0 +1,11 @@
+apiVersion: edgeclusters.kubeedge.io/v1
+kind: Mission
+metadata:
+  name: command-create-ns-face
+spec:
+  statecheck:
+    command: "[kubectl] get ns face --kubeconfig [kubeconfig] > /dev/null 2>&1 && echo created || echo not_found"
+  missioncommand: 
+    trigger: "[kubectl] get ns face --kubeconfig [kubeconfig]"
+    command: "[kubectl] create ns face  --kubeconfig [kubeconfig]"
+    reversecommand: "[kubectl] delete ns face --kubeconfig [kubeconfig]"
