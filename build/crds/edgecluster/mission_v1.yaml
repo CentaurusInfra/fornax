@@ -36,7 +36,7 @@ spec:
               properties:
                 trigger:
                   type: string
-                runiftriggersucceed:
+                runwhentriggersucceed:
                   type: boolean
                 command:
                   type: string

@@ -53,7 +53,7 @@ type MissionCommandSpec struct {
 
 	// default false, which means the mission command will run when the trigger command fails.
 	// if it is true, the mission command will run when the trigger command succeeds.
-	RunIfTriggerSucceed bool `json:"runiftriggersucceed"`
+	RunWhenTriggerSucceed bool `json:"runwhentriggersucceed"`
 
 	Command string `json:"command,omitempty"`
 

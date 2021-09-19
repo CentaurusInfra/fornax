@@ -137,7 +137,7 @@ func EqualMissionSpec(a edgeclustersv1.MissionSpec, b edgeclustersv1.MissionSpec
 		return false
 	}
 
-	if a.MissionCommand.RunIfTriggerSucceed != b.MissionCommand.RunIfTriggerSucceed {
+	if a.MissionCommand.RunWhenTriggerSucceed != b.MissionCommand.RunWhenTriggerSucceed {
 		return false
 	}
 

@@ -58,12 +58,13 @@ func deployMisionContent(mission *edgeclustersv1.Mission) {
 		output, err := helper.ExecCommandToCluster(deployContentCmd)
 		if err != nil {
 			klog.Errorf("Failed to deploy the resource of mission %v: %v", mission.Name, err)
+			return
+		}
+
+		if strings.Contains(output, "unchanged") {
+			klog.V(2).Infof("The content of mission %v is unchanged ", mission.Name)
 		} else {
-			if strings.Contains(output, "unchanged") {
-				klog.V(2).Infof("The content of mission %v is unchanged ", mission.Name)
-			} else {
-				klog.V(2).Infof("The content of mission %v applied successfully ", mission.Name)
-			}
+			klog.V(2).Infof("The content of mission %v applied successfully ", mission.Name)
 		}
 
 		return
@@ -76,7 +77,7 @@ func deployMisionContent(mission *edgeclustersv1.Mission) {
 
 	if strings.TrimSpace(mission.Spec.MissionCommand.Trigger) != "" {
 		_, err := helper.ExecCommandToCluster(resolveCommand(mission.Spec.MissionCommand.Trigger))
-		if (err != nil && mission.Spec.MissionCommand.RunIfTriggerSucceed) || (err == nil && !mission.Spec.MissionCommand.RunIfTriggerSucceed) {
+		if (err != nil && mission.Spec.MissionCommand.RunWhenTriggerSucceed) || (err == nil && !mission.Spec.MissionCommand.RunWhenTriggerSucceed) {
 			klog.V(3).Infof("Not running the mission command in %v as the trigger condition is not met.", mission.Name)
 			return
 		}
