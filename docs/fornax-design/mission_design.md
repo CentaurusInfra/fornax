@@ -1,4 +1,4 @@
-# Desgin of Mission in Fornax
+# Design of Mission in Fornax
 
 A CRD called "Mission" is used to store the actual workload definition (Mission/MissionSpec/MssionResource or Mission/MissionSpec/MissionCommand) and destination information (Mission/MissionSpec/Placement) to deploy to the edge clusters. User can also configure how the mission state is reported by specifying the field of Mission/StateCheck/Command.
 
