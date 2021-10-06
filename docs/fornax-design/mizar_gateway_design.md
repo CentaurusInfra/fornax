@@ -83,12 +83,16 @@ spec:
 1. Found a host to deploy gateway 
 2. Update the host ip above to replace the gateway value in the given yaml files below. 
 3. Verify if the gateway is assigned to the given external subnet bouncer(It has to be 1 bouncer?) 
+The code change is at https://github.com/pdgetrf/edge_gateway/blob/71aae9d5de19677a2721eb64db11a3fbb876a509/mizar/dp/mizar/operators/droplets/droplets_operator.py#L99
+The external bouncer check is at https://github.com/pdgetrf/edge_gateway/blob/71aae9d5de19677a2721eb64db11a3fbb876a509/mizar/dp/mizar/operators/droplets/droplets_operator.py#L104
 
 ### Set up a local subnet(Suppose we create all the external subnets first so that we can exclude gateway host ips from droplets)
 1. Get all the subnets
 2. Exclude all the gateway host ips from the droplets
 3. Verify that the gateway host ips are not asigned to the given local subnet bouncers
+The code change is at https://github.com/pdgetrf/edge_gateway/blob/71aae9d5de19677a2721eb64db11a3fbb876a509/mizar/dp/mizar/operators/droplets/droplets_operator.py#L102
 4. Verify that the gateway host ips are not asigned to the given local subnet dividers
+The code change is at https://github.com/pdgetrf/edge_gateway/blob/71aae9d5de19677a2721eb64db11a3fbb876a509/mizar/dp/mizar/operators/droplets/droplets_operator.py#L129
 
 ### Redirect traffic to gateway
 1. Suppose the local subnet is 192.168.0.0/16 while the external subnet is 192.168.122.0/16. 
