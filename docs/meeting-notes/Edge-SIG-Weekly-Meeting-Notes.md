@@ -453,3 +453,387 @@ argument between all resource connecting to cloud vs local inter-connected edge 
 
 ### Notes
 
+# 7/21
+
+### Agenda
+- Overall status
+  - OSS not accepted :(
+    - Priority: 
+```
+    design --> release -> perf test 
+                  |
+                  +-> academia conferences -> exposure conferences
+```
+  - Project tracked in two fronts:
+    - Release
+      - [x] Repo & CICD (owner: Qian)
+      - [ ] Edge Cluster featrues (owner: Qian)
+    - POC: Inter-cluster communication  
+- Inter-cluster Communication status
+  - POC Risk: data plane flow
+    - [tasks](https://github.com/pdgetrf/ArktosEdge/projects/2)
+    - Targeting mid-July
+  - POC
+    - Goal: 
+      - Redirect packet to gateway process
+      - Unblock gateway development
+    - More Mizar deep dive and possible routes
+      - Possible routes for packet redirect at divider
+        - ~~[ ] Inject gateway ip into the ["network map"](https://github.com/CentaurusInfra/mizar/blob/e8c21f5f262d79dd71cfec5e511a898c7cb1dbe9/src/xdp/trn_transit_xdp_maps.h#L46) directly on host~~
+        - [x] Modify operator to inject gateway ip (possible [here](https://github.com/CentaurusInfra/mizar/blob/e8c21f5f262d79dd71cfec5e511a898c7cb1dbe9/mizar/dp/mizar/workflows/dividers/create.py#L59)) (owner: Shaojun)
+        - ~~[ ] Modify existing subnet0's endpoint value to point to gateway ip (note: currently default subnet0 consumes the entire CIDR space of vpc0, so the goal here is to simply divert packet traffic on divider to external gateway so gateway work can be unblocked)~~
+      - Release solution
+        - Modify transit XDP to redirect (release solution (possibly [here](https://github.com/CentaurusInfra/mizar/blob/e8c21f5f262d79dd71cfec5e511a898c7cb1dbe9/src/xdp/trn_transit_xdp.c#L132))
+        - Mizar control plane update the network map based on gateway's map
+        
+- Collaboration
+  - UWB to present next week
+
+
+# 8/3
+
+### Agenda
+- Priority
+```
+    design --> release -> perf test 
+                  |
+                  +-> academia conferences -> exposure conferences
+```
+
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] [Release Plan](https://github.com/CentaurusInfra/fornax/blob/main/docs/fornax-design/release_plan.md)
+      - [x] Repo & CICD (owner: Qian)
+      - [x] Edge Cluster featrues (owner: Qian)
+    - POC: Inter-cluster communication  
+      - Goal: 
+        - Packet e2e
+        - Detailed gateway design
+    - [POD to VPC work by Mizar team](https://github.com/CentaurusInfra/mizar/pull/518)
+  - Exposures
+    - ONE & KubeCon NA not accepted :(
+      - Reasons
+    - Peer-reviewed Academic Conferences
+      - CFP 
+        - [IEEE Edge 2021](https://conferences.computer.org/edge/2021/cfp/), deadline **9/15**
+        - [The Sixth International Conference on Fog and Mobile Edge Computing](https://emergingtechnet.org/FMEC2021/)
+      - Focuses
+        - "Releated work"
+        - Application scenarios
+
+- Collaboration
+  - UWB stroke recovery project
+
+- Akraino Release (8/26)
+
+
+# 8/11
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] [Release Plan](https://github.com/CentaurusInfra/fornax/blob/main/docs/fornax-design/release_plan.md)
+      - [x] Edge cluster featrues (owner: Qian)
+        - [ ] [Detailed test plan](https://github.com/CentaurusInfra/fornax/blob/release-test-plan/docs/fornax_test/830_release_testplan.md)
+          - Manual at the moment, automated after 8/30 release
+          - ~20 key scenarios (more to come) 
+        - [ ] Edge application on hierarchical clusters
+          - Goal: demo the benefits of hierarchical edge clusters 
+          - Latency
+          - Autonomy
+          - Distributed cloud (offload cloud application to the edge, together with dependencies)
+          - 5G (network speed > local disk I/O --> short video encoding/decoding, gaming)
+      - Inter-cluster communication 8/30 
+        - release components: Gateway
+          1. Design doc + E2E POC Demo
+          2. Initial version of the Gateway, tested against Mizar's Kind env + Edge cluster release env
+    - POC: Inter-cluster communication  
+      - Goal: 
+        - Pod traffic e2e
+        - Detailed gateway design
+      - Tech discussion
+        - Multi-cluster VPC/Subnet
+        - VNI translation between different clusters
+        - Direct-path
+
+- Akraino Release (8/26)
+
+
+# 8/18
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] [Release Plan](https://github.com/CentaurusInfra/fornax/blob/main/docs/fornax-design/release_plan.md)
+      - [x] Edge cluster featrues (owner: Qian)
+        - [ ] (Merged) [Detailed test plan](https://github.com/CentaurusInfra/fornax/blob/main/docs/fornax_test/830_release_testplan.md)
+        - [ ] Edge application on hierarchical clusters (owner: Qian)
+          - Goal: demo the benefits of hierarchical edge clusters 
+          - Benchmark
+          - CDN
+      - Inter-cluster communication 8/30 
+        - Release components: Gateway
+          1. Design doc + E2E POC Demo
+          2. Initial version of the Gateway, tested against Mizar's Kind env + Edge cluster release env
+        - POC
+          - Goal: 
+            - Pod traffic e2e
+            - Detailed gateway design
+          - Tech discussion
+            - Direct-path across clusters
+  - Exposures
+    - Peer-reviewed Academic Conferences
+      - CFP 
+        - [IEEE Edge 2021](https://conferences.computer.org/edge/2021/cfp/), deadline **9/15**
+        - [The Sixth International Conference on Fog and Mobile Edge Computing](https://emergingtechnet.org/FMEC2021/)
+      - Focuses
+        - "Releated work"
+        - Application scenarios
+
+- Akraino Release (8/26)
+
+
+# 8/25
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - Adjustment
+        - 830 release with edge cluster
+          - Cut release branch on 8/31 (next Wednesday)
+        - inter-cluster communication to be released in 930 (together with any edge cluster fixes)
+      - Edge application on hierarchical clusters (owner: Qian)
+          - Goal: demo the benefits of hierarchical edge clusters 
+          - Idea 1: Edge Benchmark
+            - Represents a class of applications that fit a certain profile. In terms of edge, 
+              - Latency & data locality
+                - Large data volume on the edge
+                - Data has regional features
+              - Local vs global processing
+                - Edge (Local) processing + global aggregation
+              - Autonomous against resource event
+                - Network failure
+                - Node failure
+              - Remote management
+                - Deploy and manage from upper level
+          - Idea 2: Real-world application
+          - 9/27 OSS edge talk with link to demo video
+      - Inter-cluster communication 9/30 
+        - POD VPC PR from Phu
+        - Switching from Kind env to K8s/Arktos env
+        - POC
+          - Goal: 
+            - Pod traffic e2e
+            - Detailed gateway design
+  - Exposures
+    - Peer-reviewed Academic Conferences
+      - CFP 
+        - [IEEE Edge 2021](https://conferences.computer.org/edge/2021/cfp/), deadline **9/15**
+        - [The Sixth International Conference on Fog and Mobile Edge Computing](https://emergingtechnet.org/FMEC2021/)
+      - Focuses
+        - "Releated work"
+        - Application scenarios
+
+- Akraino Release
+
+
+# 9/1
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] 830 release
+        - [Release cut](https://github.com/CentaurusInfra/fornax/releases/tag/v0.1) 
+      - Edge application on hierarchical clusters (owner: Qian)
+          - Goal: demo the benefits of hierarchical edge clusters 
+            - AI application demo (by Qian)
+            - Benchmarking
+            - 9/27 OSS edge talk with link to demo video (todo)
+            - Serverless
+      - Inter-cluster communication 9/30 
+        - Switching from Kind env to real K8s cluster env (owner: Peng)
+          - [x] Env setup
+          - [ ] Documentation 
+        - POC
+          - Goal: 
+            - Pod traffic e2e
+            - Detailed gateway design
+      - New release brainstorming
+        - 5G application
+  - Exposures
+    - Kubecon Publication, topic "Edge Networking with Mizar", 600-1000 words, due by 9/10 (owner Peng)
+    - Friday brown bag talks
+    - Peer-reviewed Academic Conferences
+      - CFP 
+        - [IEEE Edge 2021](https://conferences.computer.org/edge/2021/cfp/), deadline **9/15** (not likely to make it)
+        - [NSDI](https://www.usenix.org/conference/nsdi22/call-for-papers), Paper titles and abstracts due: 9/9, full paper 9/15
+        - [The Sixth International Conference on Fog and Mobile Edge Computing](https://emergingtechnet.org/FMEC2021/) (need to look into it)
+- Akraino Release
+  - On track
+
+
+
+# 9/8
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] [830 release](https://github.com/CentaurusInfra/fornax/releases/tag/v0.1) 
+      - [ ] 930 release "Inter-cluster communication"
+        - Edge Cluster Mission Improvement inspired by AI demo experience (owner: Qian)
+          - Goal: to allow deployment of AI demo completely with Mission from cloud to edge
+        - Switching from Kind env to real K8s cluster env (owner: Peng)
+          - [x] Env setup (quick demo)
+          - [x] [Documentation](https://github.com/pdgetrf/mizar_cluster_scripts) 
+        - POC
+          - Goals (targeting mid Sept)
+            - Pod traffic e2e (to use proxy as gateway)
+            - Detailed gateway design
+        - Release item (some risk due to team size change, to be further estimated by end of this week)
+          - Gateway
+      - New release brainstorming (next week after 15th)
+  - Exposures
+    - [x] Friday brown bag talk, [video](https://www.youtube.com/watch?v=W0egc5W3Q2Q)
+    - [ ] Kubecon Publication, topic "Edge Networking with Mizar", 600-1000 words, due by 9/10 (owner Peng)
+    - Peer-reviewed Academic Conferences
+      - CFP 
+        - [NSDI](https://www.usenix.org/conference/nsdi22/call-for-papers)
+          - [ ] Paper titles and abstracts due: 9/9
+          - [ ] full paper 9/15
+- "Macro trend" discussion (due by 10/31)
+  - 5G application
+  - Cloud-cloud vs Cloud-edge
+- Akraino Release
+  - On track
+
+
+# 9/15
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] [830 release](https://github.com/CentaurusInfra/fornax/releases/tag/v0.1) 
+      - [ ] 930 release "Inter-cluster communication"
+        - [x] Edge Cluster Mission Improvement inspired by AI demo experience (owner: Qian)
+        - POC
+          - Goals (targeting mid Sept)
+            - Pod traffic e2e (to use proxy as gateway)
+            - Detailed gateway design
+        - Release item (to be further estimated by end of this week)
+      - New release brainstorming (next week after 15th)
+  - Exposures
+    - [x] [Kubecon Publication](https://vmblog.com/archive/2021/09/13/towards-a-scalable-reliable-and-secure-edge-computing-framework.aspx#.YUJra55Kg8N)
+    - Peer-reviewed Academic Conferences
+      - CFP 
+        - [NSDI](https://www.usenix.org/conference/nsdi22/call-for-papers), will aim for their next April deadline due to team size change
+- "Macro trend" discussion (due by 10/31)
+  - 5G application
+  - Cloud-cloud vs Cloud-edge
+- Akraino Release
+  - On track (documentation owner?)
+
+
+# 9/21
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [ ] 930 release "Inter-cluster communication"
+        - [x] Edge Cluster Mission Improvement inspired by AI demo experience (owner: Qian)
+          - "One-click" edge app deployment
+          - Front-end needs more work for a better live demo
+          - Team demo 
+        - Edge-edge communication
+          - Automated dev env setup for Qian and David
+          - POC/Dev
+            - Pod traffic e2e (to use proxy as gateway) (70%)
+              - [x] Mizar control plane changes for gateway host
+              - [x] Mizar data plane to 
+                  1. route traffic to user space on gateway host
+                  2. avoid ep_host_cache on divider when traffic comes from the gateway host
+              - [ ] connect 2nd cluster and perform e2e test
+            - Detailed gateway design
+        - Release items
+      - New release brainstorming (next week after 27th)
+  - Exposures
+    - [x] [Kubecon Publication](https://vmblog.com/archive/2021/09/13/towards-a-scalable-reliable-and-secure-edge-computing-framework.aspx#.YUJra55Kg8N)
+    - [ ] OSS tutorial talk 9/27
+- "Macro trend" discussion (due by 10/31)
+  - 5G application
+  - Cloud-cloud vs Cloud-edge
+  - Paper reading
+    - Deep Learning With Edge Computing- A Review
+    - Adaptive Federated Learning in Resource Constrained Edge Computing Systems
+    - Edge Intelligence- Paving the Last Mile of Artificial Intelligence With Edge Computing
+    - The Emerging Landscape of Edge-Computing
+- Akraino Release
+  - documentation owner settled
+
+# 9/29
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [ ] 930 release "Inter-cluster communication"
+        - Edge-edge communication
+          - Automated dev env setup for Qian and David
+          - POC/Dev
+            - Pod traffic e2e (to use proxy as gateway) (70%)
+              - [x] Mizar control plane changes for gateway host
+              - [x] Mizar data plane to 
+                  1. [x] route traffic to user space on gateway host
+                  2. [x] avoid ep_host_cache on divider when traffic comes from the gateway host
+              - [ ] connect 2nd cluster and perform e2e test
+            - Detailed gateway design, 930 release
+      - New release brainstorming (next week after 27th)
+  - Exposures
+    - [x] OSS tutorial talk 9/27
+- "Macro trend" discussion (due by 10/31)
+  - 5G application
+  - Cloud-cloud vs Cloud-edge
+  - Serverless
+  - Paper reading
+    - Deep Learning With Edge Computing- A Review
+    - Adaptive Federated Learning in Resource Constrained Edge Computing Systems
+    - Edge Intelligence- Paving the Last Mile of Artificial Intelligence With Edge Computing
+    - The Emerging Landscape of Edge-Computing
+- Onboarding
+- Akraino Release
+  - documentation owner settled
+- Notes:
+  - [Edge gallery for 5G](https://gitee.com/organizations/edgegallery/projects)
+
+
+# 10/06
+
+### Agenda
+- Overall status
+  - Project tracks:
+    - Release
+      - [x] 930 release
+        - Edge-edge communication
+      - New release brainstorming (next week)
+  - Exposures
+    - [x] KubeCon virtual booth slides tutorial talk 9/27
+- "Macro trend" discussion (due by 10/31)
+  - 5G application
+  - Cloud-cloud vs Cloud-edge
+  - Serverless
+  - [Edge gallery for 5G MEC](https://gitee.com/organizations/edgegallery/projects)
+  - Paper reading
+    - [ ] Deep Learning With Edge Computing- A Review
+    - [ ] Adaptive Federated Learning in Resource Constrained Edge Computing Systems
+    - [ ] Edge Intelligence- Paving the Last Mile of Artificial Intelligence With Edge Computing
+    - [ ] The Emerging Landscape of Edge-Computing
+- [x] Onboarding
+- Akraino Release
+  - [ ] documentation owner settled
