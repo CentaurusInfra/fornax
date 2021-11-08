@@ -65,6 +65,22 @@ function check_golangci-lint {
   fi
 }
 
+# check if golangci-lint installed
+function check_libacp-dev {
+  echo "checking libacp-dev"
+  dpkg -s libpcap-dev >/dev/null 2>&1
+  if [[ $? -ne 0 ]]; then
+    echo "installing libpcap-dev."
+    sudo apt-get install libpcap-dev -y
+    if [[ $? -ne 0 ]]; then
+      echo "libpcap-dev installed failed, exiting."
+      exit 1
+    fi
+  else
+    echo "found libacp-dev."
+  fi
+}
+
 verify_go_version(){
   if [[ -z "$(command -v go)" ]]; then
     echo "Can't find 'go' in PATH, please fix and retry.

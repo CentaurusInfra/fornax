@@ -26,6 +26,7 @@ source "${KUBEEDGE_ROOT}/hack/lib/install.sh"
 
 set +e
 check_golangci-lint
+check_libacp-dev
 set -e
 
 kubeedge::lint::check "$@"
