@@ -69,7 +69,7 @@ func InitFlag() {
 	localDividerIP = localDividerIP.To4()
 }
 
-// Initialize the confif vuales to use in packet forwarding
+// Initialize the config vuales to use in packet forwarding
 func init() {
 	var err error
 	InitFlag()
@@ -81,6 +81,7 @@ func init() {
 
 	buffer = gopacket.NewSerializeBuffer()
 
+	// refer to https://www.youtube.com/watch?v=APDnbmTKjgM for a nice talk about what these values are
 	handle, err = pcap.OpenLive("eth0", int32(65535), false, -1*time.Second)
 
 	if err != nil {
