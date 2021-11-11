@@ -47,7 +47,15 @@ else
 all: verify-golang
 	KUBEEDGE_OUTPUT_SUBPATH=$(OUT_DIR) hack/make-rules/build.sh $(WHAT)
 	yes | cp -r binaries/kubectl $(OUT_DIR)/bin/
-	yes | cp build/crds/edgecluster/*.yaml $(OUT_DIR)/bin/
+	mkdir -p $(OUT_DIR)/bin/crds
+	yes | cp build/crds/devices/devices_v1alpha2_device.yaml  $(OUT_DIR)/bin/crds/
+	yes | cp build/crds/devices/devices_v1alpha2_devicemodel.yaml  $(OUT_DIR)/bin/crds/ 
+	yes | cp build/crds/reliablesyncs/cluster_objectsync_v1alpha1.yaml  $(OUT_DIR)/bin/crds/
+	yes | cp build/crds/reliablesyncs/objectsync_v1alpha1.yaml  $(OUT_DIR)/bin/crds/ 
+	yes | cp build/crds/router/router_v1_rule.yaml  $(OUT_DIR)/bin/crds/
+	yes | cp build/crds/router/router_v1_ruleEndpoint.yaml  $(OUT_DIR)/bin/crds/
+	yes | cp build/crds/edgecluster/mission_v1.yaml  $(OUT_DIR)/bin/crds/
+	yes | cp build/crds/edgecluster/edgecluster_v1.yaml  $(OUT_DIR)/bin/crds/
 endif
 
 

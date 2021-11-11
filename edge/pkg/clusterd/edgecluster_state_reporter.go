@@ -40,10 +40,9 @@ import (
 )
 
 const (
-	MissionCrdFile     = "mission_v1.yaml"
-	EdgeClusterCrdFile = "edgecluster_v1.yaml"
-	HealthyStatus      = "healthy"
-	UnhealthyStatus    = "unhealthy"
+	crdFolder       = "crds"
+	HealthyStatus   = "healthy"
+	UnhealthyStatus = "unhealthy"
 )
 
 var initEdgeCluster edgeclustersv1.EdgeCluster
@@ -81,16 +80,10 @@ func (esr *EdgeClusterStateReporter) initialEdgeCluster() (*edgeclustersv1.EdgeC
 
 func (esr *EdgeClusterStateReporter) prepareCluster() error {
 	basedir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	missionCrdFilePath := filepath.Join(basedir, MissionCrdFile)
-	deployMissioCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, missionCrdFilePath)
-	if _, err := helper.ExecCommandToCluster(deployMissioCrdCmd); err != nil {
-		return fmt.Errorf("Failed to deploy mission crd: %v", err)
-	}
-
-	edgeClusterCrdFilePath := filepath.Join(basedir, EdgeClusterCrdFile)
-	deployEdgeClusterCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, edgeClusterCrdFilePath)
-	if _, err := helper.ExecCommandToCluster(deployEdgeClusterCrdCmd); err != nil {
-		return fmt.Errorf("Failed to deploy edgecluster crd: %v", err)
+	crdFilePath := filepath.Join(basedir, crdFolder)
+	deployCrdCmd := fmt.Sprintf("%s apply --kubeconfig=%s -f %s ", config.Config.KubectlCli, config.Config.Kubeconfig, crdFilePath)
+	if _, err := helper.ExecCommandToCluster(deployCrdCmd); err != nil {
+		return fmt.Errorf("Failed to deploy crd files: %v", err)
 	}
 
 	return nil
