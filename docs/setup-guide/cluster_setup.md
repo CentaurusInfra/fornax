@@ -8,7 +8,11 @@ The purpose of this document is to how to setup and configuration Cloud core and
 4. Generate Machine Security certification, and deployed to virtual machine, 
 5. Install CRD file in Cloud core. 
 
-## Scenarios & Design Considerations
+## 1.1. Virtual Machine Prepare and Created (We use AWS for example)
+-	Ubuntu 18.04, one for cloud-core, two for edge-core.
+-	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
+
+### 1.1.1. SETUP CLOUD CORE VIRTUAL MACHINE
 
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
 
