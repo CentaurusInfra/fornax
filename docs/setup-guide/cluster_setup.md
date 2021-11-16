@@ -13,6 +13,11 @@ The purpose of this document is to how to setup and configuration Cloud core and
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
 
 ### 1.1.1. SETUP CLOUD CORE VIRTUAL MACHINE
+-	This Step to create Cloud core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
+-	If you already have similarity machine, you can follow step to create a virtual machine (if you did not have, and you can create brand new from the scratch).
+-	In AWS EC2, pickup instance which you want to copy. Then pickup “Launch more like this”.
+
+
 
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
 
