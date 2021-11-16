@@ -1,7 +1,7 @@
 #	Virtual Machine Setup and Configuration
 
 ## Abstract
-The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create AWS instance, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing. 
+The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create AWS instance, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
 1. Virtual Machine Setup (create Cloud core  and Edge core virutal machine, and setup port),
 2. Fornax Installation and Configuration (Install all the kubernetes compnents: kubectl, kubadm, bubelet),
 3. GoLang Installlation and Configuration (Install all GoLang component and load the Fornax source code), 
