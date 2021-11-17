@@ -152,6 +152,48 @@ You will install these packages on all of your machines:
 	wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz -P /tmp
 	sudo tar -C /usr/local -xzf /tmp/go${GOLANG_VERSION}.linux-amd64.tar.gz
 	```
+- Instal vim
+```
+sudo apt-get install vim
+```
+###  1.3.2.	Configuration GoLang Path.
+- Open "~/.bashrc" file and add two line to to file end, then save and exit
+```
+vi ~/.bashrc
+
+export PATH=$PATH:/usr/local/go/bin
+export GOPATH=/usr/local/go/bin
+```
+- run following line and let source file effective. The check version and environment value.
+```
+source ~/.bashrc
+
+go version
+
+go env
+```
+###  1.3.3.	Setup project location.
+- create project folder
+```
+mkdir -p go/src/github.com
+```
+- go to project folder
+```
+cd go/src/github.com
+```
+- clone fornax repo, change name to Kubeedge, go to "kubeedge" folder, and compile code by "make all"
+```
+git clone https://github.com/CentaurusInfra/fornax.git
+mv fornax kubeedge
+cd kubeedge
+make all
+```
+- if you want to modify the source code, you need create your practice branch.
+```
+git checkout -b practicebransh
+```
+
+
 
 # Stop here
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
