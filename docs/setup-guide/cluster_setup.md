@@ -87,11 +87,58 @@ The purpose of this document is to how to setup and configuration Cloud core and
 
 
 ## 1.2.	Install Kubernetes Tools to Cloud core and Edge core
--	Install kubectl, kubeadm, kubelete to virtual machine.
+-	Install kubernetes tools to virtual machine.(Make sure install version is: 1.21.1-00).
 - 	<a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl" target="_blank">Kubernetes Tools Doc</a>
-###  1.2.1.	Install Kubernetes Tools and Componet
-•	install kubeadm tools.
+- 	Letting iptables see bridged traffic
+- 	Install docker runtime
+-	Installing kubeadm, kubelet and kubectl
 
+###  1.2.1.	Letting iptables see bridged traffic
+•	Make sure that the br_netfilter module is loaded. This can be done by running **lsmod | grep br_netfilter**. To load it explicitly call**sudo modprobe br_netfilter**.
+```Script
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+br_netfilter
+EOF
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sudo sysctl --system
+```
+###  1.2.2.	Install docker runtime
+- Install Docker runtime
+```
+sudo apt-get install docker.io
+```
+###  1.2.3.	Installing kubeadm, kubelet and kubectl
+You will install these packages on all of your machines:
+
+-	**kubeadm:** the command to bootstrap the cluster.
+
+-	**kubelet:** the component that runs on all of the machines in your cluster and does things like starting pods and containers.
+
+-	**kubectl:** the command line util to talk to your cluster.
+
+	1. Update the apt package index and install packages needed to use the Kubernetes apt repository:
+	```
+	sudo apt-get update
+	sudo apt-get install -y apt-transport-https ca-certificates curl
+	```
+	2. Download the Google Cloud public signing key:
+	```
+	sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+	```
+	3. Add the Kubernetes apt repository:
+	```
+	echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+	```
+	4. Update apt package index, install kubelet, kubeadm and kubectl, and pin their version:
+	```
+	sudo apt-get update
+	apt-get install -qy kubelet=1.21.1-00 kubectl=1.21.1-00 kubeadm=1.21.1-00
+	sudo apt-mark hold kubelet kubeadm kubectl
+	```
 
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
 
