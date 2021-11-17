@@ -140,6 +140,18 @@ You will install these packages on all of your machines:
 	sudo apt-mark hold kubelet kubeadm kubectl
 	```
 
+## 1.3.	Install GoLang Tools to Cloud core and Edge core
+###  1.3.1.	Install GoLang
+- You should in root folder.
+	```
+	GOLANG_VERSION=${GOLANG_VERSION:-"1.14.15"}
+	sudo apt -y update
+	sudo apt -y install make
+	sudo apt -y install gcc
+	sudo apt -y install jq
+	wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz -P /tmp
+	sudo tar -C /usr/local -xzf /tmp/go${GOLANG_VERSION}.linux-amd64.tar.gz
+	```
 
 # Stop here
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
