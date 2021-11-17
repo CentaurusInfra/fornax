@@ -82,7 +82,7 @@ The purpose of this document is to how to setup and configuration Cloud core and
      width="98%" 
      align="center"/>
 
-###  1.1.2.	REPEAT 1.1.1 CREATE TWO EDGE-CORE NODE
+###  1.1.2.	REPEAT 1.1.1 CREATE TWO EDGE-CORE Virtual Machine
 •	Create two Edge core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
 
 
