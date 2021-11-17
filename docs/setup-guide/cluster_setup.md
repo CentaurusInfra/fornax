@@ -23,11 +23,11 @@ The purpose of this document is to how to setup and configuration Cloud core and
      
 - 	You will get following screen for review.  
 <img src="images/EC2_vm_03_review.png" width="98%" align="center"/>
-- 	Change disksapce size to 80G
+   **Change disksapce size to 80G**
 <img src="images/EC2_vm_04_storage.png" width="98%" align="center"/>
-- 	Give a Tags name. see screen shot.
+- 	**Give a Tags name. see screen shot.**
 <img src="images/EC2_vm_05_tagname.png" width="98%" align="center"/>
-- 	Click "Review and Launch" button to review.
+- 	**Click "Review and Launch" button to review.**
 <img src="images/EC2_vm_06_security.png" width="98%" align="center"/>
 - 	Click "Launch"
 <img src="images/EC2_vm_07_launch.png" width="98%" align="center"/>
