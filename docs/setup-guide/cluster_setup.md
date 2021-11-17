@@ -82,6 +82,15 @@ The purpose of this document is to how to setup and configuration Cloud core and
      width="98%" 
      align="center"/>
 
+###  1.1.2.	REPEAT 1.1.1 CREATE TWO EDGE-CORE NODE
+•	Create two Edge core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
+
+
+## 1.2.	Install Kubernetes Tools to Cloud core and Edge core
+-	Install kubectl, kubeadm, kubelete to virtual machine.
+- 	<a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl" target="_blank">Kubernetes Tools Doc</a>
+###  1.2.1.	Install Kubernetes Tools and Componet
+•	install kubeadm tools.
 
 
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
