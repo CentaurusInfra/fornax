@@ -1,4 +1,4 @@
-#	Edge Cluster Multi-Level Setup and Configuration
+#	Edge Cluster Multi-Layer Setup and Configuration
 
 ## Abstract
 The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
