@@ -1,4 +1,4 @@
-#	Virtual Machine Setup and Configuration
+#	Edge Cluster Setup and Configuration
 
 ## Abstract
 The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
@@ -8,7 +8,7 @@ The purpose of this document is to how to setup and configuration Cloud core and
 4. Generate Machine Security certification, and deployed to virtual machine, 
 5. Install CRD file in Cloud core. 
 
-## 1.1. Virtual Machine Prepare and Created (We use AWS for example)
+## 1.1. Virtual Machine Setup and Configuration (We use AWS for example)
 -	Ubuntu 18.04, one for cloud-core, two for edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
 
