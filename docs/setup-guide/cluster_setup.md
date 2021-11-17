@@ -1,7 +1,7 @@
 #	Virtual Machine Setup and Configuration
 
 ## Abstract
-The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create AWS instance, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
+The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
 1. Virtual Machine Setup (create Cloud core  and Edge core virutal machine, and setup port),
 2. Fornax Installation and Configuration (Install all the kubernetes compnents: kubectl, kubadm, bubelet),
 3. GoLang Installlation and Configuration (Install all GoLang component and load the Fornax source code), 
@@ -94,7 +94,7 @@ The purpose of this document is to how to setup and configuration Cloud core and
 -	Installing kubeadm, kubelet and kubectl
 
 ###  1.2.1.	Letting iptables see bridged traffic
-•	Make sure that the br_netfilter module is loaded. This can be done by running **lsmod | grep br_netfilter**. To load it explicitly call**sudo modprobe br_netfilter**.
+•	Make sure that the br_netfilter module is loaded. This can be done by running **lsmod | grep br_netfilter**. To load it explicitly call **sudo modprobe br_netfilter**.
 ```Script
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 br_netfilter
@@ -140,6 +140,8 @@ You will install these packages on all of your machines:
 	sudo apt-mark hold kubelet kubeadm kubectl
 	```
 
+
+# Stop here
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
 
 - IoT, where devices such as temperature sensors and surveillance cameras are connected to edge nodes.
