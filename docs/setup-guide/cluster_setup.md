@@ -17,38 +17,72 @@ The purpose of this document is to how to setup and configuration Cloud core and
 -	If you already have similarity machine, you can follow step to create a virtual machine (if you did not have, and you can create brand new from the scratch).
 -	In AWS EC2, pickup instance which you want to copy. Then pickup “Launch more like this”.
 
-<img src="images/EC2_vm_01.png" width="98%"  align="center"/>
+<img src="images/EC2_vm_01.png" 
+     width="98%"  
+     align="center"/>
      
-<img src="images/EC2_vm_02.png" width="98%"  align="center"/>
+<img src="images/EC2_vm_02.png" 
+     width="98%"  
+     align="center"/>
      
 - 	You will get following screen for review.  
-<img src="images/EC2_vm_03_review.png" width="98%" align="center"/>
-   **Change disksapce size to 80G**
-<img src="images/EC2_vm_04_storage.png" width="98%" align="center"/>
-- 	**Give a Tags name. see screen shot.**
-<img src="images/EC2_vm_05_tagname.png" width="98%" align="center"/>
-- 	**Click "Review and Launch" button to review.**
-<img src="images/EC2_vm_06_security.png" width="98%" align="center"/>
+<img src="images/EC2_vm_03_review.png" 
+     width="98%" 
+     align="center"/>
+-	Change disksapce size to 80G 
+<img src="images/EC2_vm_04_storage.png" 
+     width="98%" 
+     align="center"/>
+- 	Give a Tags name. see screen shot.
+<img src="images/EC2_vm_05_tagname.png" 
+     width="98%" 
+     align="center"/>
+- 	Click "Review and Launch" button to review.
+<img src="images/EC2_vm_06_security.png" 
+     width="98%" 
+     align="center"/>
 - 	Click "Launch"
-<img src="images/EC2_vm_07_launch.png" width="98%" align="center"/>
+<img src="images/EC2_vm_07_launch.png" 
+     width="98%" 
+     align="center"/>
 - 	It will pop up a window, pickup "Choose an existing key pair" and edge-team-key|RSA. Check "checkbox", then click "Launch Instance"
-<img src="images/EC2_vm_08_keypair.png" width="98%" align="center"/>
+<img src="images/EC2_vm_08_keypair.png" 
+     width="98%" 
+     align="center"/>
 - Waiting virtual machine to launch. The following window will show. Then  click "View Instance"
-<img src="images/EC2_vm_09_status.png" width="98%" align="center"/>
+<img src="images/EC2_vm_09_status.png" 
+     width="98%" 
+     align="center"/>
 
-<img src="images/EC2_vm_10_view.png" width="98%" align="center"/>
+<img src="images/EC2_vm_10_view.png" 
+     width="98%" 
+     align="center"/>
 - 	Your instance  will be  running.
-<img src="images/EC2_vm_11_cloudcore.png" width="98%" align="center"/>
+<img src="images/EC2_vm_11_cloudcore.png" 
+     width="98%" 
+     align="center"/>
 - 	Add prot number 10000 and 10002.
-<img src="images/EC2_vm_12_port1.png" width="98%" align="center"/>
+<img src="images/EC2_vm_12_port1.png" 
+     width="98%" 
+     align="center"/>
 
-<img src="images/EC2_vm_13_port2.png" width="98%" align="center"/>
+<img src="images/EC2_vm_13_port2.png" 
+     width="98%" 
+     align="center"/>
 - 	Click "Edit inbound rules"
-<img src="images/EC2_vm_14_portadd.png" width="98%" align="center"/>
+<img src="images/EC2_vm_14_portadd.png" 
+     width="98%" 
+     align="center"/>
 
-<img src="images/EC2_vm_15_portdone.png" width="98%" align="center"/>
-- 	Final you will see 10000 and 10002 port.
-<img src="images/EC2_vm_16_portfinal.png" width="98%" align="center"/>
+<img src="images/EC2_vm_15_portdone.png" 
+     width="98%" 
+     align="center"/>
+- 	Finally you will see 10000 and 10002 port.
+<img src="images/EC2_vm_16_portfinal.png" 
+     width="98%" 
+     align="center"/>
+
+
 
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
 
