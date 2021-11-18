@@ -222,6 +222,7 @@ build/tools/certgen.sh genCertAndKey server IP_A IP_B IP_C
 4. Then copy the files of folder /etc/kubeedge/ca and /etc/kubeedge/certs in machine A to the folder of /etc/kubeedge/ca and /etc/kubeedge/certs in machine B, and C.
 
 5. Install CRDs
+- For first line mostly use "export KUBECONFIG=/etc/kubernetes/admin.conf".
 ```
 export KUBECONFIG=[Cluster_A_kubeconfig_file]
 
