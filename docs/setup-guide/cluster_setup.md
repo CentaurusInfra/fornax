@@ -140,6 +140,24 @@ You will install these packages on all of your machines:
 	sudo apt-mark hold kubelet kubeadm kubectl
 	```
 
+- Next, run the command to enable docker service systemctl enable docker.service
+
+###  1.2.4.	Start a cluster using kubeadm
+- (referring doc: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)
+- 1. Run command (it might cost a few minutes)
+```
+kubeadm init
+```
+- 2. At the end of the screen output, you will see info about setting the kubeconfig. Do the following if you are the root user:
+ ```
+ export KUBECONFIG=/etc/kubernetes/admin.conf
+ ```
+- 3. Check the cluster is up by running some commands, like
+```
+kubectl get nodes
+```
+
+
 ## 1.3.	Install GoLang Tools to Cloud core and Edge core
 ###  1.3.1.	Install GoLang
 - You should in root folder.
