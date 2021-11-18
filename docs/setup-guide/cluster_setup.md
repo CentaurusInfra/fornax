@@ -193,6 +193,34 @@ make all
 git checkout -b practicebransh
 ```
 
+## 1.4.	Fornax Configuration
+###  1.4.1.	Kubecofig File Preparation
+- Copy the admin kubeconfig file of cluster A to machine B, the kubecofig file of cluster B to the machine of cluster C.
+
+- Copy the kubeconfig files of cluster A, B, and C to the root operator machine.
+
+###  1.4.2.	In machine A, do following
+
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (See 1.3.3. for detail)
+Build the binaries of edgecore and cloudcore using the commands
+```
+make WHAT=cloudcore
+make WHAT=edgecore
+```
+2. config cloudcore
+```
+cp /etc/kubernetes/admin.conf /root/.kube/config
+_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
+```
+3. Generate security data
+Note down the IP address of machine A, B, and C denotes as IP_A, IP_B, and IP_C, and run the command:
+
+```
+build/tools/certgen.sh genCA IP_A IP_B IP_C
+build/tools/certgen.sh genCertAndKey server IP_A IP_B IP_C
+```
+
+
 
 
 # Stop here
