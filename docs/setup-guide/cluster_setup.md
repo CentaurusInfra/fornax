@@ -219,9 +219,24 @@ Note down the IP address of machine A, B, and C denotes as IP_A, IP_B, and IP_C,
 build/tools/certgen.sh genCA IP_A IP_B IP_C
 build/tools/certgen.sh genCertAndKey server IP_A IP_B IP_C
 ```
+4. Then copy the files of folder /etc/kubeedge/ca and /etc/kubeedge/certs in machine A to the folder of /etc/kubeedge/ca and /etc/kubeedge/certs in machine B, and C.
 
+5. Install CRDs
+```
+export KUBECONFIG=[Cluster_A_kubeconfig_file]
 
+kubectl apply -f build/crds/devices/devices_v1alpha2_device.yaml
+kubectl apply -f build/crds/devices/devices_v1alpha2_devicemodel.yaml 
 
+kubectl apply -f build/crds/reliablesyncs/cluster_objectsync_v1alpha1.yaml
+kubectl apply -f build/crds/reliablesyncs/objectsync_v1alpha1.yaml 
+
+kubectl apply -f  build/crds/router/router_v1_rule.yaml
+kubectl apply -f  build/crds/router/router_v1_ruleEndpoint.yaml
+
+kubectl apply -f build/crds/edgecluster/mission_v1.yaml
+kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
+```
 
 # Stop here
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
