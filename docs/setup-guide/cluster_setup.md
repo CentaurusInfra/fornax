@@ -219,7 +219,7 @@ git checkout -b practicebransh
 
 ###  1.4.2.	In machine A, do following
 
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (See 1.3.3. for detail)
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (**See 1.3.3. for detail**)
 Build the binaries of edgecore and cloudcore using the commands
 ```
 make WHAT=cloudcore
@@ -260,7 +260,7 @@ kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
 
 ###  1.4.3.	In machine B, do following
 
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (See 1.3.3. for detail)
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (**See 1.3.3. for detail**)
 Build the binaries of edgecore and cloudcore using the commands
 ```
 make WHAT=cloudcore
@@ -283,7 +283,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_A_kubeconfig_file]
 
 ###  1.4.4.	In machine C, do following
 
-1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (See 1.3.3. for detail)
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (**See 1.3.3. for detail**)
 Build the binaries of edgecore and cloudcore using the commands
 ```
 make WHAT=cloudcore
