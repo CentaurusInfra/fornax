@@ -239,6 +239,54 @@ kubectl apply -f build/crds/edgecluster/mission_v1.yaml
 kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
 ```
 
+
+###  1.4.3.	In machine B, do following
+
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (See 1.3.3. for detail)
+Build the binaries of edgecore and cloudcore using the commands
+```
+make WHAT=cloudcore
+make WHAT=edgecore
+```
+2. config cloudcore
+```
+cp /etc/kubernetes/admin.conf /root/.kube/config
+_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
+```
+
+
+3. config edgecore
+```
+cp [Cluster_B_kubeconfig_file] /root/edgecluster.kubeconfig
+_output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
+tests/edgecluster/hack/update_edgecore_config.sh [cluster_A_kubeconfig_file]
+
+```
+
+###  1.4.4.	In machine C, do following
+
+1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (See 1.3.3. for detail)
+Build the binaries of edgecore and cloudcore using the commands
+```
+make WHAT=cloudcore
+make WHAT=edgecore
+```
+2. config cloudcore
+```
+cp /etc/kubernetes/admin.conf /root/.kube/config
+_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
+```
+
+
+3. config edgecore
+```
+cp [Cluster_C_kubeconfig_file] /root/edgecluster.kubeconfig
+_output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
+tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
+```
+
+
+
 # Stop here
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
 
