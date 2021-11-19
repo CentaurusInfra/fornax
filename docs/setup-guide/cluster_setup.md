@@ -7,6 +7,7 @@ The purpose of this document is to how to setup and configuration Cloud core and
 3. GoLang Installlation and Configuration (Install all GoLang component and load the Fornax source code), 
 4. Generate Machine Security certification, and deployed to virtual machine, 
 5. Install CRD file in Cloud core. 
+6. Run cloud-core and edge-core and deployed mission and verify the mission.
 
 ## 1.1. Virtual Machine Setup and Configuration (We use AWS for example)
 -	Ubuntu 18.04, one for cloud-core, two for edge-core.
@@ -240,6 +241,8 @@ build/tools/certgen.sh genCertAndKey server IP_A IP_B IP_C
 4. Then copy the files of folder /etc/kubeedge/ca and /etc/kubeedge/certs in machine A to the folder of /etc/kubeedge/ca and /etc/kubeedge/certs in machine B, and C.
 
 5. Install CRDs
+- 	The *Mission* CRD is used to carry workload information through edge cluster layers, and therefore workload information is stored as a part of the *[Mission/State]* definition called "State".
+
 - For first line mostly use "export KUBECONFIG=/etc/kubernetes/admin.conf".
 ```
 export KUBECONFIG=[Cluster_A_kubeconfig_file]
@@ -305,6 +308,8 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 
 
 # 2	Run Fornax Cluster and Deployment Mission to Machine B, C
+
+- Each *Mission* can be deployed to multiple clusters, so the status is a collection of all workloads from the same *Mission*.
 
 ##  2.1.	In machine A.
 - If you have tmux on your machine, split two window view. Otherwise start two command window. One window run the cloud-core, One window check cluster status
