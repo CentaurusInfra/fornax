@@ -304,6 +304,67 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 ```
 
 
+## 1.5.	Run Fornax Cluster Layer and Deployment Mission to Machine B, C
+
+###  1.5.1.	In machine A.
+- If you have tmux on your machine, split two window view. Otherwise start two command window. One window run the cloud-core, One window check cluster status
+- One window run following cloudcore command line (notes: machine A only run cloudcore):
+```
+export KUBECONFIG=/etc/kubernetes/admin.conf
+_output/local/bin/cloudcore
+
+```
+- Another window run following line, to check machine status and mission deployment status
+```
+kubectl get crd
+kubectl get edgecluster
+kubectl get mission
+```
+
+###  1.5.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
+- Run cloudcore in machine B 
+```
+export KUBECONFIG=/etc/kubernetes/admin.conf
+_output/local/bin/cloudcore
+```
+- Run edgecore in machine B
+```
+export KUBECONFIG=/etc/kubernetes/admin.conf
+_output/local/bin/edgecore --edgecluster
+```
+
+###  1.5.3.	In machine C. (only run edgecore)
+```
+export KUBECONFIG=/etc/kubernetes/admin.conf
+_output/local/bin/edgecore --edgecluster
+```
+
+###  1.5.4.	Deployment Mission to Machine B, C
+- Waiting machine A, B, C running, we can run following command and test mission deployment
+- In machine A, do following command in Second Command Window.
+
+```
+kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
+```
+you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] Mission deployment-to-all is created
+
+- Run following command test mission created status.
+```
+kubectl get edgecluster
+kubectl get mission
+```
+- After you see mission, you can test delete mission. by using following command
+```
+kubectl delete mission deployment-to-all
+```
+- Run following command test mission deteted status.
+```
+kubectl get edgecluster
+kubectl get mission
+```
+
+
+
 
 # Stop here
 Edge computing is being adopted in traditional and new industries at a quick pace. Applications for factory automation, automated vehicles, security surveillance,  medical operation, remote monitoring, etc. are enjoying the benefits of shifting workload closer to the fields of operation. In specific, here are  three of the most prominent fields that are seeing the most development with edge adoption: 
