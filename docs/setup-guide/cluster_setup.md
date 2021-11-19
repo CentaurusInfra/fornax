@@ -304,7 +304,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 ```
 
 
-# 2	Run Fornax Cluster Layer and Deployment Mission to Machine B, C
+# 2	Run Fornax Cluster and Deployment Mission to Machine B, C
 
 ##  2.1.	In machine A.
 - If you have tmux on your machine, split two window view. Otherwise start two command window. One window run the cloud-core, One window check cluster status
