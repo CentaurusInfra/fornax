@@ -304,60 +304,60 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 ```
 
 
-## 1.5.	Run Fornax Cluster Layer and Deployment Mission to Machine B, C
+# 2	Run Fornax Cluster Layer and Deployment Mission to Machine B, C
 
-###  1.5.1.	In machine A.
+##  2.1.	In machine A.
 - If you have tmux on your machine, split two window view. Otherwise start two command window. One window run the cloud-core, One window check cluster status
-- One window run following cloudcore command line (notes: machine A only run cloudcore):
+### 2.1.1. One window run following cloudcore command line (notes: machine A only run cloudcore):
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
 
 ```
-- Another window run following line, to check machine status and mission deployment status
+### 2.1.2 Another window run following line, to check machine status and mission deployment status
 ```
 kubectl get crd
 kubectl get edgecluster
 kubectl get mission
 ```
 
-###  1.5.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
-- Run cloudcore in machine B 
+##  2.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
+### 2.2.1. Run cloudcore in machine B 
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
 ```
-- Run edgecore in machine B
+### 2.2.2 Run edgecore in machine B
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
 ```
 
-###  1.5.3.	In machine C. (only run edgecore)
+##  2.3.	In machine C. (only run edgecore)
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
 ```
 
-###  1.5.4.	Deployment Mission to Machine B, C
-- Waiting machine A, B, C running, we can run following command and test mission deployment
-- In machine A, do following command in Second Command Window.
+##  2.4.	Deployment Mission to Machine B, C
+### 2.4.1. Waiting machine A, B, C running, we can run following command and test mission deployment
+### 2.4.2.  In machine A, do following command in Second Command Window.
 
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
 ```
-you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**
+-	you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**
 
-- Run following command verify mission created status.
+### 2.4.3. Run following command verify mission created status.
 ```
 kubectl get edgecluster
 kubectl get mission
 ```
-- After you see mission, you can test delete mission. by using following command
+### 2.4.4. After you see mission, you can test delete mission. by using following command
 ```
 kubectl delete mission deployment-to-all
 ```
-- Run following command test mission deteted status.
+### 2.4.5. Run following command verify mission deteted status.
 ```
 kubectl get edgecluster
 kubectl get mission
