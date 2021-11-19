@@ -346,9 +346,9 @@ _output/local/bin/edgecore --edgecluster
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
 ```
-you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] Mission deployment-to-all is created
+you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**
 
-- Run following command test mission created status.
+- Run following command verify mission created status.
 ```
 kubectl get edgecluster
 kubectl get mission
