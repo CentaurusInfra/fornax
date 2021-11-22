@@ -108,6 +108,12 @@ EOF
 sudo sysctl --system
 ```
 
+- Verify the bridged
+```
+lsmod | grep br_netfilter
+sudo modprobe br_netfilter
+lsmod | grep br_netfilter
+```
 - insert iptables verify image in here later.
 
 ###  1.2.2.	Install docker runtime
