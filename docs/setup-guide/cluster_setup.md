@@ -107,6 +107,9 @@ net.bridge.bridge-nf-call-iptables = 1
 EOF
 sudo sysctl --system
 ```
+
+- insert iptables verify image in here later.
+
 ###  1.2.2.	Install docker runtime
 - Install Docker runtime
 ```
