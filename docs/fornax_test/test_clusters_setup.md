@@ -44,11 +44,6 @@ make WHAT=edgecore
 cp /etc/kubernetes/admin.conf /root/.kube/config
 _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
 ```
-- **Notes:**. if you meeting error "/etc/kubeedge/config/cloudcore.yaml: No such file or directory". do following command
-```
-mkdir /etc/kubeedge/config -p
-mkdir /root/.kube/config -p
-```
 
 3. Generate security data 
 
