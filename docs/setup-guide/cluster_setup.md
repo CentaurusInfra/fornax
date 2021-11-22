@@ -170,14 +170,20 @@ kubectl get nodes
 
 ## 1.3.	Install GoLang Tools to Cloud core and Edge core
 ###  1.3.1.	Install GoLang
-- You should in root folder (copy command line  should by line by line).
+- You should in root folder (**copy command line  should by line by line to run**).
 	```
 	GOLANG_VERSION=${GOLANG_VERSION:-"1.14.15"}
+	
 	sudo apt -y update
+	
 	sudo apt -y install make
+	
 	sudo apt -y install gcc
+	
 	sudo apt -y install jq
+	
 	wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz -P /tmp
+	
 	sudo tar -C /usr/local -xzf /tmp/go${GOLANG_VERSION}.linux-amd64.tar.gz
 	```
 - Instal vim
