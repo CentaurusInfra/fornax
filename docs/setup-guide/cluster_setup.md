@@ -240,6 +240,12 @@ make WHAT=edgecore
 cp /etc/kubernetes/admin.conf /root/.kube/config
 _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
 ```
+- **Notes:**. if you run above command and meeting error "/etc/kubeedge/config/cloudcore.yaml: No such file or directory". do following command
+```
+mkdir /etc/kubeedge/config -p
+mkdir /root/.kube/config -p
+```
+
 3. Generate security data
 Note down the IP address of machine A, B, and C denotes as IP_A, IP_B, and IP_C, and run the command:
 
