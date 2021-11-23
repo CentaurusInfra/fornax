@@ -255,6 +255,10 @@ mkdir /root/.kube/config -p
 
 3. Generate security data
 Note down the IP address of machine A, B, and C denotes as IP_A, IP_B, and IP_C, and run the command:
+- Befoe run certgen.sh, create directory
+```
+mkdir -p /etc/kubeedge/ca
+```
 
 ```
 build/tools/certgen.sh genCA IP_A IP_B IP_C
