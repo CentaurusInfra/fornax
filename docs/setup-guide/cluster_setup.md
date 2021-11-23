@@ -119,6 +119,7 @@ lsmod | grep br_netfilter
 ###  1.2.2.	Install docker runtime
 - Install Docker runtime
 ```
+sudo apt-get update
 sudo apt-get install docker.io
 ```
 ###  1.2.3.	Installing kubeadm, kubelet and kubectl
