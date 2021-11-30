@@ -348,7 +348,10 @@ kubectl delete mission deployment-to-all
 kubectl get edgecluster
 kubectl get mission
 ```
-
+Result:
+<img src="images/Deployment_3_5_status.png" 
+     width="98%"  
+     align="center"/>
 
 
 
