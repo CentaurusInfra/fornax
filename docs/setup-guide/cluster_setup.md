@@ -12,7 +12,7 @@ The purpose of this document is to how to setup and configuration Cloud core and
 ## 1.1. Virtual Machine Setup and Configuration (We use AWS for example)
 -	Ubuntu 18.04, one for cloud-core, two for edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
-
+- 	Virtual Machine Setup and Configuration <a href="vm_setup.md" target="_blank"> Virtual Machine Setup and Configuration </a>
 ### 1.1.1. SETUP CLOUD CORE VIRTUAL MACHINE
 -	This Step to create Cloud core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
 -	If you already have similarity machine, you can follow step to create a virtual machine (if you did not have, and you can create brand new from the scratch).
