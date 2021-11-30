@@ -260,7 +260,7 @@ Note down the IP address of machine A, B, and C denotes as IP_A, IP_B, and IP_C,
 mkdir -p /etc/kubeedge/ca
 ```
 - Notes: if you cannot generate certkey: you need modify /etc/ssl/openssl.cnf file. Open file by vi and Try removing or commenting "RANDFILE = $ENV::HOME/.rnd" line.
-for doc reference: https://stackoverflow.com/questions/63893662/cant-load-root-rnd-into-rng
+for doc reference: <a href="https://stackoverflow.com/questions/63893662/cant-load-root-rnd-into-rng/" target="_blank">https://stackoverflow.com/questions/63893662/cant-load-root-rnd-into-rng/</a>
 ```
 vi /etc/ssl/openssl.cnf
 ```
