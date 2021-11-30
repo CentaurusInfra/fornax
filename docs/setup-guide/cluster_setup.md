@@ -278,13 +278,13 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 
 ##  2.1.	In machine A.
 - If you have tmux on your machine, split two window view. Otherwise start two command window. One window run the cloud-core, One window check cluster status
-### 2.1.1. One window run following cloudcore command line (notes: machine A only run cloudcore):
+### 2.1.1. One window run following cloudcore command line (notes: machine A only run cloudcore)(Step 1):
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
 
 ```
-### 2.1.2 Another window run following line, to check machine status and mission deployment status
+### 2.1.2 Another window run following line, to check machine status and mission deployment status (Step 5)
 ```
 kubectl get crd
 kubectl get edgecluster
@@ -292,7 +292,7 @@ kubectl get mission
 ```
 
 ##  2.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
-### 2.2.1 Run edgecore in machine B
+### 2.2.1 Run edgecore in machine B (Step 2)
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
@@ -302,7 +302,7 @@ _output/local/bin/edgecore --edgecluster
 chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
 ```
 
-### 2.2.2. Run cloudcore in machine B (if you have machine C)
+### 2.2.2. Run cloudcore in machine B (if you have machine C) (Step 3)
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
@@ -310,7 +310,7 @@ _output/local/bin/cloudcore
 
 
 ##  2.3.	In machine C. (only run edgecore)
-### 2.3.1 Run edgecore in machine B
+### 2.3.1 Run edgecore in machine B (Step 4)
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
