@@ -286,16 +286,22 @@ kubectl get mission
 ```
 
 ##  2.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
-### 2.2.1. Run cloudcore in machine B 
-```
-export KUBECONFIG=/etc/kubernetes/admin.conf
-_output/local/bin/cloudcore
-```
-### 2.2.2 Run edgecore in machine B
+### 2.2.1 Run edgecore in machine B
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
 ```
+- Notes: If you first time to run above command, please run the following command. only run one time.
+```
+chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
+```
+
+### 2.2.2. Run cloudcore in machine B (if you have machine C)
+```
+export KUBECONFIG=/etc/kubernetes/admin.conf
+_output/local/bin/cloudcore
+```
+
 
 ##  2.3.	In machine C. (only run edgecore)
 ```
