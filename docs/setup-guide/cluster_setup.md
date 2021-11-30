@@ -334,6 +334,11 @@ kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
 kubectl get edgecluster
 kubectl get mission
 ```
+Result:
+<img src="images/Deployment_3_2_status.png" 
+     width="98%"  
+     align="center"/>
+     
 ## 3.4. After you see mission, you can test delete mission. by using following command
 ```
 kubectl delete mission deployment-to-all
