@@ -80,3 +80,5 @@ The purpose of this document is to how to setup and configuration Virtual Machin
 
 ###  1.1.2.	REPEAT 1.1.1 CREATE TWO EDGE-CORE Virtual Machine
 •	Create two Edge core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
+
+###  1.1.3.	After you done above section, you can got 1.2.  <a href="vm_setup.md" target="_blank"> Installation </a>
