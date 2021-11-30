@@ -267,7 +267,12 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 
 
 # 2	Run Fornax Cluster and Deployment Mission to Machine B, C
-
+- Use tmux and split window. Run following sequence step.
+- Step 1: machine A cloud core
+- Step 2: machine B edge core
+- Step 3: machine B cloud core
+- Step 4: machine C edge core
+- Step 5: back to machine A second window to deployment command and other command(kubectl get edgecluster, kubectl get mission)
 - Each *Mission* can be deployed to multiple clusters, so the status is a collection of all workloads from the same *Mission*.
 
 ##  2.1.	In machine A.
@@ -304,11 +309,15 @@ _output/local/bin/cloudcore
 
 
 ##  2.3.	In machine C. (only run edgecore)
+### 2.3.1 Run edgecore in machine B
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
 ```
-
+- Notes: If you first time to run above command, please run the following command. only run one time.
+```
+chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
+```
 ##  2.4.	Deployment Mission to Machine B, C
 ### 2.4.1. Waiting machine A, B, C running, we can run following command and test mission deployment
 ### 2.4.2.  In machine A, do following command in Second Command Window.
