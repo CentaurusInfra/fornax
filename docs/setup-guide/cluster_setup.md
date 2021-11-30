@@ -266,7 +266,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 ```
 
 
-# 2	Run Fornax Cluster and Deployment Mission to Machine B, C
+# 2	Run Fornax Cluster in Machine B, C
 ## summary
 - Use tmux and split window. Run following sequence step.
 - Step 1: machine A cloud core
@@ -319,25 +319,26 @@ _output/local/bin/edgecore --edgecluster
 ```
 chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
 ```
-##  2.4.	Deployment Mission to Machine B, C
-### 2.4.1. Waiting machine A, B, C running, we can run following command and test mission deployment
-### 2.4.2.  In machine A, do following command in Second Command Window.
+
+# 3	Deployment Mission to Machine B, C
+## 3.1. Waiting machine A, B, C running, we can run following command and test mission deployment
+## 3.2.  In machine A, do following command in Second Command Window.
 
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
 ```
 -	you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**
 
-### 2.4.3. Run following command verify mission created status.
+## 3.3. Run following command verify mission created status(in second window).
 ```
 kubectl get edgecluster
 kubectl get mission
 ```
-### 2.4.4. After you see mission, you can test delete mission. by using following command
+## 3.4. After you see mission, you can test delete mission. by using following command
 ```
 kubectl delete mission deployment-to-all
 ```
-### 2.4.5. Run following command verify mission deteted status.
+## 3.5. Run following command verify mission deteted status(in second window).
 ```
 kubectl get edgecluster
 kubectl get mission
