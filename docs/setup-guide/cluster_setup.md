@@ -365,6 +365,12 @@ kubectl delete mission deployment-to-all
 kubectl get edgecluster
 kubectl get mission
 ```
+OR
+```
+watch kubectl get edgecluster
+watch kubectl get mission
+```
+	
 Result:
 <img src="images/Deployment_3_5_status.png" 
      width="98%"  
