@@ -284,6 +284,11 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
 
 ```
+Result:
+<img src="images/Running_A_cloudcore.png" 
+     width="98%"  
+     align="center"/>
+     
 ### 2.1.2 Another window run following line, to check machine status and mission deployment status (Step 5)
 ```
 kubectl get crd
@@ -307,10 +312,13 @@ chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kub
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
 ```
-
+Result:
+<img src="images/Running_B_edgecoreAndcloudcore.png" 
+     width="98%"  
+     align="center"/>
 
 ##  2.3.	In machine C. (only run edgecore)
-### 2.3.1 Run edgecore in machine B (Step 4)
+### 2.3.1 Run edgecore in machine C (Step 4)
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
@@ -320,6 +328,11 @@ _output/local/bin/edgecore --edgecluster
 chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
 ```
 
+Result:
+<img src="images/Running_C_edgecore.png" 
+     width="98%"  
+     align="center"/>
+
 # 3	Deployment Mission to Machine B, C
 ## 3.1. Waiting machine A, B, C running, we can run following command and test mission deployment
 ## 3.2.  In machine A, do following command in Second Command Window.
@@ -327,7 +340,11 @@ chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kub
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
 ```
--	you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**
+you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**.
+<BR>Result:
+<img src="images/Deployment_mission_status.png" 
+     width="98%"  
+     align="center"/>
 
 ## 3.3. Run following command verify mission created status(in second window).
 ```
