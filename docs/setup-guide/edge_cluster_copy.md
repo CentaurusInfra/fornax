@@ -72,7 +72,7 @@ scp -r /etc/kubeedge/cert [machine_B_IP]:/etc/kubeedge/
 scp /etc/kubernetes/admin.conf [machine_B_IP]:/root/go/src/github.com/kubeedge/[david_sample_folder]
 ```
 
-## 2.3. Copy machine A security file to machne B 
+## 2.3. Copy machine A security file to machne C 
 ## 2.1.1. Copy ca, certs from machine A to machine C
 - notes: replace machine_B_IP with your ip address. also remove square bracess
 ```
