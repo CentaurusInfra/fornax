@@ -50,9 +50,13 @@ Result:
      align="center"/>
      
      
-# 2. Copy ca, certs, admin.conf between cluster virtural machine A 
+# 2. Copy ca, certs, admin.conf from machine A to machine B, C
 -	Ubuntu 18.04, one for cloud-core, two for edge-core.
 -	You need know your machine private ip.
+-	Copy Structure Overview
+<img src="images/Cluster_cacerts_copy_structure.png" 
+     width="98%"  
+     align="center"/>
 
 ## 2.1. Copy machine A security file to machne B 
 ## 2.1.1. Copy ca, certs from machine A to machine B
