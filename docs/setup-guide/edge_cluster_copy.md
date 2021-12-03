@@ -1,4 +1,4 @@
-#	File or Folder Copy Process Between Edge cluster For Reference
+#	File or Folder Copy Process Between Edge cluster(For Reference)
 
 ## Abstract
 The purpose of this document is to how to copy file or folder in machine A to machine B and C Virtual Machine(or Cluster), and describe the each step to create copy process and refence documentation.
@@ -17,6 +17,9 @@ If you have own way to copy, you can use your own way to copy and skip this doc.
 ssh-keygen -t rsa
 ```
 Result:
+<img src="images/Key_01_generate.png" 
+     width="98%"  
+     align="center"/>
 
 ### 1.1.2. Open pub key in B.
 ```
@@ -27,6 +30,9 @@ or
 vi .ssh/id_rsa.pub
 ```
 Result:
+<img src="images/Key_02_machineAkey.png" 
+     width="98%"  
+     align="center"/>
 
 ### 1.1.3. Copy pub key to Machine B.
 Connect to machine B and opend .ssh/authorized_keys
@@ -35,8 +41,10 @@ vi .ssh/authorized_keys
 ```
 you need append machine A public key to authorized_keys.
 Result:
+<img src="images/Key_03_machineBauthkey.png" 
+     width="98%"  
+     align="center"/>
 
-
-<img src="images/EC2_vm_01.png" 
+<img src="images/Key_04_machineBappend.png" 
      width="98%"  
      align="center"/>
