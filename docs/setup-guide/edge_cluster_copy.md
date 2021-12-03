@@ -48,3 +48,36 @@ Result:
 <img src="images/Key_04_machineBappend.png" 
      width="98%"  
      align="center"/>
+     
+     
+# 2. Copy ca, certs, admin.conf between cluster virtural machine A 
+-	Ubuntu 18.04, one for cloud-core, two for edge-core.
+-	You need know your machine private ip.
+
+## 2.1. Copy machine A security file to machne B 
+## 2.1.1. Copy ca, certs from machine A to machine B
+- notes: replace machine_B_IP with your ip address. also remove square bracess
+```
+scp -r /etc/kubeedge/ca  [machine_B_IP]:/etc/kubeedge/
+scp -r /etc/kubeedge/cert [machine_B_IP]:/etc/kubeedge/
+```
+
+## 2.1.2. Copy "admin.conf" from machine A to machine B
+- notes: Copy machine A "admin.conf" to machine B, and put one location and easy to use. when run edgecore setting, we need this file. most time put name as "adminA.conf".
+```
+scp /etc/kubernetes/admin.conf [machine_B_IP]:/root/go/src/github.com/kubeedge/[david_sample_folder]
+```
+
+## 2.3. Copy machine A security file to machne B 
+## 2.1.1. Copy ca, certs from machine A to machine C
+- notes: replace machine_B_IP with your ip address. also remove square bracess
+```
+scp -r /etc/kubeedge/ca  [machine_B_IP]:/etc/kubeedge/
+scp -r /etc/kubeedge/cert [machine_B_IP]:/etc/kubeedge/
+```
+
+## 2.1.2. Copy "admin.conf" from machine B to machine C
+- notes: Copy machine A "admin.conf" to machine B, and put one location and easy to use. when run edgecore setting, we need this file. most time put name as "adminB.conf".
+```
+scp /etc/kubernetes/admin.conf [machine_B_IP]:/root/go/src/github.com/kubeedge/[david_sample_folder]
+```
