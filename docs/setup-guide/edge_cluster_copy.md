@@ -63,7 +63,7 @@ scp -r /etc/kubeedge/cert [machine_B_IP]:/etc/kubeedge/
 ```
 
 ## 2.1.2. Copy "admin.conf" from machine A to machine B
-- notes: Copy machine A "admin.conf" to machine B, and put one location and easy to use. when run edgecore setting, we need this file. most time put name as "adminA.conf".
+- notes: Copy machine A "admin.conf" to machine B, and put one location and easy to use. when run edgecore setting, we need this file. most time put name as **"adminA.conf"**.
 ```
 scp /etc/kubernetes/admin.conf [machine_B_IP]:/root/go/src/github.com/kubeedge/[david_sample_folder]
 ```
@@ -77,7 +77,7 @@ scp -r /etc/kubeedge/cert [machine_B_IP]:/etc/kubeedge/
 ```
 
 ## 2.1.2. Copy "admin.conf" from machine B to machine C
-- notes: Copy machine A "admin.conf" to machine B, and put one location and easy to use. when run edgecore setting, we need this file. most time put name as "adminB.conf".
+- notes: Copy machine A "admin.conf" to machine B, and put one location and easy to use. when run edgecore setting, we need this file. most time put name as **"adminB.conf"**.
 ```
 scp /etc/kubernetes/admin.conf [machine_B_IP]:/root/go/src/github.com/kubeedge/[david_sample_folder]
 ```
