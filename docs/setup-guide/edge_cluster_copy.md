@@ -48,6 +48,10 @@ Result:
 <img src="images/Key_04_machineBappend.png" 
      width="98%"  
      align="center"/>
+  
+### 1.1.4. Follow up 1.1.1 to 1.1.3 Copy Machine A pub key to Machine C.
+### 1.1.5. Follow up 1.1.1 to 1.1.3 Copy Machine B pub key to Machine C. (notes: we need copy machine B "admin.conf" to machine C).
+
      
      
 # 2. Copy ca, certs, admin.conf from machine A to machine B, C
