@@ -198,7 +198,7 @@ build/tools/certgen.sh genCA IP_A IP_B IP_C
 build/tools/certgen.sh genCertAndKey server IP_A IP_B IP_C
 ```
 4. Then copy the files of folder /etc/kubeedge/ca and /etc/kubeedge/certs in machine A to the folder of /etc/kubeedge/ca and /etc/kubeedge/certs in machine B, and C.
-<a href="vm_setup.md" target="_blank"> File or Folder Copy Process Between Edge cluster </a>
+For detail, you can reference: <a href="vm_setup.md" target="_blank"> File or Folder Copy Process Between Edge cluster </a>
 
 5. Install CRDs
 - 	The *Mission* CRD is used to carry workload information through edge cluster layers, and therefore workload information is stored as a part of the *[Mission/State]* definition called "State".
