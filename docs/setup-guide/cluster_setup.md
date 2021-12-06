@@ -363,12 +363,12 @@ kubectl delete mission deployment-to-all
 ```
 ## 3.5. Run following command verify mission deteted status(in second window).
 ```
-kubectl get edgecluster
+kubectl get edgeclusters
 kubectl get mission
 ```
 OR
 ```
-watch kubectl get edgecluster
+watch kubectl get edgeclusters
 watch kubectl get mission
 ```
 	
