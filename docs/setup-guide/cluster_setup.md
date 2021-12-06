@@ -349,8 +349,8 @@ you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **
 
 ## 3.3. Run following command verify mission created status(in second window).
 ```
-kubectl get edgecluster
-kubectl get mission
+kubectl get edgeclusters
+kubectl get missions
 ```
 Result:
 <img src="images/Deployment_3_2_status.png" 
@@ -364,12 +364,12 @@ kubectl delete mission deployment-to-all
 ## 3.5. Run following command verify mission deteted status(in second window).
 ```
 kubectl get edgeclusters
-kubectl get mission
+kubectl get missions
 ```
 OR
 ```
 watch kubectl get edgeclusters
-watch kubectl get mission
+watch kubectl get missions
 ```
 	
 Result:
