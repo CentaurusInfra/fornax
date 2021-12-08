@@ -378,4 +378,21 @@ Result:
      align="center"/>
 
 
-
+# 4	Tips & Tricks
+## 4.1  When you finished run the cloudcore and edgecore. Please use "Ctrl + c" exit running.
+	if you use tmux, make sure use "Ctrl + c" exit running. if you accidently exit window. please use following command back to exit or terminate runing.
+	```
+	tmux ls
+	tmux a
+	```
+	if you have more session in previous, you can go to specific session by following command
+	```
+	tumx a -t [session number in the list]
+	```
+	if you only want to kill specific process, you can use following command (use kill command to kill the process. use ps auxw|grep core to find all process id )
+	```
+	ps auxw | grep core
+	kill 6733
+	```
+## 4.2
+## 4.3
