@@ -176,7 +176,7 @@ make WHAT=cloudcore
 make WHAT=edgecore
 ```
 2. config cloudcore
-Notes: if you first time to run, do following line first.
+- notes: following command line only run at first time.
 ```
 mkdir /etc/kubeedge/config -p
 ```
@@ -240,6 +240,11 @@ make WHAT=cloudcore
 make WHAT=edgecore
 ```
 2. config cloudcore
+- notes: following command line only run at first time.
+```
+mkdir /etc/kubeedge/config -p
+```
+
 ```
 cp /etc/kubernetes/admin.conf /root/.kube/config
 _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
