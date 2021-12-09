@@ -131,6 +131,7 @@ vi ~/.bashrc
 
 export PATH=$PATH:/usr/local/go/bin
 export GOPATH=/usr/local/go/bin
+export KUBECONFIG=/etc/kubernetes/admin.conf
 ```
 - run following line and let source file effective. The check version and environment value.
 ```
