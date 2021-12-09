@@ -116,6 +116,10 @@ kubectl get nodes
 	
 	sudo tar -C /usr/local -xzf /tmp/go${GOLANG_VERSION}.linux-amd64.tar.gz
 	```
+	notes: you can use following command see the package list
+	```
+	apt list --upgradable
+	```
 - Instal vim
 ```
 sudo apt-get install vim
