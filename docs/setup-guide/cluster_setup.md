@@ -275,6 +275,10 @@ _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
 
 
 3. config edgecore
+- notes: following command line only run at first time.
+```
+mkdir /etc/kubeedge/config -p
+```
 ```
 cp [Cluster_C_kubeconfig_file] /root/edgecluster.kubeconfig
 _output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
