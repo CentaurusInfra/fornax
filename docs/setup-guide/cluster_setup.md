@@ -25,6 +25,9 @@ The purpose of this document is to how to setup and configuration Cloud core and
 ###  1.2.1.	Letting iptables see bridged traffic
 •	Make sure that the br_netfilter module is loaded. This can be done by running **lsmod | grep br_netfilter**. To load it explicitly call **sudo modprobe br_netfilter**.
 ```Script
+sudo modprobe br_netfilter
+lsmod | grep br_netfilter
+
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 br_netfilter
 EOF
@@ -35,11 +38,10 @@ net.bridge.bridge-nf-call-iptables = 1
 EOF
 sudo sysctl --system
 ```
+Result:
 
 - Verify the bridged
 ```
-lsmod | grep br_netfilter
-sudo modprobe br_netfilter
 lsmod | grep br_netfilter
 ```
 - insert iptables verify image in here later.
