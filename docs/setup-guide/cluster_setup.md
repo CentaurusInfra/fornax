@@ -318,6 +318,7 @@ kubectl get mission
 
 ##  2.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
 ### 2.2.1 Run edgecore in machine B (Step 2)
+- following command line only run one time.
 ```
 chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
 ```
@@ -342,6 +343,7 @@ Result:
 
 ##  2.3.	In machine C. (only run edgecore)
 ### 2.3.1 Run edgecore in machine C (Step 4)
+- following command line only run one time.
 ```
 chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
 ```
