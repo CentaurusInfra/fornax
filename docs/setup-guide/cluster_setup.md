@@ -319,6 +319,9 @@ kubectl get mission
 ##  2.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
 ### 2.2.1 Run edgecore in machine B (Step 2)
 ```
+chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
+```
+```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
 ```
@@ -339,6 +342,9 @@ Result:
 
 ##  2.3.	In machine C. (only run edgecore)
 ### 2.3.1 Run edgecore in machine C (Step 4)
+```
+chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
+```
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/edgecore --edgecluster
