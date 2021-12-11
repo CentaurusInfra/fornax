@@ -7,8 +7,8 @@ The purpose of this document is to how to setup and configuration Virtual Machin
 ## 1.1. Virtual Machine Setup and Configuration (We use AWS for example)
 -	Ubuntu 18.04, one for cloud-core, two for edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
--	Setup virtual machine from brand new instance. See 1.1.1
--	Setup virtual machine from exit instance. See 1.1.2
+-	**Setup virtual machine from brand new instance. See 1.1.1**
+-	**Setup virtual machine from exit instance. See 1.1.2**
 
 ### 1.1.1 SETUP CLOUD CORE VIRTUAL MACHINE FROM BRAND NEW INSTANCE
 - Select instance launch from the right up corner
