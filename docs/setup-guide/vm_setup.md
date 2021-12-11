@@ -10,23 +10,23 @@ The purpose of this document is to how to setup and configuration Virtual Machin
 -	Setup virtual machine from brand new instance. See 1.1.1
 -	Setup virtual machine from exit instance. See 1.1.2
 
-### 1.1.1. SETUP CLOUD CORE VIRTUAL MACHINE FROM BRAND NEW INSTANCE
+### 1.1.1 SETUP CLOUD CORE VIRTUAL MACHINE FROM BRAND NEW INSTANCE
 - Select instance launch from the right up corner
 <img src="images/EC2_01_chooseami_01.png" 
      width="98%"  
      align="center"/>
 
-- Select Ubuntu 18.04
+- Select vertiual machine type: Ubuntu 18.04
 <img src="images/EC2_01_chooseami_02.png" 
      width="98%"  
      align="center"/>
-
-- Select vertiual machine size and type (t2.large or t2.xlarge)
-<img src="images/EC2_01_chooseami.png" 
+     
+- Choose Instance Type : t2.large or t2.xlarge
+<img src="images/EC2_02_chooseinstancetype.png" 
      width="98%"  
      align="center"/>
      
-- Configure Instance
+- Configure Instance: 
 <img src="images/EC2_03_configureinstance.png" 
      width="98%"  
      align="center"/>
@@ -61,7 +61,7 @@ The purpose of this document is to how to setup and configuration Virtual Machin
      width="98%"  
      align="center"/>
 
-### 1.1.2. SETUP CLOUD CORE VIRTUAL MACHINE FROM EXIST INSTANCE
+### 1.1.2 SETUP CLOUD CORE VIRTUAL MACHINE FROM EXIST INSTANCE
 -	This Step to create Cloud core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
 -	If you already have similarity machine, you can follow step to create a virtual machine (if you did not have, and you can create brand new from the scratch).
 -	In AWS EC2, pickup instance which you want to copy. Then pickup “Launch more like this”.
@@ -131,7 +131,7 @@ The purpose of this document is to how to setup and configuration Virtual Machin
      width="98%" 
      align="center"/>
 
-###  1.1.2.	REPEAT 1.1.1 CREATE TWO EDGE-CORE Virtual Machine
+###  1.1.3	REPEAT 1.1.1 CREATE TWO EDGE-CORE Virtual Machine
 •	Create two Edge core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
 
-###  1.1.3.	After you done above section, you can go 1.2.  <a href="cluster_setup.md" target="_blank"> Install Kubernetes Tools to Cloud core and Edge core </a>
+###  1.1.4	After you done above section, you can go 1.2.  <a href="cluster_setup.md" target="_blank"> Install Kubernetes Tools to Cloud core and Edge core </a>
