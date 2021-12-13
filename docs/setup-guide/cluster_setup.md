@@ -267,14 +267,8 @@ Build the binaries of edgecore and cloudcore using the commands
 make WHAT=cloudcore
 make WHAT=edgecore
 ```
-2. config cloudcore
-```
-cp /etc/kubernetes/admin.conf /root/.kube/config
-_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
-```
 
-
-3. config edgecore
+2. config edgecore
 - notes: following command line only run at first time.
 ```
 mkdir /etc/kubeedge/config -p
