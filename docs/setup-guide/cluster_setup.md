@@ -44,6 +44,9 @@ sudo sysctl --system
 lsmod | grep br_netfilter
 ```
 - Result:
+<img src="images/k8s_setup_1_verify ipitable.png" 
+     width="98%"  
+     align="center"/>
 
 ###  1.2.2.	Install docker runtime
 - Install Docker runtime
