@@ -120,7 +120,7 @@ func installCRDs(ks *K8SInstTool) error {
 			"router/router_v1_ruleEndpoint.yaml"},
 	}
 	//version := fmt.Sprintf("%d.%d", ks.ToolVersion.Major, ks.ToolVersion.Minor)
-	version := "1.7"
+	version := "1.8"
 	CRDDownloadURL := fmt.Sprintf(KubeEdgeCRDDownloadURL, version)
 	for dir := range crds {
 		crdPath := KubeEdgeCrdPath + "/" + dir
