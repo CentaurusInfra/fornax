@@ -119,7 +119,7 @@ func installCRDs(ks *K8SInstTool) error {
 		"router": {"router/router_v1_rule.yaml",
 			"router/router_v1_ruleEndpoint.yaml"},
 	}
-	//version := fmt.Sprintf("%d.%d", ks.ToolVersion.Major, ks.ToolVersion.Minor)
+	//TODO: There is an api version change in the latest version 1.9.0 to break CI/CD. This is a temp solution to roll back the api version change.
 	version := "1.8"
 	CRDDownloadURL := fmt.Sprintf(KubeEdgeCRDDownloadURL, version)
 	for dir := range crds {
