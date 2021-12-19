@@ -1,28 +1,30 @@
 #	Edge Cluster Multi-Layer Setup and Configuration
 
 ## Abstract
-The purpose of this document is to how to setup and configuration Cloud core and Edge core , and describe the each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
-1. Virtual Machine Setup (create Cloud core  and Edge core virutal machine, and setup port),
-2. Fornax Installation and Configuration (Install all the kubernetes compnents: kubectl, kubadm, bubelet),
-3. GoLang Installlation and Configuration (Install all GoLang component and load the Fornax source code), 
-4. Generate Machine Security certification, and deployed to virtual machine, 
-5. Install CRD file in Cloud core. 
+The purpose of this document is how to setup and configuration hierarchical edge cluster, and describe the each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
+1. Virtual machine setup (create cloud core  and edge core virutal machine, and setup port),
+2. Fornax installation and configuration (install all the kubernetes compnents: kubectl, kubadm, bubelet),
+3. GoLang installlation and configuration (install all GoLang component and load the Fornax source code), 
+4. Generate machine security certification, and deployed to virtual machine, 
+5. Install CRD file in cloud core. 
 6. Run cloud-core and edge-core and deployed mission and verify the mission.
+7. You should be a root user.
 
-## 1.1. Virtual Machine Setup and Configuration (We use AWS for example)
--	Ubuntu 18.04, one for cloud-core, two for edge-core.
+## 1.1 Virtual Machine Setup and Configuration (We use AWS for example)
+-	Ubuntu 18.04, Create A virtual machine as an cloud-core, Create B and C virtual machine as edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
-- 	Go to doc and follow up instruction to setup: Virtual Machine Setup and Configuration <a href="vm_setup.md" target="_blank"> Virtual Machine Setup and Configuration </a>
+- 	Go to doc and follow up instruction to setup: [Virtual Machine Setup and Configuration](vm_setup.md).
 - 	After done, you can continue to 1.2.
 
-## 1.2.	Install Kubernetes Tools to Cloud core and Edge core
--	Install kubernetes tools to virtual machine.(Make sure install version is: 1.21.1-00).
-- 	<a href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl" target="_blank">Kubernetes Tools Doc</a>
+## 1.2	Install Kubernetes Tools
+The general steps to install software tools to machine A (machine B and C have the same steps as machine A):
 - 	Letting iptables see bridged traffic
+-	Install kubernetes tools to virtual machine.(Make sure install version is: 1.21.1-00).
+-	[Kubernetes Tools Doc](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl)
 - 	Install docker runtime
 -	Installing kubeadm, kubelet and kubectl
 
-###  1.2.1.	Letting iptables see bridged traffic
+###  1.2.1	Letting iptables see bridged traffic
 •	Make sure that the br_netfilter module is loaded. This can be done by running **lsmod | grep br_netfilter**. To load it explicitly call **sudo modprobe br_netfilter**.
 ```Script
 sudo modprobe br_netfilter
@@ -48,13 +50,13 @@ lsmod | grep br_netfilter
      width="98%"  
      align="center"/>
 
-###  1.2.2.	Install docker runtime
+###  1.2.2	Install docker runtime
 - Install Docker runtime
 ```
 sudo apt-get update
 sudo apt-get install docker.io
 ```
-###  1.2.3.	Installing kubeadm, kubelet and kubectl
+###  1.2.3	Installing kubeadm, kubelet and kubectl
 You will install these packages on all of your machines:
 
 -	**kubeadm:** the command to bootstrap the cluster.
@@ -84,8 +86,11 @@ You will install these packages on all of your machines:
 	```
 
 - Next, run the command to enable docker service systemctl enable docker.service
+```
+systemctl enable docker.service
+```
 
-###  1.2.4.	Start a cluster using kubeadm
+###  1.2.4	Start a cluster using kubeadm
 - (referring doc: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)
 - 1. Run command (it might cost a few minutes)
 ```
@@ -101,8 +106,9 @@ kubectl get nodes
 ```
 
 
-## 1.3.	Install GoLang Tools to Cloud core and Edge core
-###  1.3.1.	Install GoLang
+## 1.3	Install GoLang Tools
+You should be a root user
+###  1.3.1	Install GoLang
 - You should in root folder (**copy command line  should by line by line to run**).
 	```
 	GOLANG_VERSION=${GOLANG_VERSION:-"1.14.15"}
@@ -111,9 +117,7 @@ kubectl get nodes
 	
 	sudo apt -y install make
 	
-	sudo apt -y install gcc
-	
-	sudo apt -y install jq
+	sudo apt -y install gcc jq
 	
 	wget https://dl.google.com/go/go${GOLANG_VERSION}.linux-amd64.tar.gz -P /tmp
 	
@@ -127,7 +131,7 @@ kubectl get nodes
 ```
 sudo apt-get install vim
 ```
-###  1.3.2.	Configuration GoLang Path.
+###  1.3.2	Configuration GoLang Path.
 - Open "~/.bashrc" file and add two line to to file end, then save and exit
 ```
 vi ~/.bashrc
@@ -139,12 +143,14 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 - run following line and let source file effective. The check version and environment value.
 ```
 source ~/.bashrc
-
-go version
-
-go env
 ```
-###  1.3.3.	Setup project location.
+- run following line and verify Go verison.
+```
+go version
+```
+you will see "go version go1.14.15 linux/amd64"
+
+###  1.3.3	Setup project location.
 - create project folder
 ```
 mkdir -p go/src/github.com
@@ -153,7 +159,7 @@ mkdir -p go/src/github.com
 ```
 cd go/src/github.com
 ```
-- clone fornax repo, change name to Kubeedge, go to "kubeedge" folder, and compile code by "make all"
+- clone fornax repo, change name to "kubeedge", go to "kubeedge" folder, and compile code by "make all"
 ```
 git clone https://github.com/CentaurusInfra/fornax.git
 mv fornax kubeedge
@@ -164,14 +170,19 @@ make all
 ```
 git checkout -b practicebransh
 ```
+The machine A software installation is done  
+
+### 1.3.4    Setup machine B and machine C 
+Repeat steps from 1.2.1 to 1.3.3, install all software tools to machine B and C.
 
 ## 1.4.	Fornax Configuration
-###  1.4.1.	Kubecofig File Preparation
+###  1.4.1	Kubecofig File Preparation
+Summary
 - Copy the admin kubeconfig file of cluster A to machine B, the kubecofig file of cluster B to the machine of cluster C.
-
 - Copy the kubeconfig files of cluster A, B, and C to the root operator machine.
+- Detail see 1.4.2 to 1.4.4
 
-###  1.4.2.	In machine A, do following
+###  1.4.2	In machine A, do following
 
 1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (**See 1.3.3. for detail**)
 Build the binaries of edgecore and cloudcore using the commands
@@ -179,7 +190,7 @@ Build the binaries of edgecore and cloudcore using the commands
 make WHAT=cloudcore
 make WHAT=edgecore
 ```
-2. config cloudcore
+2. Config cloudcore
 - notes: following command line only run at first time.
 ```
 mkdir /etc/kubeedge/config -p
@@ -189,18 +200,19 @@ mkdir /etc/kubeedge/config -p
 cp /etc/kubernetes/admin.conf /root/.kube/config
 _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
 ```
-- **Notes:**. if you run above command and meeting error "/etc/kubeedge/config/cloudcore.yaml: No such file or directory". do following command
+- **Notes:** if you run above command and meeting error "/etc/kubeedge/config/cloudcore.yaml: No such file or directory", do following command
 ```
 mkdir /etc/kubeedge/config -p
 mkdir /root/.kube/config -p
 ```
 
-3. Generate security data
+3. Generate certificates
 Note down the IP address of machine A, B, and C denotes as IP_A, IP_B, and IP_C, and run the command:
 - Befoe run certgen.sh, create directory, "mkdir -p /etc/kubeedge/ca"
 
 - Notes: if you cannot generate certkey: you need modify /etc/ssl/openssl.cnf file. Open file by vi and Try **removing or commenting "RANDFILE = $ENV::HOME/.rnd" line**.
-for doc reference: <a href="https://stackoverflow.com/questions/63893662/cant-load-root-rnd-into-rng/" target="_blank">https://stackoverflow.com/questions/63893662/cant-load-root-rnd-into-rng/</a>
+[for doc reference](https://stackoverflow.com/questions/63893662/cant-load-root-rnd-into-rng/)
+
 ```
 vi /etc/ssl/openssl.cnf
 ```
@@ -211,7 +223,7 @@ build/tools/certgen.sh genCA IP_A IP_B IP_C
 build/tools/certgen.sh genCertAndKey server IP_A IP_B IP_C
 ```
 4. Then copy the files of folder /etc/kubeedge/ca and /etc/kubeedge/certs in machine A to the folder of /etc/kubeedge/ca and /etc/kubeedge/certs in machine B, and C.
-For detail, you can reference: <a href="edge_cluster_copy.md" target="_blank"> File or Folder Copy Process Between Edge cluster </a>
+For detail, you can reference: <a href="copy_cert_between_edge_cluster.md" target="_blank"> File or Folder Copy Process Between Edge cluster </a>
 
 5. Install CRDs
 - 	The *Mission* CRD is used to carry workload information through edge cluster layers, and therefore workload information is stored as a part of the *[Mission/State]* definition called "State".
@@ -234,7 +246,7 @@ kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
 ```
 
 
-###  1.4.3.	In machine B, do following
+###  1.4.3	In machine B, do following
 
 1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (**See 1.3.3. for detail**)
 Build the binaries of edgecore and cloudcore using the commands
@@ -262,7 +274,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_A_kubeconfig_file]
 
 ```
 
-###  1.4.4.	In machine C, do following
+###  1.4.4	In machine C, do following
 
 1. Clone a repo of https://github.com/CentaurusInfra/fornax, sync to the branch/commit to test. (**See 1.3.3. for detail**)
 Build the binaries of edgecore and cloudcore using the commands
@@ -293,9 +305,9 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 - Step 5: back to machine A second window to run deployment command and other command(kubectl get edgecluster, kubectl get mission)
 - Each *Mission* can be deployed to multiple clusters, so the status is a collection of all workloads from the same *Mission*.
 
-##  2.1.	In machine A.
+##  2.1		In machine A.
 - If you have tmux on your machine, split two window view. Otherwise start two command window. One window run the cloud-core, One window check cluster status
-### 2.1.1. One window run following cloudcore command line (notes: machine A only run cloudcore)(Step 1):
+### 2.1.1 One window run following cloudcore command line (notes: machine A only run cloudcore)(Step 1):
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
@@ -313,7 +325,7 @@ kubectl get edgecluster
 kubectl get mission
 ```
 
-##  2.2.	In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
+##  2.2		In machine B. (Notes: If we have C machine, we need also run "cloudcore" in machine B.)
 ### 2.2.1 Run edgecore in machine B (Step 2)
 - following command line only run one time.
 ```
@@ -328,7 +340,7 @@ _output/local/bin/edgecore --edgecluster
 chmod 777 /root/go/src/github.com/kubeedge/_output/local/bin/kubectl/vanilla/kubectl
 ```
 
-### 2.2.2. Run cloudcore in machine B (if you have machine C) (Step 3)
+### 2.2.2 Run cloudcore in machine B (if you have machine C) (Step 3)
 ```
 export KUBECONFIG=/etc/kubernetes/admin.conf
 _output/local/bin/cloudcore
@@ -338,7 +350,7 @@ Result:
      width="98%"  
      align="center"/>
 
-##  2.3.	In machine C. (only run edgecore)
+##  2.3		In machine C. (only run edgecore)
 ### 2.3.1 Run edgecore in machine C (Step 4)
 - following command line only run one time.
 ```
@@ -359,19 +371,19 @@ Result:
      align="center"/>
 
 # 3	Deployment Mission to Machine B, C
-## 3.1. Waiting machine A, B, C running, we can run following command and test mission deployment
-## 3.2.  In machine A, do following command in Second Command Window.
+## 3.1	Waiting machine A, B, C running, we can start 3.2
+## 3.2  In machine A, do following command in Second Command Window.
 
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
 ```
-you will see the line: I1110 22:14:59.920280     986 mission_deployer.go:125] **Mission deployment-to-all is created**.
+you will see one line have the message **Mission deployment-to-all is created**. detail see the result
 <BR>Result:
 <img src="images/Deployment_mission_status.png" 
      width="98%"  
      align="center"/>
 
-## 3.3. Run following command verify mission created status(in second window).
+## 3.3 Run following command verify mission created status(in second window).
 ```
 kubectl get edgeclusters
 kubectl get missions
@@ -381,11 +393,11 @@ Result:
      width="98%"  
      align="center"/>
      
-## 3.4. After you see mission, you can test delete mission. by using following command
+## 3.4 After you see mission, you can test delete mission. by using following command
 ```
 kubectl delete mission deployment-to-all
 ```
-## 3.5. Run following command verify mission deteted status(in second window).
+## 3.5 Run following command verify mission deteted status(in second window).
 ```
 kubectl get edgeclusters
 kubectl get missions
@@ -404,19 +416,18 @@ Result:
 
 # 4	Tips & Tricks
 ## 4.1  When you finished run the cloudcore and edgecore. Please use "Ctrl + c" exit running.
-	if you use tmux, make sure use "Ctrl + c" exit running. if you accidently exit window. please use following command back to exit or terminate runing.
-	```
-	tmux ls
-	tmux a
-	```
-	if you have more session in previous, you can go to specific session by following command
-	```
-	tumx a -t [session number in the list]
-	```
-	if you only want to kill specific process, you can use following command (use kill command to kill the process. use ps auxw|grep core to find all process id )
-	```
-	ps auxw | grep core
-	kill 6733
-	```
-## 4.2
-## 4.3
+- If you use tmux, make sure use "Ctrl + c" exit running. If you accidently exit window, please use following command back to exit or terminate runing.
+```
+tmux ls
+tmux a
+```
+- If you have more session in previous, you can go to specific session by following command
+```
+tumx a -t [session number in the list]
+```
+- If you only want to kill specific process, you can use following command (use kill command to kill the process. use ps auxw|grep core to find all process id )
+```
+ps auxw | grep core
+kill [process number]
+```
+

@@ -1,16 +1,16 @@
-#	Virtual Machine Setup and Configuration
+#	Create, Setup and Configuration Virtual Machine
 
 ## Abstract
-The purpose of this document is to how to setup and configuration Virtual Machine, and describe the each step to create virtual machine, setup the port number.
-1. Virtual Machine Setup (create Cloud core  and Edge core virutal machine, and setup port),
+The purpose of this document is how to create, setup and configuration virtual machine, and describe the each step to create virtual machine, setup the port number.
+1. Instruction for create virtual machine (create virtual machine A as cloud core, create virtual machine B and C as edge core).
 
-## 1.1. Virtual Machine Setup and Configuration (We use AWS for example)
+## 1.1. Create Virtual Machine, and Setup and Configuration (We use AWS for example)
 -	Ubuntu 18.04, one for cloud-core, two for edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
--	**Setup virtual machine from brand new instance. See 1.1.1**
--	**Setup virtual machine from exit instance. See 1.1.2**
+-	**Create virtual machine from brand new instance. See 1.1.1**
+-	**Create virtual machine from exit instance. See 1.1.2**
 
-### 1.1.1 SETUP CLOUD CORE VIRTUAL MACHINE FROM BRAND NEW INSTANCE
+### 1.1.1 Create Clore Core Virtual Machine A From Brand New Instance
 - Select instance launch from the right up corner
 <img src="images/EC2_01_chooseami_01.png" 
      width="98%"  
@@ -61,7 +61,7 @@ The purpose of this document is to how to setup and configuration Virtual Machin
      width="98%"  
      align="center"/>
 
-### 1.1.2 SETUP CLOUD CORE VIRTUAL MACHINE FROM EXIST INSTANCE
+### 1.1.2 Create Cloud Core Virtual Machine From Exist Instance.
 -	This Step to create Cloud core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
 -	If you already have similarity machine, you can follow step to create a virtual machine (if you did not have, and you can create brand new from the scratch).
 -	In AWS EC2, pickup instance which you want to copy. Then pickup “Launch more like this”.
@@ -131,7 +131,7 @@ The purpose of this document is to how to setup and configuration Virtual Machin
      width="98%" 
      align="center"/>
 
-###  1.1.3	REPEAT 1.1.1 CREATE TWO EDGE-CORE Virtual Machine
-•	Create two Edge core in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
+###  1.1.3	Repeat 1.1.1 Create B and C Edgecore Virtual Machine
+•	Create two Edge core virtual machine(B and C) in AWS. And Setup port and security, disk space, Unix Ubuntu machine.
 
-###  1.1.4	After you done above section, you can go 1.2.  <a href="cluster_setup.md" target="_blank"> Install Kubernetes Tools to Cloud core and Edge core </a>
+###  1.1.4	After you done above section, go to 1.2  [Install Kubernetes Tools](cluster_setup.md)
