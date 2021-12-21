@@ -11,7 +11,7 @@ The purpose of this document is how to setup and configuration hierarchical edge
 7. You should be a root user.
 
 ## 1.1 Virtual Machine Setup and Configuration (We use AWS for example)
--	Ubuntu 18.04, Create A virtual machine as an cloud-core, Create B and C virtual machine as edge-core.
+-	Ubuntu 18.04, Create virtual machine A to run an cloud-core, Create virtual machine B and C to run edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
 - 	Go to doc and follow up instruction to setup: [Virtual Machine Setup and Configuration](vm_setup.md).
 - 	After done, you can continue to 1.2.
@@ -296,8 +296,8 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 
 
 # 2	Run Fornax Cluster in Machine B, C
-## summary
-- Use tmux and split window. Run following sequence step.
+## Summary
+- Use tmux and split window. Run following sequence steps.
 - Step 1: machine A cloud core
 - Step 2: machine B edge core
 - Step 3: machine B cloud core
