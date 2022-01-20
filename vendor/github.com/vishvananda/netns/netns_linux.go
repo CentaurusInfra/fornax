@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,go1.10
 
 package netns
 
@@ -6,21 +6,24 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
 
 // Deprecated: use syscall pkg instead (go >= 1.5 needed).
 const (
-	CLONE_NEWUTS  = 0x04000000 /* New utsname group? */
-	CLONE_NEWIPC  = 0x08000000 /* New ipcs */
-	CLONE_NEWUSER = 0x10000000 /* New user namespace */
-	CLONE_NEWPID  = 0x20000000 /* New pid namespace */
-	CLONE_NEWNET  = 0x40000000 /* New network namespace */
-	CLONE_IO      = 0x80000000 /* Get io context */
+	CLONE_NEWUTS  = 0x04000000   /* New utsname group? */
+	CLONE_NEWIPC  = 0x08000000   /* New ipcs */
+	CLONE_NEWUSER = 0x10000000   /* New user namespace */
+	CLONE_NEWPID  = 0x20000000   /* New pid namespace */
+	CLONE_NEWNET  = 0x40000000   /* New network namespace */
+	CLONE_IO      = 0x80000000   /* Get io context */
+	bindMountPath = "/run/netns" /* Bind mount path for named netns */
 )
 
 // Setns sets namespace using syscall. Note that this should be a method
@@ -44,6 +47,49 @@ func New() (ns NsHandle, err error) {
 	return Get()
 }
 
+// NewNamed creates a new named network namespace and returns a handle to it
+func NewNamed(name string) (NsHandle, error) {
+	if _, err := os.Stat(bindMountPath); os.IsNotExist(err) {
+		err = os.MkdirAll(bindMountPath, 0755)
+		if err != nil {
+			return None(), err
+		}
+	}
+
+	newNs, err := New()
+	if err != nil {
+		return None(), err
+	}
+
+	namedPath := path.Join(bindMountPath, name)
+
+	f, err := os.OpenFile(namedPath, os.O_CREATE|os.O_EXCL, 0444)
+	if err != nil {
+		return None(), err
+	}
+	f.Close()
+
+	nsPath := fmt.Sprintf("/proc/%d/task/%d/ns/net", os.Getpid(), syscall.Gettid())
+	err = syscall.Mount(nsPath, namedPath, "bind", syscall.MS_BIND, "")
+	if err != nil {
+		return None(), err
+	}
+
+	return newNs, nil
+}
+
+// DeleteNamed deletes a named network namespace
+func DeleteNamed(name string) error {
+	namedPath := path.Join(bindMountPath, name)
+
+	err := syscall.Unmount(namedPath, syscall.MNT_DETACH)
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(namedPath)
+}
+
 // Get gets a handle to the current threads network namespace.
 func Get() (NsHandle, error) {
 	return GetFromThread(os.Getpid(), unix.Gettid())
@@ -52,7 +98,7 @@ func Get() (NsHandle, error) {
 // GetFromPath gets a handle to a network namespace
 // identified by the path
 func GetFromPath(path string) (NsHandle, error) {
-	fd, err := unix.Open(path, unix.O_RDONLY, 0)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return -1, err
 	}
@@ -172,12 +218,18 @@ func getPidForContainer(id string) (int, error) {
 		filepath.Join(cgroupRoot, "system.slice", "docker-"+id+".scope", "tasks"),
 		// Even more recent docker versions under cgroup/systemd/docker/<id>/
 		filepath.Join(cgroupRoot, "..", "systemd", "docker", id, "tasks"),
-		// Kubernetes with docker and CNI is even more different
+		// Kubernetes with docker and CNI is even more different. Works for BestEffort and Burstable QoS
 		filepath.Join(cgroupRoot, "..", "systemd", "kubepods", "*", "pod*", id, "tasks"),
-		// Another flavor of containers location in recent kubernetes 1.11+
-		filepath.Join(cgroupRoot, cgroupThis, "kubepods.slice", "kubepods-besteffort.slice", "*", "docker-"+id+".scope", "tasks"),
-		// When runs inside of a container with recent kubernetes 1.11+
-		filepath.Join(cgroupRoot, "kubepods.slice", "kubepods-besteffort.slice", "*", "docker-"+id+".scope", "tasks"),
+		// Same as above but for Guaranteed QoS
+		filepath.Join(cgroupRoot, "..", "systemd", "kubepods", "pod*", id, "tasks"),
+		// Another flavor of containers location in recent kubernetes 1.11+. Works for BestEffort and Burstable QoS
+		filepath.Join(cgroupRoot, cgroupThis, "kubepods.slice", "*.slice", "*", "docker-"+id+".scope", "tasks"),
+		// Same as above but for Guaranteed QoS
+		filepath.Join(cgroupRoot, cgroupThis, "kubepods.slice", "*", "docker-"+id+".scope", "tasks"),
+		// When runs inside of a container with recent kubernetes 1.11+. Works for BestEffort and Burstable QoS
+		filepath.Join(cgroupRoot, "kubepods.slice", "*.slice", "*", "docker-"+id+".scope", "tasks"),
+		// Same as above but for Guaranteed QoS
+		filepath.Join(cgroupRoot, "kubepods.slice", "*", "docker-"+id+".scope", "tasks"),
 	}
 
 	var filename string
