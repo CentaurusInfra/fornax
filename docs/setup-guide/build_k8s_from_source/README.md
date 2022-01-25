@@ -107,12 +107,14 @@ CRICTL_VERSION="v1.22.0"
 ARCH="amd64"
 curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-${ARCH}.tar.gz" | sudo tar -C $DOWNLOAD_DIR -xz
 ```
-- Run `sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubelet /usr/bin/`
-- Run `sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubeadm /usr/bin/`
-- Run `sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl /usr/bin/`
-- Run `sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubelet /usr/local/bin/`
-- Run `sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubeadm /usr/local/bin/`
-- Run `sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl /usr/local/bin/`
+- Run
+  ```
+  for dir in /usr/bin/ /usr/local/bin/; do
+    sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubelet $dir
+    sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubeadm $dir
+    sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl $dir
+  done
+  ```
 - Add a `kubelet` systemd service by running
 ```
 RELEASE_VERSION="v0.4.0"

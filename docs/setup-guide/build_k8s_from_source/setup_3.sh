@@ -23,12 +23,11 @@ sudo mkdir -p $DOWNLOAD_DIR
 CRICTL_VERSION="v1.22.0"
 ARCH="amd64"
 curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-${ARCH}.tar.gz" | sudo tar -C $DOWNLOAD_DIR -xz
-sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubelet /usr/bin/
-sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubeadm /usr/bin/
-sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl /usr/bin/
-sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubelet /usr/local/bin/
-sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubeadm /usr/local/bin/
-sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl /usr/local/bin/
+for dir in /usr/bin/ /usr/local/bin/; do
+    sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubelet $dir
+    sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubeadm $dir
+    sudo ln -s $GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl $dir
+done
 RELEASE_VERSION="v0.4.0"
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service
 sudo mkdir -p /etc/systemd/system/kubelet.service.d
