@@ -66,10 +66,12 @@ EOF
 - Run `sudo systemctl restart docker`
 
 ## Install GoLang
+- Run `GO_VERSION="1.17.1"`
 - Run `cd ~`
 - Run `sudo apt-get -y install make gcc jq`
-- Run `wget https://redirector.gvt1.com/edgedl/go/go1.17.1.linux-amd64.tar.gz -O go1.17.1.tar.gz`
-- Run `tar -xzvf go1.17.1.tar.gz`
+- Run `wget https://redirector.gvt1.com/edgedl/go/go${GO_VERSION}.linux-amd64.tar.gz -O go${GO_VERSION}.tar.gz`
+- Run `rm -rf /usr/local/go`
+- Run `tar -xzvf go${GO_VERSION}.tar.gz`
 - Run `mkdir gopath`
 - Append the following lines to `~/.bashrc`
   ```
