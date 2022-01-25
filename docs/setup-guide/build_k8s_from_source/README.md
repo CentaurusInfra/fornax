@@ -124,7 +124,7 @@ curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSIO
 - Enable and start by running `sudo systemctl enable --now kubelet`
 - Run
 ```
-IPADDR="<your_machine_ip>"
+IPADDR=$(hostname -I | cut -d ' ' -f1)
 NODENAME=$(hostname -s)
 ```
 - Run `sudo kubeadm init --apiserver-advertise-address=$IPADDR  --apiserver-cert-extra-sans=$IPADDR  --pod-network-cidr=192.168.0.0/16 --node-name $NODENAME --ignore-preflight-errors Swap`
