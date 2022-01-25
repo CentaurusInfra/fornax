@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 echo "Setup Part 2 started...\n"
 
 echo "Continuing configuring docker..."

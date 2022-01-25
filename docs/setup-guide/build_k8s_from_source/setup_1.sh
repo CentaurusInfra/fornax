@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 echo "Setup Part 1 started... \n"
 
 echo "Configuring iptables..."

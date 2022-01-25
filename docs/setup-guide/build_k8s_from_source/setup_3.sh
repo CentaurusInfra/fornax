@@ -1,5 +1,7 @@
 #!/bin/bash
-  
+
+set -e
+
 echo "Setup Part 3 started...\n"
 
 echo "Starting building Kubernetes from source code..."
