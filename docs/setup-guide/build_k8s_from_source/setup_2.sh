@@ -20,10 +20,11 @@ sudo systemctl restart docker
 echo "[x] Finished setting up docker.\n"
 
 echo "Starting installing Go..."
+GO_VERSION="1.17.1"
 cd $HOME
 sudo apt-get -y install make gcc jq
-wget https://redirector.gvt1.com/edgedl/go/go1.17.1.linux-amd64.tar.gz -O go1.17.1.tar.gz
-tar -xzvf go1.17.1.tar.gz
+wget https://redirector.gvt1.com/edgedl/go/go${GO_VERSION}.linux-amd64.tar.gz -O go${GO_VERSION}.tar.gz
+tar -xzvf go${GO_VERSION}.tar.gz
 mkdir gopath
 cat <<EOF | tee -a $HOME/.bashrc
 export GOROOT=$HOME/go
