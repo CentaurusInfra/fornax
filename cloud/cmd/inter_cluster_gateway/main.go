@@ -12,7 +12,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
-	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/config"
+	cmdconfig "github.com/kubeedge/kubeedge/cloud/cmd/config"
 	"k8s.io/klog/v2"
 )
 
@@ -41,13 +41,12 @@ var (
 
 // initialize the commandline options
 func InitFlag() {
-	config, err := config.NewGatewayConfiguration("gateway_config.json")
+	config, err := cmdconfig.NewGatewayConfiguration("gateway_config.json")
 	if err != nil {
-		fmt.Printf("error setting gateway agent configuration: %v", err)
-		os.Exit(1)
+		panic(fmt.Errorf("error setting gateway agent configuration: %v", err))
 	}
 
-	logLevel = string(config.LogLevel)
+	logLevel = config.LogLevel
 	local := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	klog.InitFlags(local)
 	err = local.Set("v", logLevel)
@@ -112,9 +111,6 @@ func init() {
 
 func main() {
 	defer handle.Close()
-
-	version := pcap.Version()
-	fmt.Println(version)
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {

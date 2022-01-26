@@ -7,5 +7,5 @@
     ],
     "GenevePort": 6081,
     "LocalDividerIP": "172.31.15.85",
-    "LogLevel": 3
+    "LogLevel": "3"
 }
