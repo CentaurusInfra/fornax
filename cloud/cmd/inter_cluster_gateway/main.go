@@ -13,14 +13,15 @@ import (
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
 	"k8s.io/klog/v2"
-)
 
-const (
-	GenevePort    = 6081
-	FirepowerPort = 2615
+	"github.com/kubeedge/kubeedge/cloud/cmd/config"
 )
 
 var (
+	genevePort    layers.UDPPort
+	firepowerPort layers.UDPPort
+	logLevel      string
+
 	remoteIcgwIPstr   string
 	localDividerIPstr string
 
@@ -41,20 +42,25 @@ var (
 
 // initialize the commandline options
 func InitFlag() {
-	var logLevel string
-	flag.StringVar(&remoteIcgwIPstr, "remote_icgw", "", "the ip address of the remote Inter-Cluster Gateway")
-	flag.StringVar(&localDividerIPstr, "local_divider", "", "the ip address of the local divider")
-	flag.StringVar(&logLevel, "log_level", "3", "log level")
+	config, err := config.NewGatewayConfiguration("gateway_config.json")
+	if err != nil {
+		panic(fmt.Errorf("error setting gateway agent configuration: %v", err))
+	}
 
-	flag.Parse()
-
+	logLevel = config.LogLevel
 	local := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	klog.InitFlags(local)
-	err := local.Set("v", logLevel)
+	err = local.Set("v", logLevel)
 	if err != nil {
 		fmt.Printf("error setting klog flags: %v", err)
 		os.Exit(1)
 	}
+
+	//There shall be multiple remote gateways. However, the current implementation only works for one gateway
+	remoteIcgwIPstr = config.RemoteGateways[0].RemoteGatewayIP
+	firepowerPort = layers.UDPPort((config.RemoteGateways[0].RemoteGatewayPort))
+	localDividerIPstr = config.LocalDividerIP
+	genevePort = layers.UDPPort((config.GenevePort))
 
 	remoteIcgwIP = net.ParseIP(remoteIcgwIPstr)
 	if remoteIcgwIP == nil {
@@ -107,10 +113,7 @@ func init() {
 func main() {
 	defer handle.Close()
 
-	version := pcap.Version()
-	fmt.Println(version)
-
-	geneveFilter := fmt.Sprintf("port %d", GenevePort)
+	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
 		klog.Fatalf("Error in setting up BPF filter: %v", err)
 	}
@@ -143,7 +146,7 @@ func processPacket(p *gopacket.Packet) error {
 
 	switch {
 	// when receiving a geneve packet, note that only local clusters send geneve packets to the Inter-Cluster Gateway
-	case udpPacketCopy.DstPort == GenevePort:
+	case udpPacketCopy.DstPort == genevePort:
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = icgwHrdAddr
 
@@ -152,13 +155,13 @@ func processPacket(p *gopacket.Packet) error {
 
 		// change the port so the receiving side mizar will not catch it, as the mizar XDP only catches geneve packets.
 		// so the packet will be processed by the inter-cluster gateway in the user space.
-		udpPacketCopy.SrcPort = GenevePort
-		udpPacketCopy.DstPort = FirepowerPort
+		udpPacketCopy.SrcPort = genevePort
+		udpPacketCopy.DstPort = firepowerPort
 
 		klog.V(3).Infof("Forwarding packet to remote icgw %v", remoteIcgwIPstr)
 
 	// it is a packet from the remote Inter-Cluster gateway
-	case udpPacketCopy.SrcPort == GenevePort && udpPacketCopy.DstPort == FirepowerPort:
+	case udpPacketCopy.SrcPort == genevePort && udpPacketCopy.DstPort == firepowerPort:
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = dividerHrdAddr
 
@@ -166,8 +169,8 @@ func processPacket(p *gopacket.Packet) error {
 		ipPacketCopy.DstIP = localDividerIP
 
 		// change the port packet becomes a geneve packet again, so it will be caught by the mizar XDP in the divider.
-		udpPacketCopy.SrcPort = FirepowerPort
-		udpPacketCopy.DstPort = GenevePort
+		udpPacketCopy.SrcPort = firepowerPort
+		udpPacketCopy.DstPort = genevePort
 
 		klog.V(3).Infof("Forwarding packet to local divider %v", localDividerIPstr)
 

@@ -1,0 +1,11 @@
+{
+    "RemoteGateways": [ 
+        {   
+            "RemoteGatewayIP": "172.31.15.238", 
+            "RemoteGatewayPort": 2615
+        }
+    ],
+    "GenevePort": 6081,
+    "LocalDividerIP": "172.31.15.85",
+    "LogLevel": "3"
+}
