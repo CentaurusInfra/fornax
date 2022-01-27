@@ -2,9 +2,9 @@
 
 set -e
 
-echo "Setup Part 3 started...\n"
+echo -e "Setup Part 3 started...\n"
 
-echo "Starting building Kubernetes from source code..."
+echo -e "Starting building Kubernetes from source code..."
 sudo apt -y install conntrack socat
 mkdir -p $GOPATH/src/k8s.io
 cd $GOPATH/src/k8s.io
@@ -34,7 +34,7 @@ sudo mkdir -p /etc/systemd/system/kubelet.service.d
 curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | sudo tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 sudo sed -i '5 i Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 sudo systemctl enable --now kubelet
-echo "==============="
-echo "Congratulations"
-echo "==============="
-echo "[x] Kubernetes development environment has been set up. Enjoy!"
+echo -e "==============="
+echo -e "Congratulations"
+echo -e "==============="
+echo -e "[x] Kubernetes development environment has been set up. Enjoy!"

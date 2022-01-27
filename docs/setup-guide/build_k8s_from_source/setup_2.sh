@@ -2,9 +2,9 @@
 
 set -e
 
-echo "Setup Part 2 started...\n"
+echo -e "Setup Part 2 started...\n"
 
-echo "Continuing configuring docker..."
+echo -e "Continuing configuring docker..."
 cat <<EOF | sudo tee /etc/docker/daemon.json
 {
   "exec-opts": ["native.cgroupdriver=systemd"],
@@ -17,9 +17,9 @@ cat <<EOF | sudo tee /etc/docker/daemon.json
 EOF
 sudo systemctl daemon-reload
 sudo systemctl restart docker
-echo "[x] Finished setting up docker.\n"
+echo -e "[x] Finished setting up docker.\n"
 
-echo "Starting installing Go..."
+echo -e "Starting installing Go..."
 GO_VERSION="1.17.1"
 cd $HOME
 sudo apt-get -y install make gcc jq
@@ -32,8 +32,6 @@ export GOPATH=$HOME/gopath
 export PATH=$HOME/go/bin:$PATH
 EOF
 . $HOME/.bashrc
-echo "[x] Finished setting up Go."
-echo "Rebooting the machine..."
-echo "After reboot run Setup Part 3 script setup_3.sh..."
-sleep 3
-sudo reboot
+echo -e "[x] Finished setting up Go."
+echo -e "\nPlease reboot the machine."
+echo -e "After reboot run Setup Part 3 script setup_3.sh"
