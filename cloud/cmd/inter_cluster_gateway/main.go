@@ -54,7 +54,7 @@ var gvr = schema.GroupVersionResource{
 }
 
 type SubnetSpec struct {
-	Ip             string `json:"ip"`
+	IP             string `json:"ip"`
 	Prefix         string `json:"name"`
 	Vni            string `json:"vni"`
 	Vpc            string `json:"vpc"`
