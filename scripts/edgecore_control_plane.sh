@@ -3,7 +3,7 @@
 set -e 
 
 echo "Enter IP ADDRESS of Machine 3:"
-read ip_c
+read ip_m3
 echo "Enter ROOT password of Machine 3 for copying the Kubeconfig file from Machine 2"
 read -s pass
 #To kill running process of cloudcore and edgecore
@@ -17,7 +17,7 @@ echo y | apt-get update
 rm -rf /root/.ssh/id_rsa  &&  rm -rf /root/.ssh/id_rsa.pub
 echo y | apt-get install sshpass
 < /dev/zero ssh-keygen -q -N ""
-sshpass -p $pass ssh-copy-id -o StrictHostKeyChecking=no root@$ip_c    
+sshpass -p $pass ssh-copy-id -o StrictHostKeyChecking=no root@$ip_m3    
 echo '*****SETTING UP THE HOSTNAME NODE-B*****'
 sudo hostnamectl set-hostname node-b
 echo '*****DISABLING FIREWALL*****'
@@ -46,8 +46,8 @@ fornax_setup_vm_2(){
     pushd $HOME/go/src/github.com/fornax
     cp $HOME/machine_1_admin_file/admin.conf $HOME/go/src/github.com/fornax
     systemctl restart docker
-    ssh -t root@$ip_c "mkdir -p $HOME/machine_2_admin_file" > /dev/null 2>&1
-    scp -r /etc/kubernetes/admin.conf  $ip_c:$HOME/machine_2_admin_file
+    ssh -t root@$ip_m3 "mkdir -p $HOME/machine_2_admin_file" > /dev/null 2>&1
+    scp -r /etc/kubernetes/admin.conf  $ip_m3:$HOME/machine_2_admin_file
     echo 'SETTING UP THE CLOUDCORE'
     chmod a+x Makefile
     make all

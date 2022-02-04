@@ -4,13 +4,13 @@ set -e
 
 # Enter the IP address of the a: Cloud Core Node, b: Edge Node with Control Plane, c: Edge Worker node 
 echo "Enter IP ADDRESS of Machine 1:"
-read ip_a 
+read ip_m1 
 echo "Enter IP ADDRESS of Machine 2:"
-read ip_b
+read ip_m2
 echo "Enter ROOT password of Machine 2 for copying the CA, CERTS and Kubeconfig files from Machine 1"
 read -s pass_2
 echo "Enter IP ADDRESS of Machine 3:"
-read ip_c
+read ip_m3
 echo "Enter ROOT password of Machine 3 for copying the CA, CERTS files to Machine 3"
 read -s pass_3
 #To kill running process of cloudcore
@@ -25,8 +25,8 @@ key_gen (){
    echo y | apt-get update
    echo y | apt-get install sshpass
    < /dev/zero ssh-keygen -q -N ""
-   sshpass -p $pass_2 ssh-copy-id -o StrictHostKeyChecking=no root@$ip_b
-   sshpass -p $pass_3 ssh-copy-id -o StrictHostKeyChecking=no root@$ip_c
+   sshpass -p $pass_2 ssh-copy-id -o StrictHostKeyChecking=no root@$ip_m2
+   sshpass -p $pass_3 ssh-copy-id -o StrictHostKeyChecking=no root@$ip_m3
 }
 
 pushd $HOME
@@ -59,16 +59,16 @@ fornax_setup_vm_1(){
     sed -i 's+RANDFILE+#RANDFILE+g' /etc/ssl/openssl.cnf
     mkdir -p /etc/kubeedge/ca
     mkdir -p /etc/kubeedge/certs
-    build/tools/certgen.sh genCA $ip_a $ip_b $ip_c
-    build/tools/certgen.sh genCertAndKey server $ip_a $ip_b $ip_c
-    ssh -t root@$ip_b "mkdir -p /etc/kubeedge" > /dev/null 2>&1
-    scp -r /etc/kubeedge/certs  $ip_b:/etc/kubeedge
-    scp -r /etc/kubeedge/ca  $ip_b:/etc/kubeedge
-    ssh -t root@$ip_c "mkdir -p /etc/kubeedge" > /dev/null 2>&1
-    scp -r /etc/kubeedge/certs  $ip_c:/etc/kubeedge
-    scp -r /etc/kubeedge/ca  $ip_c:/etc/kubeedge
-    ssh -t root@$ip_b "mkdir -p $HOME/machine_1_admin_file" > /dev/null 2>&1
-    scp -r /etc/kubernetes/admin.conf  $ip_b:$HOME/machine_1_admin_file
+    build/tools/certgen.sh genCA $ip_m1 $ip_m2 $ip_m3
+    build/tools/certgen.sh genCertAndKey server $ip_m1 $ip_m2 $ip_m3
+    ssh -t root@$ip_m2 "mkdir -p /etc/kubeedge" > /dev/null 2>&1
+    scp -r /etc/kubeedge/certs  $ip_m2:/etc/kubeedge
+    scp -r /etc/kubeedge/ca  $ip_m2:/etc/kubeedge
+    ssh -t root@$ip_m3 "mkdir -p /etc/kubeedge" > /dev/null 2>&1
+    scp -r /etc/kubeedge/certs  $ip_m3:/etc/kubeedge
+    scp -r /etc/kubeedge/ca  $ip_m3:/etc/kubeedge
+    ssh -t root@$ip_m2 "mkdir -p $HOME/machine_1_admin_file" > /dev/null 2>&1
+    scp -r /etc/kubernetes/admin.conf  $ip_m2:$HOME/machine_1_admin_file
     kubectl apply -f build/crds/devices/devices_v1alpha2_device.yaml
     kubectl apply -f build/crds/devices/devices_v1alpha2_devicemodel.yaml
     kubectl apply -f build/crds/reliablesyncs/cluster_objectsync_v1alpha1.yaml
