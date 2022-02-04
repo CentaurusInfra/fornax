@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,12 +14,17 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/kubeedge/cloud/cmd/config"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
+	kubeconfig    string
 	genevePort    layers.UDPPort
 	firepowerPort layers.UDPPort
 	logLevel      string
@@ -40,8 +47,42 @@ var (
 	buffer gopacket.SerializeBuffer
 )
 
+var gvr = schema.GroupVersionResource{
+	Group:    "mizar.com",
+	Version:  "v1",
+	Resource: "subnets",
+}
+
+type SubnetSpec struct {
+	Ip             string `json:"ip"`
+	Prefix         string `json:"name"`
+	Vni            string `json:"vni"`
+	Vpc            string `json:"vpc"`
+	Status         string `json:"status"`
+	Virtual        bool   `json:"virtual"`
+	ClusterGateway string `json:"clustergateway"`
+	Bouncers       int    `json:"bouncers"`
+	CreateTime     string `json:"createtime"`
+	ProvisionDelay string `json:"provisiondelay"`
+}
+
+type Subnet struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec SubnetSpec `json:"spec,omitempty"`
+}
+
+type SubnetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	Items []Subnet `json:"items"`
+}
+
 // initialize the commandline options
 func InitFlag() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "/etc/kubernetes/kubelet.conf", "the kubeconfig file path to access kube apiserver")
 	config, err := config.NewGatewayConfiguration("gateway_config.json")
 	if err != nil {
 		panic(fmt.Errorf("error setting gateway agent configuration: %v", err))
@@ -112,6 +153,23 @@ func init() {
 
 func main() {
 	defer handle.Close()
+
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+
+	client, err := dynamic.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+	list, err := listSubnets(client, "default")
+	if err != nil {
+		panic(err)
+	}
+	for _, t := range list.Items {
+		fmt.Printf("%s %s %s %s\n", t.Namespace, t.Name, t.Spec.Vni, t.Spec.ClusterGateway)
+	}
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
@@ -247,4 +305,20 @@ func send(l ...gopacket.SerializableLayer) error {
 	}
 
 	return handle.WritePacketData(buffer.Bytes())
+}
+
+func listSubnets(client dynamic.Interface, namespace string) (*SubnetList, error) {
+	list, err := client.Resource(gvr).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	data, err := list.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	var subnetList SubnetList
+	if err := json.Unmarshal(data, &subnetList); err != nil {
+		return nil, err
+	}
+	return &subnetList, nil
 }
