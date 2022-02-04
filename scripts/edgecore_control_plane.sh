@@ -14,7 +14,7 @@ if [ -f "${DIR}/prerequisite_packages.sh" ]; then
 source "${DIR}/prerequisite_packages.sh"
 fi
 echo y | apt-get update
-rm -rf /root/.ssh/*
+rm -rf /root/.ssh/id_rsa  &&  rm -rf /root/.ssh/id_rsa.pub
 echo y | apt-get install sshpass
 < /dev/zero ssh-keygen -q -N ""
 sshpass -p $pass ssh-copy-id -o StrictHostKeyChecking=no root@$ip_c    
@@ -43,14 +43,6 @@ cloud_edge_process(){
 
 fornax_setup_vm_2(){
     echo '*****FORNAX CONFIGURATION*****'
-    mkdir -p $HOME/go/src/github.com/
-    pushd $HOME/go/src/github.com/
-    if [ "$(ls $HOME/go/src/github.com/)" == "" ]
-    then
-      git clone https://github.com/CentaurusInfra/fornax.git
-    else
-      sudo rm -rf fornax && git clone https://github.com/CentaurusInfra/fornax.git
-    fi
     pushd $HOME/go/src/github.com/fornax
     cp $HOME/machine_1_admin_file/admin.conf $HOME/go/src/github.com/fornax
     systemctl restart docker
@@ -97,7 +89,6 @@ kube_cluster
 golang_tools
 
 fornax_setup_vm_2
-
 echo '*****SETUP SUCCESSSFUL*****' 
 echo 'Logs: '
 echo 'Cloudcore: $HOME/go/src/github.com/fornax/cloudcore.logs'

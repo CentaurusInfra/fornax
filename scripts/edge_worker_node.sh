@@ -28,14 +28,6 @@ edgecore_process(){
 
 fornax_setup_vm_3(){
     echo '*****FORNAX CONFIGURATION*****'
-    mkdir -p $HOME/go/src/github.com/
-    pushd $HOME/go/src/github.com/
-    if [ "$(ls $HOME/go/src/github.com/)" == "" ]
-    then
-      git clone https://github.com/CentaurusInfra/fornax.git
-    else
-      sudo rm -rf fornax && git clone https://github.com/CentaurusInfra/fornax.git
-    fi
     pushd $HOME/go/src/github.com/fornax
     systemctl restart docker
     cp $HOME/machine_2_admin_file/admin.conf $HOME/go/src/github.com/fornax
@@ -61,7 +53,6 @@ fornax_setup_vm_3(){
     export KUBECONFIG=/etc/kubernetes/admin.conf
     nohup _output/local/bin/edgecore --edgecluster >> edgecore.logs 2>&1 &
 }
-
 edgecore_process
 
 ip_tables
@@ -75,7 +66,6 @@ kube_cluster
 golang_tools
 
 fornax_setup_vm_3
-
 echo '*****SETUP SUCCESSSFUL*****' 
 echo 'Logs: '
 echo 'Edgecore: $HOME/go/src/github.com/fornax/edgecore.logs'

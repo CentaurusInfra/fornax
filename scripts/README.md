@@ -14,17 +14,65 @@
 ####     Machine 2: Edge Node with Control Plane 
 ####     Machine 3: Edge Worker Node
 
+
+## Steps to configure 'sshd' before running the scripts in all the three machines:
+
+**Switch to ROOT user:**
+        
+        sudo -i
+        
+**Edit the 'sshd_config' file:**
+
+       vi /etc/ssh/sshd_config
+       
+       
+**Here modify line no. 32 and line no. 56 by uncommenting and updating to `PermitRootLogin yes` and `PasswordAuthentication yes`**
+
+
+
+   ![image](https://user-images.githubusercontent.com/95343388/152476470-8fb9d893-23bb-4666-84fc-7996f6d132a7.png)
    
+   
+   
+
+**Now reload the sshd service:**
+     
+     
+       systemctl reload sshd
+       
+       
+**Set the ROOT password of the Machine**
+
+
+       passwd root
+       
+       
+   ![image](https://user-images.githubusercontent.com/95343388/152478338-2bc2a7da-b236-4776-9c50-42c9eb60eaaf.png)
+
+
+   
+### Running the Scripts:
+
+
+**create project folder and go to the project folder**
+
+       mkdir -p /root/go/src/github.com
+       cd /root/go/src/github.com
+       
+### Clone the git repo in project folder and run the scripts:
+
+
+       sudo bash fornax/scripts/cloudcore_node.sh                  (Run in machine-1)
+       sudo bash fornax/scripts/edgecore_control_plane.sh          (Run in machine 2)  (run the script only after successfully running the machine-1 script)
+       sudo bash fornax/scripts/edge_worker_node.sh                (Run in machine 3)  (run the script only after successfully running the machine-2 script)
+       
+       
+### • Run the machine-2 script only after successfully running the machine-1 script.
+### • Run the machine-3 script only after successfully running the machine-2 script.
+
+
 ### NOTE: 'prerequisite_package.sh' contains all the required packages for creating Kubernetes Cluster.
-
-
-   
-#### Run the Scripts:
-
-
-       sudo bash cloudcore_node.sh                  (Run in machine-1)
-       sudo bash edgecore_control_plane.sh          (Run in machine 2)  (run the script only after successfully running the machine-1 script)
-       sudo bash edge_worker_node.sh                (Run in machine 3)  (run the script only after successfully running the machine-2 script)
+          
 
 
 #### Input the Private IP's and Password of Machine 1, Machine 2 and Machine 3 :
@@ -59,3 +107,16 @@
        cd $HOME/go/src/github.com/fornax
        cat cloudcore.logs
        cat edgecore.logs
+       
+       
+       
+### If Kubernetes node does not get Ready even after successfully running the script in Machine-3 please run the following command:
+
+
+       export KUBECONFIG=/etc/kubernetes/admin.conf
+       
+       
+       
+   ![image](https://user-images.githubusercontent.com/95343388/152477536-b2aa6c4b-15c5-4b57-87dd-de197d0597c3.png)
+
+
