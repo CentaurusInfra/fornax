@@ -82,7 +82,7 @@ type SubnetList struct {
 
 // initialize the commandline options
 func InitFlag() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "/etc/kubernetes/kubelet.conf", "the kubeconfig file path to access kube apiserver")
+	flag.StringVar(&kubeconfig, "kubeconfig", "/etc/kubernetes/admin.conf", "the kubeconfig file path to access kube apiserver")
 	config, err := config.NewGatewayConfiguration("gateway_config.json")
 	if err != nil {
 		panic(fmt.Errorf("error setting gateway agent configuration: %v", err))
@@ -167,9 +167,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for _, t := range list.Items {
-		fmt.Printf("%s %s %s %s\n", t.Namespace, t.Name, t.Spec.Vni, t.Spec.ClusterGateway)
-	}
+
+	syncSubnets(list, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort))
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
@@ -195,6 +194,7 @@ func processPacket(p *gopacket.Packet) error {
 	ethernetFrame := ethernetLayer.(*layers.Ethernet)
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	ipPacket, _ := ipLayer.(*layers.IPv4)
+	appLayer := packet.ApplicationLayer()
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	udpPacket := udpLayer.(*layers.UDP)
 
@@ -220,6 +220,9 @@ func processPacket(p *gopacket.Packet) error {
 
 	// it is a packet from the remote Inter-Cluster gateway
 	case udpPacketCopy.SrcPort == genevePort && udpPacketCopy.DstPort == firepowerPort:
+		if appLayer != nil {
+			klog.V(3).Infof("The playload is %v", string(appLayer.Payload()[8:]))
+		}
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = dividerHrdAddr
 
@@ -321,4 +324,47 @@ func listSubnets(client dynamic.Interface, namespace string) (*SubnetList, error
 		return nil, err
 	}
 	return &subnetList, nil
+}
+
+func syncSubnets(subnets *SubnetList, remoteHostIP net.IP, remoteHostMac net.HardwareAddr, remotePort, localPort int) error {
+	iface, _, src, err := router.Route(remoteHostIP)
+	if err != nil {
+		return err
+	}
+
+	eth := layers.Ethernet{
+		SrcMAC:       iface.HardwareAddr,
+		DstMAC:       remoteHostMac,
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+	ip4 := layers.IPv4{
+		SrcIP:    src,
+		DstIP:    remoteIcgwIP,
+		Version:  4,
+		TTL:      64,
+		Protocol: layers.IPProtocolTCP,
+	}
+	tcp := layers.TCP{
+		SrcPort: layers.TCPPort(localPort),
+		DstPort: layers.TCPPort(remotePort),
+		SYN:     true,
+	}
+	tcp.SetNetworkLayerForChecksum(&ip4)
+	udp := layers.UDP{
+		SrcPort: layers.UDPPort(localPort),
+		DstPort: layers.UDPPort(remotePort),
+	}
+	udp.SetNetworkLayerForChecksum(&ip4)
+
+	subnetsByteArray, err := json.Marshal(subnets)
+	if err != nil {
+		return err
+	}
+	payload := gopacket.Payload(subnetsByteArray)
+
+	if err := send(&eth, &ip4, &tcp, &udp, &payload); err != nil {
+		return err
+	}
+
+	return nil
 }
