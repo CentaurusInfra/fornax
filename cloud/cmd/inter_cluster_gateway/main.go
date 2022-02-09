@@ -168,7 +168,9 @@ func main() {
 		panic(err)
 	}
 
-	syncSubnets(list, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort))
+	if err := syncSubnets(list, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort)); err != nil {
+		klog.Fatalf("Error in synchronizing subnets: %v", err)
+	}
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
@@ -349,12 +351,18 @@ func syncSubnets(subnets *SubnetList, remoteHostIP net.IP, remoteHostMac net.Har
 		DstPort: layers.TCPPort(remotePort),
 		SYN:     true,
 	}
-	tcp.SetNetworkLayerForChecksum(&ip4)
+	err = tcp.SetNetworkLayerForChecksum(&ip4)
+	if err != nil {
+		return err
+	}
 	udp := layers.UDP{
 		SrcPort: layers.UDPPort(localPort),
 		DstPort: layers.UDPPort(remotePort),
 	}
-	udp.SetNetworkLayerForChecksum(&ip4)
+	err = udp.SetNetworkLayerForChecksum(&ip4)
+	if err != nil {
+		return err
+	}
 
 	subnetsByteArray, err := json.Marshal(subnets)
 	if err != nil {
