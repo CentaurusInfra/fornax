@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -14,13 +13,16 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/kubeedge/cloud/cmd/config"
+	subnetclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/client/clientset/versioned"
+	subnetv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/v1"
 )
 
 var (
@@ -46,39 +48,6 @@ var (
 	opts   gopacket.SerializeOptions
 	buffer gopacket.SerializeBuffer
 )
-
-var gvr = schema.GroupVersionResource{
-	Group:    "mizar.com",
-	Version:  "v1",
-	Resource: "subnets",
-}
-
-type SubnetSpec struct {
-	IP             string `json:"ip"`
-	Prefix         string `json:"name"`
-	Vni            string `json:"vni"`
-	Vpc            string `json:"vpc"`
-	Status         string `json:"status"`
-	Virtual        bool   `json:"virtual"`
-	ClusterGateway string `json:"clustergateway"`
-	Bouncers       int    `json:"bouncers"`
-	CreateTime     string `json:"createtime"`
-	ProvisionDelay string `json:"provisiondelay"`
-}
-
-type Subnet struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec SubnetSpec `json:"spec,omitempty"`
-}
-
-type SubnetList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-
-	Items []Subnet `json:"items"`
-}
 
 // initialize the commandline options
 func InitFlag() {
@@ -159,18 +128,15 @@ func main() {
 		panic(err)
 	}
 
-	client, err := dynamic.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
-	list, err := listSubnets(client, "default")
-	if err != nil {
+	quit := make(chan struct{})
+	defer close(quit)
+	if err = runSubnetInformer(config, quit); err != nil {
 		panic(err)
 	}
 
-	if err := syncSubnets(list, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort)); err != nil {
-		klog.Fatalf("Error in synchronizing subnets: %v", err)
-	}
+	// if err := syncSubnets(list, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort)); err != nil {
+	// 	klog.Fatalf("Error in synchronizing subnets: %v", err)
+	// }
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
@@ -312,23 +278,7 @@ func send(l ...gopacket.SerializableLayer) error {
 	return handle.WritePacketData(buffer.Bytes())
 }
 
-func listSubnets(client dynamic.Interface, namespace string) (*SubnetList, error) {
-	list, err := client.Resource(gvr).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	data, err := list.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	var subnetList SubnetList
-	if err := json.Unmarshal(data, &subnetList); err != nil {
-		return nil, err
-	}
-	return &subnetList, nil
-}
-
-func syncSubnets(subnets *SubnetList, remoteHostIP net.IP, remoteHostMac net.HardwareAddr, remotePort, localPort int) error {
+func syncSubnet(subnet *subnetv1.Subnet, remoteHostIP net.IP, remoteHostMac net.HardwareAddr, remotePort, localPort int) error {
 	iface, _, src, err := router.Route(remoteHostIP)
 	if err != nil {
 		return err
@@ -364,15 +314,39 @@ func syncSubnets(subnets *SubnetList, remoteHostIP net.IP, remoteHostMac net.Har
 		return err
 	}
 
-	subnetsByteArray, err := json.Marshal(subnets)
+	subnetByteArray, err := json.Marshal(subnet)
 	if err != nil {
 		return err
 	}
-	payload := gopacket.Payload(subnetsByteArray)
+	payload := gopacket.Payload(subnetByteArray)
 
 	if err := send(&eth, &ip4, &tcp, &udp, &payload); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func runSubnetInformer(kubeconfig *rest.Config, quit chan struct{}) error {
+	subnetclientset, err := subnetclientset.NewForConfig(kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	subnetLW := cache.NewListWatchFromClient(subnetclientset.MizarV1().RESTClient(), "subnets", v1.NamespaceAll, fields.Everything())
+
+	subnetInformer := cache.NewSharedIndexInformer(subnetLW, &subnetv1.Subnet{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	subnetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if subnet, ok := obj.(*subnetv1.Subnet); ok {
+				klog.V(3).Infof("A new subnet %s is trying to sync to %s", subnet.Name, subnet.Spec.RemoteGateway)
+				if err := syncSubnet(subnet, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort)); err != nil {
+					klog.Fatalf("Error in synchronizing subnet %v: %v", subnet, err)
+				}
+			}
+		},
+	})
+
+	go subnetInformer.Run(quit)
 	return nil
 }
