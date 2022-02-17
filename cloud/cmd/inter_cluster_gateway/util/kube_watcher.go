@@ -1,12 +1,15 @@
 package util
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"net"
 	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -15,6 +18,7 @@ import (
 	dividerclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/divider/client/clientset/versioned"
 	dividerv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/divider/v1"
 	subnetclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/client/clientset/versioned"
+	subnetinterface "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/client/clientset/versioned/typed/subnet/v1"
 	subnetv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/v1"
 	vpcclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/vpc/client/clientset/versioned"
 	vpcv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/vpc/v1"
@@ -30,6 +34,7 @@ type KubeWatcher struct {
 	dividerMap      map[string]*dividerv1.Divider
 	vpcMap          map[string]*vpcv1.Vpc
 	vpcGatewayMap   map[string]GatewayConfig
+	subnetInterface subnetinterface.SubnetInterface
 }
 
 func NewKubeWatcher(kubeconfig *rest.Config, quit chan struct{}) (*KubeWatcher, error) {
@@ -37,6 +42,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, quit chan struct{}) (*KubeWatcher, 
 	if err != nil {
 		return nil, err
 	}
+	subnetclientset.MizarV1().Subnets("default")
 	subnetLW := cache.NewListWatchFromClient(subnetclientset.MizarV1().RESTClient(), "subnets", v1.NamespaceAll, fields.Everything())
 	subnetInformer := cache.NewSharedIndexInformer(subnetLW, &subnetv1.Subnet{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
@@ -64,6 +70,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, quit chan struct{}) (*KubeWatcher, 
 		dividerMap:      make(map[string]*dividerv1.Divider),
 		vpcMap:          make(map[string]*vpcv1.Vpc),
 		vpcGatewayMap:   make(map[string]GatewayConfig),
+		subnetInterface: subnetclientset.MizarV1().Subnets("default"),
 	}, nil
 }
 
@@ -143,6 +150,8 @@ func (watcher *KubeWatcher) Run() {
 							klog.Fatalf("error in getting dividernext hop hardware address: %v", err)
 						}
 						localDividerHosts = append(localDividerHosts, LocalDividerHost{IP: dividerSrc, Mac: dividerHrdAddr})
+						gateway.LocalDividerHosts = localDividerHosts
+						watcher.vpcGatewayMap[divider.Spec.Vni] = gateway
 					}
 				}
 			}
@@ -153,6 +162,19 @@ func (watcher *KubeWatcher) Run() {
 	go watcher.dividerInformer.Run(watcher.quit)
 	go watcher.vpcInformer.Run(watcher.quit)
 	<-watcher.quit
+}
+
+func (watcher *KubeWatcher) SaveSubnet(payload []byte) {
+	var subnet subnetv1.Subnet
+	err := json.Unmarshal([]byte(payload), &subnet)
+	subnet.ResourceVersion = ""
+	subnet.Spec.Virtual = true
+	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err = watcher.subnetInterface.Create(context.TODO(), &subnet, metav1.CreateOptions{}); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func GetLocalHostIP() net.IP {

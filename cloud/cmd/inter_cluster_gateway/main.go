@@ -138,7 +138,7 @@ func main() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	for packet := range packetSource.Packets() {
-		if err := processPacket(&packet); err != nil {
+		if err := processPacket(&packet, kubeWatcher); err != nil {
 			klog.Errorf("Failed to process packet: %v, packet: %v", err, packet)
 		} else {
 			klog.V(3).Infof("Successfully processed packet")
@@ -147,7 +147,7 @@ func main() {
 	}
 }
 
-func processPacket(p *gopacket.Packet) error {
+func processPacket(p *gopacket.Packet, watcher *util.KubeWatcher) error {
 	packet := *p
 
 	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
@@ -155,6 +155,9 @@ func processPacket(p *gopacket.Packet) error {
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	ipPacket, _ := ipLayer.(*layers.IPv4)
 	appLayer := packet.ApplicationLayer()
+	klog.Infof("The playload is %v", string(appLayer.Payload()[8:]))
+	watcher.SaveSubnet(appLayer.Payload()[8:])
+
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	udpPacket := udpLayer.(*layers.UDP)
 
