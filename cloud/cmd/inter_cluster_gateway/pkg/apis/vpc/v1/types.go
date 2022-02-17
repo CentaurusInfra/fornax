@@ -18,12 +18,12 @@ import (
 
 // VpcSpec defines the desired subnets
 type VpcSpec struct {
-	Dividers      int    `json:"dividers"`
-	IP            string `json:"ip"`
-	Prefix        string `json:"prefix"`
-	Status        string `json:"status"`
-	Vni           string `json:"vni"`
-	RemoteGateway string `json:"remotegateway"`
+	Dividers       int      `json:"dividers"`
+	IP             string   `json:"ip"`
+	Prefix         string   `json:"prefix"`
+	Status         string   `json:"status"`
+	Vni            string   `json:"vni"`
+	RemoteGateways []string `json:"remotegateways"`
 }
 
 // +genclient
