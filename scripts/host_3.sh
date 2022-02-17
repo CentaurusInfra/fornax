@@ -29,7 +29,7 @@ edgecore_process(){
 fornax_setup_vm_3(){
     echo -e "## FORNAX CONFIGURATION\n"
     pushd $HOME/go/src/github.com/fornax
-    cp $HOME/machine_2_admin_file/admin.conf $HOME/go/src/github.com/fornax
+    cp $HOME/machine_1_admin_file/admin.conf $HOME/go/src/github.com/fornax
     chmod a+x Makefile
     make all
     make WHAT=edgecore

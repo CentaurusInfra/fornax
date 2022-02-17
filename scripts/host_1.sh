@@ -81,6 +81,8 @@ fornax_setup_vm_1(){
     sudo scp -r /etc/kubeedge/ca  $ip_m3:/etc/kubeedge
     ssh -t root@$ip_m2 "sudo mkdir -p /root/machine_1_admin_file" > /dev/null 2>&1
     sudo scp -r /etc/kubernetes/admin.conf  $ip_m2:/root/machine_1_admin_file
+    ssh -t root@$ip_m3 "sudo mkdir -p /root/machine_1_admin_file" > /dev/null 2>&1
+    sudo scp -r /etc/kubernetes/admin.conf  $ip_m3:/root/machine_1_admin_file
     echo -e "## APPLYING DEVICES.YAML"
     kubectl apply -f build/crds/devices/devices_v1alpha2_device.yaml
     kubectl apply -f build/crds/devices/devices_v1alpha2_devicemodel.yaml
