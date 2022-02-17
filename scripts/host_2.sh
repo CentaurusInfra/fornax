@@ -2,10 +2,10 @@
 
 set -e 
 
-echo -e "## Enter Private IP ADDRESS of Host Machine 3:"
-read ip_m3
-echo -e "## Enter Absolute path of your key-pair of Host Machine-3:"
-read key_pair_3
+#echo -e "## Enter Private IP ADDRESS of Host Machine 3:"
+#read ip_m3
+#echo -e "## Enter Absolute path of your key-pair of Host Machine-3:"
+#read key_pair_3
 echo -e "\n"
 
 #To kill running process of cloudcore and edgecore
