@@ -94,7 +94,6 @@ func (watcher *KubeWatcher) Run() {
 					}
 				}
 			}
-
 		},
 	})
 
@@ -123,7 +122,7 @@ func (watcher *KubeWatcher) Run() {
 								klog.Fatalf("error in getting remote gateway port: %s", hosts[1])
 							}
 							remoteGatewayHosts = append(remoteGatewayHosts, RemoteGatewayHost{Remote: remoteIcgwIP, IP: icgwSrc, Port: port, Mac: icgwHrdAddr})
-							klog.V(3).Infof("The remote gateway hosts are set to ", remoteGatewayHosts)
+							klog.V(3).Infof("The remote gateway hosts are set to %v", remoteGatewayHosts)
 						}
 						watcher.vpcGatewayMap[vpc.Spec.Vni] = GatewayConfig{RemoteGatewayHosts: remoteGatewayHosts}
 					}
