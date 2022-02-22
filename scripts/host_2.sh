@@ -65,7 +65,7 @@ fornax_setup_vm_2(){
     #make WHAT=cloudcore
     make WHAT=edgecore
     mkdir /etc/kubeedge/config -p
-    #cp /etc/kubernetes/admin.conf $HOME/.kube/config
+    cp /etc/kubernetes/admin.conf $HOME/.kube/config
     #_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
     echo '## SETTING UP THE EDGECORE' 
     cp /etc/kubernetes/admin.conf  $HOME/edgecluster.kubeconfig

@@ -96,3 +96,9 @@ cd $HOME/go/src/github.com/fornax
 cat cloudcore.logs
 cat edgecore.logs
 ```
+
+#### To verify Cloudcore & Edgecore is running currently:
+```bash
+ps -aef | grep _output/local/bin/cloudcore | grep -v sh| grep -v grep
+ps -aef | grep _output/local/bin/edgecore | grep -v sh| grep -v grep
+cat 

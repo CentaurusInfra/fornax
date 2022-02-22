@@ -26,6 +26,8 @@ edgecore_process(){
    fi
 }
 
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+
 fornax_setup_vm_3(){
     echo -e "## FORNAX CONFIGURATION\n"
     pushd $HOME/go/src/github.com/fornax
@@ -34,6 +36,7 @@ fornax_setup_vm_3(){
     make all
     make WHAT=edgecore
     mkdir /etc/kubeedge/config -p
+    cp /etc/kubernetes/admin.conf $HOME/.kube/config
     echo -e "## SETTING UP THE EDGECORE"
     sudo cp /etc/kubernetes/admin.conf $HOME/edgecluster.kubeconfig
     _output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
@@ -48,6 +51,7 @@ fornax_setup_vm_3(){
     kubectl apply -f build/crds/edgecluster/mission_v1.yaml
     kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
     chmod 777 $HOME/go/src/github.com/fornax/_output/local/bin/kubectl/vanilla/kubectl
+    export KUBECONFIG=/etc/kubernetes/admin.conf
     nohup _output/local/bin/edgecore --edgecluster >> edgecore.logs 2>&1 &
 }
 edgecore_process
@@ -62,7 +66,7 @@ kube_cluster
 
 golang_tools
 
-fornax_setup_vm_3
+#fornax_setup_vm_3
 echo -e "## SETUP SUCCESSSFUL\n"
 echo -e "## Edgecore Logs: $HOME/go/src/github.com/fornax/edgecore.logs\n"
 echo -e "To start using your cluster, Please Run the command:\n"
