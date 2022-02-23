@@ -11,7 +11,7 @@
 ####    Host Machine 2: Edge Core Node
 ####    Host Machine 3: Edge Core Node
 
-<img src="/../../images/Multi-Edgecore-in-same-level.png" 
+<img src="/docs/setup-guide/images/Multi-Edgecore-in-same-level.png" 
      width="98%"  
      align="center"/>
 
