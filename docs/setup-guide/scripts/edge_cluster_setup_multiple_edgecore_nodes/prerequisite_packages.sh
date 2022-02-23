@@ -51,7 +51,7 @@ kube_packages(){
 kube_cluster(){
    if [ "$(ls /etc/kubernetes/admin.conf )" != "/etc/kubernetes/admin.conf" ] > /dev/null 2>&1
    then
-      echo -e "## STARTING CLUSTER USING KUBEADM"
+      echo -e "## STARTING KUBERNETES NODE USING KUBEADM"
       kubeadm init
       systemctl restart kubelet
       export KUBECONFIG=/etc/kubernetes/admin.conf
@@ -63,7 +63,7 @@ kube_cluster(){
       export KUBECONFIG=/etc/kubernetes/admin.conf
       kubectl get nodes
    fi
-   echo -e "## KUBERNETES CLUSTER IS READY\n"
+   echo -e "## KUBERNETES NODE SETUP IS DONE\n"
 }
 
 golang_tools(){

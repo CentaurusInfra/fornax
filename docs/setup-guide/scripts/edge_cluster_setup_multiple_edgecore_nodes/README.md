@@ -11,6 +11,10 @@
 ####    Host Machine 2: Edge Core Node
 ####    Host Machine 3: Edge Core Node
 
+<img src="/../../images/Multi-Edgecore-in-same-level.png" 
+     width="98%"  
+     align="center"/>
+
 ### A Step-by-Step Process for Setting up all Machines (For AWS EC2 Instances)
 
 - **Step 1.1:  Switch to ROOT user:**
@@ -48,7 +52,7 @@ vi  aws-keypair-3.pem
 ```
 - **Step 2.2: Run the command**
 ```bash
-sudo bash fornax/docs/setup-guide/scripts/host_1.sh
+sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/host_level_1.sh
 ```
 - **Step 2.3: Input the Private IP's of Hosts and keypair path:**
 
@@ -60,7 +64,7 @@ sudo bash fornax/docs/setup-guide/scripts/host_1.sh
 - **Step 3: Run the command**
 
 ```bash
-sudo bash fornax/docs/setup-guide/scripts/host_2_1.sh
+sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/host_level_2_1.sh
 ```
  
 
@@ -69,7 +73,7 @@ sudo bash fornax/docs/setup-guide/scripts/host_2_1.sh
 - **Step 4: Run the command**
 
 ```bash
-sudo bash fornax/docs/setup-guide/scripts/host_2_2.sh
+sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/host_level_2_2.sh
 ```
 
 **Note:  `prerequisite_packages.sh` contains all the required packages for creating Kubernetes Cluster.**
@@ -92,6 +96,6 @@ cat edgecore.logs
 
 #### To verify Cloudcore & Edgecore is running currently:
 ```bash
-ps -aef | grep _output/local/bin/cloudcore | grep -v sh| grep -v grep
-ps -aef | grep _output/local/bin/edgecore | grep -v sh| grep -v grep
+ps -aef | grep cloudcore | grep -v sh| grep -v grep
+ps -aef | grep edgecore | grep -v sh| grep -v grep
 cat 

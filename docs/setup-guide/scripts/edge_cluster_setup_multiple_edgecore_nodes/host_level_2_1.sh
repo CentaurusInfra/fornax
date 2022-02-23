@@ -3,7 +3,7 @@
 set -e 
 
 echo -e "\n"
-#To kill running process of cloudcore and edgecore
+#To kill running process of edgecore
 edgecore=`ps -aef | grep _output/local/bin/edgecore | grep -v sh| grep -v grep| awk '{print $2}'`
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 if [ -f "${DIR}/prerequisite_packages.sh" ]; then
@@ -28,14 +28,7 @@ key_gen(){
    fi
 } 
 
-cloud_edge_process(){
-   if `[ !-z "$cloudcore"]`
-   then
-      echo cloudcore process is not running 
-   else
-      kill -9 $cloudcore
-      echo cloudcore process killed forcefully, process id $cloudcore.
-   fi
+edgecore_process(){
    if `[ !-z "$edgecore"]`
    then
       echo edgecore process is not running 
