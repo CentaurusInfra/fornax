@@ -99,7 +99,7 @@ cat edgecore.logs
 ps -aef | grep cloudcore | grep -v sh| grep -v grep
 ps -aef | grep edgecore | grep -v sh| grep -v grep
 ```
-<<<<<<< HEAD
+
 #### 5.1 In Machine 1, running following command and deployment mission to Machine 2 and Machine 3.
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
@@ -123,5 +123,4 @@ OR
 watch kubectl get edgeclusters
 watch kubectl get missions
 ```
-=======
->>>>>>> 21dbe2c9c764a9d8fe67f881cad034ce1149a9e0
+
