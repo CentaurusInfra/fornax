@@ -87,15 +87,38 @@ kubectl get edgecluster
   ![image](https://user-images.githubusercontent.com/95343388/154036219-3314f23a-1828-4598-afa2-9c4cada412c7.png) 
 
 
-#### To see Cloudcore & Edgecore logs:
+#### To see Cloudcore or Edgecore logs:
 ```bash
 cd $HOME/go/src/github.com/fornax
 cat cloudcore.logs
 cat edgecore.logs
 ```
 
-#### To verify Cloudcore & Edgecore is running currently:
+#### To verify Cloudcore or Edgecore is running currently:
 ```bash
 ps -aef | grep cloudcore | grep -v sh| grep -v grep
 ps -aef | grep edgecore | grep -v sh| grep -v grep
-cat 
+```
+#### 5.1 In Machine 1, running following command and deployment mission to Machine 2 and Machine 3.
+```
+kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
+```
+#### 5.2 To verify mission created status in Machine 1, 2, 3 and run following command.
+```
+kubectl get edgeclusters
+kubectl get missions
+```
+#### 5.3 After you see mission, you can delete mission. by using following command
+```
+kubectl delete mission deployment-to-all
+```
+#### 5.4 Run following command verify mission deleted status.
+```
+kubectl get edgeclusters
+kubectl get missions
+```
+OR
+```
+watch kubectl get edgeclusters
+watch kubectl get missions
+```
