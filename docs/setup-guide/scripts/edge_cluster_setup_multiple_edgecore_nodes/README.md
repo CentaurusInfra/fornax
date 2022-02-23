@@ -98,4 +98,4 @@ cat edgecore.logs
 ```bash
 ps -aef | grep cloudcore | grep -v sh| grep -v grep
 ps -aef | grep edgecore | grep -v sh| grep -v grep
-cat 
+```
