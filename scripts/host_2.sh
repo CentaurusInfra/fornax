@@ -2,10 +2,12 @@
 
 set -e 
 
-echo "Enter IP ADDRESS of Machine 3:"
+echo -e "## Enter Private IP ADDRESS of Host Machine 3:"
 read ip_m3
-echo "Enter ROOT password of Machine 3 for copying the Kubeconfig file from Machine 2"
-read -s pass
+echo -e "## Enter Absolute path of your key-pair of Host Machine-3:"
+read key_pair_3
+echo -e "\n"
+
 #To kill running process of cloudcore and edgecore
 cloudcore=`ps -aef | grep _output/local/bin/cloudcore | grep -v sh| grep -v grep| awk '{print $2}'`
 edgecore=`ps -aef | grep _output/local/bin/edgecore | grep -v sh| grep -v grep| awk '{print $2}'`
@@ -13,16 +15,24 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 if [ -f "${DIR}/prerequisite_packages.sh" ]; then
 source "${DIR}/prerequisite_packages.sh"
 fi
-echo y | apt-get update
-rm -rf /root/.ssh/id_rsa  &&  rm -rf /root/.ssh/id_rsa.pub
-echo y | apt-get install sshpass
-< /dev/zero ssh-keygen -q -N ""
-sshpass -p $pass ssh-copy-id -o StrictHostKeyChecking=no root@$ip_m3    
-echo '*****SETTING UP THE HOSTNAME NODE-B*****'
+
+echo -e "## SETTING UP THE HOSTNAME NODE-B\n"
 sudo hostnamectl set-hostname node-b
-echo '*****DISABLING FIREWALL*****'
+echo -e "## DISABLING FIREWALL\n"
 sudo ufw disable
 sudo swapoff -a
+
+key_gen(){
+   if [ "$(ls /root/.ssh/id_rsa.pub)" != "/root/.ssh/id_rsa.pub" ] > /dev/null 2>&1
+   then
+       echo -e "## GENERATING KEY AND COPYING THE KEY TO HOST MACHINE 3"
+       chmod 600 $key_pair_3 
+       < /dev/zero ssh-keygen -q -N ""
+       cat ~/.ssh/id_rsa.pub | ssh -o StrictHostKeyChecking=no -i $key_pair_3 root@$ip_m3 "cat >> ~/.ssh/authorized_keys"
+   else
+       cat ~/.ssh/id_rsa.pub | ssh -o StrictHostKeyChecking=no -i $key_pair_3 root@$ip_m3 "cat >> ~/.ssh/authorized_keys"
+   fi
+} 
 
 cloud_edge_process(){
    if `[ !-z "$cloudcore"]`
@@ -42,13 +52,14 @@ cloud_edge_process(){
 }
 
 fornax_setup_vm_2(){
-    echo '*****FORNAX CONFIGURATION*****'
+    echo  -e "## FORNAX CONFIGURATION"
     pushd $HOME/go/src/github.com/fornax
     cp $HOME/machine_1_admin_file/admin.conf $HOME/go/src/github.com/fornax
     systemctl restart docker
+    echo  "## COPYING THE KUBECONFIG FILE TO HOST MACHINE 3"
     ssh -t root@$ip_m3 "mkdir -p $HOME/machine_2_admin_file" > /dev/null 2>&1
     scp -r /etc/kubernetes/admin.conf  $ip_m3:$HOME/machine_2_admin_file
-    echo 'SETTING UP THE CLOUDCORE'
+    echo '## SETTING UP THE CLOUDCORE'
     chmod a+x Makefile
     make all
     make WHAT=cloudcore
@@ -56,12 +67,11 @@ fornax_setup_vm_2(){
     mkdir /etc/kubeedge/config -p
     cp /etc/kubernetes/admin.conf $HOME/.kube/config
     _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
-    sed -i 's+RANDFILE+#RANDFILE+g' /etc/ssl/openssl.cnf
-    echo 'SETTING UP THE EDGECORE' 
+    echo '## SETTING UP THE EDGECORE' 
     cp /etc/kubernetes/admin.conf  $HOME/edgecluster.kubeconfig
     _output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
     tests/edgecluster/hack/update_edgecore_config.sh admin.conf
-    echo 'APPLYING DEVICES.YAML'
+    echo '## APPLYING DEVICES.YAML'
     kubectl apply -f build/crds/devices/devices_v1alpha2_device.yaml
     kubectl apply -f build/crds/devices/devices_v1alpha2_devicemodel.yaml
     kubectl apply -f build/crds/reliablesyncs/cluster_objectsync_v1alpha1.yaml
@@ -76,6 +86,8 @@ fornax_setup_vm_2(){
     export KUBECONFIG=/etc/kubernetes/admin.conf
     nohup _output/local/bin/cloudcore >> cloudcore.logs 2>&1 & 
 }
+key_gen
+
 cloud_edge_process
 
 ip_tables
@@ -89,7 +101,7 @@ kube_cluster
 golang_tools
 
 fornax_setup_vm_2
-echo '*****SETUP SUCCESSSFUL*****' 
-echo 'Logs: '
-echo 'Cloudcore: $HOME/go/src/github.com/fornax/cloudcore.logs'
-echo 'Edgecore: $HOME/go/src/github.com/fornax/edgecore.logs'
+echo -e "## SETUP SUCCESSSFUL\n"
+echo -e "## Logs:"
+echo -e "Cloudcore: $HOME/go/src/github.com/fornax/cloudcore.logs"
+echo -e "Edgecore: $HOME/go/src/github.com/fornax/edgecore.logs\n"
