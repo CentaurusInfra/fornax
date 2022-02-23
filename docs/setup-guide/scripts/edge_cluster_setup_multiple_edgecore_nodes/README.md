@@ -11,7 +11,7 @@
 ####    Host Machine 2: Edge Core Node
 ####    Host Machine 3: Edge Core Node
 
-<img src="/../../images/Multi-Edgecore-in-same-level.png" 
+<img src="/docs/setup-guide/images/Multi-Edgecore-in-same-level.png" 
      width="98%"  
      align="center"/>
 
@@ -99,6 +99,7 @@ cat edgecore.logs
 ps -aef | grep cloudcore | grep -v sh| grep -v grep
 ps -aef | grep edgecore | grep -v sh| grep -v grep
 ```
+<<<<<<< HEAD
 #### 5.1 In Machine 1, running following command and deployment mission to Machine 2 and Machine 3.
 ```
 kubectl apply -f tests/edgecluster/data/missions/deployment-to-all.yaml
@@ -122,3 +123,5 @@ OR
 watch kubectl get edgeclusters
 watch kubectl get missions
 ```
+=======
+>>>>>>> 21dbe2c9c764a9d8fe67f881cad034ce1149a9e0
