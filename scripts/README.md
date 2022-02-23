@@ -104,6 +104,6 @@ ps -aef | grep _output/local/bin/cloudcore | grep -v sh| grep -v grep
 ps -aef | grep _output/local/bin/edgecore | grep -v sh| grep -v grep
 ```
 
-   ![image](https://user-images.githubusercontent.com/95343388/155320206-ee4d2371-9c8e-4767-a7a0-17e66209ed34.png)
+  ![image](https://user-images.githubusercontent.com/95343388/155320958-d5e86cc8-43ef-4205-875a-dec38e43bc52.png)
 
 
