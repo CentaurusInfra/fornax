@@ -5,7 +5,7 @@ set -e
 #Enter kubernetes version
 v='1.21.1-00'
 #Golang version
-GO_VERSION=${GO_VERSION:-"1.14.15"}
+GO_VERSION=${GO_VERSION:-"1.13.9"}
 
 ip_tables(){
    echo -e "## LETTING IPTABLES SEE BRIDGED TRAFFIC"

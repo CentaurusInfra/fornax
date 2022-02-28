@@ -9,4 +9,10 @@ if [ -f "${DIR}/common.sh" ]; then
 source "${DIR}/common.sh"
 fi
 
+ip_tables
+
 docker_install
+
+kube_packages
+
+golang_tools
