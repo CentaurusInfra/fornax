@@ -9,6 +9,12 @@ kubeadmjoinlog=/tmp/kubeadm_join.out
 mizarlog=/tmp/mizar.out
 secondstowait=10
 
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+if [ -f "${DIR}/common.sh" ]; then
+source "${DIR}/common.sh"
+fi
+
+
 echo ">> verifying slave host file exist"
 if [ ! -f "$slavehosts" ]; then
     echo "$slavehosts does not exist."
@@ -50,13 +56,13 @@ echo ">>>> joining with '$joincmd'"
 
 while IFS= read -r slave
 do
-    echo ">>>> joining from $slave"
+    echo ">>>> joining from $slave using $joincmd to $kubeadmjoinlog"
     ssh -n $slave "$joincmd" > $kubeadmjoinlog 2>&1 & # remove & here to see log in its entirety
 done < "$slavehosts"
 wait 
 
 echo ">> installing gateway configmap"
-kubectl create -f cluster_gateway_configmap.yaml
+sh ./create_cluster_gateway_configmap.sh
 
 echo ">> installing mizar"
 kubectl create -f mizar.goose.yaml > $mizarlog 2>&1
@@ -71,6 +77,8 @@ do
   vpc0=`kubectl get vpc vpc0|awk '{print $6}'`
   net0=`kubectl get subnet net0|awk '{print $6}'`
 done
+echo "Update config files"
+update_conf
 
 echo "ALL DONE! YEEHAW!!"
 
