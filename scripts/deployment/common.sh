@@ -110,17 +110,17 @@ EOF
 
 update_conf() {
     cp /etc/kubernetes/admin.conf $HOME/.kube/config
-    /root/go/src/github.com/fornax/_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
+    $HOME/go/src/github.com/fornax/_output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
     cp /etc/kubernetes/admin.conf  $HOME/edgecluster.kubeconfig
-    /root/go/src/github.com/fornax/_output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
-    tests/edgecluster/hack/update_edgecore_config.sh admin.conf
-    kubectl apply -f build/crds/devices/devices_v1alpha2_device.yaml
-    kubectl apply -f build/crds/devices/devices_v1alpha2_devicemodel.yaml
-    kubectl apply -f build/crds/reliablesyncs/cluster_objectsync_v1alpha1.yaml
-    kubectl apply -f build/crds/reliablesyncs/objectsync_v1alpha1.yaml
-    kubectl apply -f  build/crds/router/router_v1_rule.yaml
-    kubectl apply -f  build/crds/router/router_v1_ruleEndpoint.yaml
-    kubectl apply -f build/crds/edgecluster/mission_v1.yaml
-    kubectl apply -f build/crds/edgecluster/edgecluster_v1.yaml
+    $HOME/go/src/github.com/fornax/_output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
+    $HOME/go/src/github.com/fornax/tests/edgecluster/hack/update_edgecore_config.sh admin.conf
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/devices/devices_v1alpha2_device.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/devices/devices_v1alpha2_devicemodel.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/reliablesyncs/cluster_objectsync_v1alpha1.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/reliablesyncs/objectsync_v1alpha1.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/router/router_v1_rule.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/router/router_v1_ruleEndpoint.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/edgecluster/mission_v1.yaml
+    kubectl apply -f $HOME/go/src/github.com/fornax/build/crds/edgecluster/edgecluster_v1.yaml
     chmod 777 $HOME/go/src/github.com/fornax/_output/local/bin/kubectl/vanilla/kubectl
 }
