@@ -52,7 +52,7 @@ vi  aws-keypair-3.pem
 ```
 - **Step 2.2: Run the command**
 ```bash
-sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/host_level_1.sh
+sudo bash docs/setup-guide/scripts/edge_cluster_setup_multiple_edgecore_nodes/host_level_1.sh
 ```
 - **Step 2.3: Input the Private IP's of Hosts and keypair path:**
 
@@ -64,7 +64,7 @@ sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/hos
 - **Step 3: Run the command**
 
 ```bash
-sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/host_level_2_1.sh
+sudo bash docs/setup-guide/scripts/edge_cluster_setup_multiple_edgecore_nodes/host_level_2_1.sh
 ```
  
 
@@ -73,7 +73,7 @@ sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/hos
 - **Step 4: Run the command**
 
 ```bash
-sudo bash fornax/docs/setup-guide/edge_cluster_setup_multiple_edgecore_nodes/host_level_2_2.sh
+sudo bash docs/setup-guide/scripts/edge_cluster_setup_multiple_edgecore_nodes/host_level_2_2.sh
 ```
 
 **Note:  `prerequisite_packages.sh` contains all the required packages for creating Kubernetes Cluster.**

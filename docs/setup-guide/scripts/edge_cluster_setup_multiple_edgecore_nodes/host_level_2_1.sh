@@ -70,7 +70,7 @@ fornax_setup_vm_2(){
 }
 #key_gen
 
-cloud_edge_process
+edgecore_process
 
 ip_tables
 
