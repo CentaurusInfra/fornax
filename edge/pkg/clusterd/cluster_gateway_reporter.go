@@ -17,12 +17,11 @@ limitations under the License.
 package clusterd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 
@@ -43,17 +42,19 @@ func NewClusterGatewayReporter(c *clusterd) *ClusterGatewayReporter {
 }
 
 func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
-	configMap, err := GetClusterGatewayConfigMap()
+	clusterGatewayHostIP, err := GetClusterGatewayHostIP()
 	if err != nil {
 		return err
 	}
-
+	configMap := &corev1.ConfigMap{}
+	configMap.Data = make(map[string]string)
+	configMap.Data["gateway_host_ip"] = clusterGatewayHostIP
+	configMap.ClusterName = config.Config.Name
 	err = reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(configMap)
 	if err != nil {
 		klog.Errorf("update cluster gateway config map failed, error: %v", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -70,24 +71,21 @@ func (reporter *ClusterGatewayReporter) Run() {
 	go utilwait.Until(reporter.syncClusterGatewayConfigMap, reporter.clusterGatewayUpdateInterval, utilwait.NeverStop)
 }
 
-func GetClusterGatewayConfigMap() (*v1.ConfigMap, error) {
-	var res *v1.ConfigMap
+func GetClusterGatewayHostIP() (string, error) {
+	var res string
 
-	getClusterGatewayCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
-	output, err := helper.ExecCommandToCluster(getClusterGatewayCmd)
+	getClusterGatewayHostIPCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data.gateway_host_ip}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
+	output, err := helper.ExecCommandToCluster(getClusterGatewayHostIPCmd)
 	if err != nil {
-		klog.Errorf("Failed to get cluster gateway: %v", err)
+		klog.Errorf("Failed to get cluster gateway host ip: %v", err)
 		return res, err
 	}
 
 	if strings.TrimSpace(output) == "" {
-		klog.V(4).Infof("There is no cluster gateway config maps.")
+		klog.V(4).Infof("There is no cluster gateway host ip.")
 		return res, err
 	}
 
-	if err := json.Unmarshal([]byte(output), res); err != nil {
-		klog.Errorf("Error in unmarshall cluster gateway config map json: (%s), error: %v", output, err)
-		return res, err
-	}
+	res = string(output)
 	return res, nil
 }
