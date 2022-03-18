@@ -43,6 +43,13 @@ func (c *configMaps) Create(cm *api.ConfigMap) (*api.ConfigMap, error) {
 }
 
 func (c *configMaps) Update(cm *api.ConfigMap) error {
+	resource := fmt.Sprintf("%s/%s/%s", c.namespace, model.ResourceTypeConfigmap, cm.ClusterName)
+	configMapsMsg := message.BuildMsg(modules.MetaGroup, "", modules.ClusterdModuleName, resource, model.UpdateOperation, cm.ClusterName)
+	_, err := c.send.SendSync(configMapsMsg)
+	if err != nil {
+		return fmt.Errorf("update config map failed, err: %v", err)
+	}
+
 	return nil
 }
 

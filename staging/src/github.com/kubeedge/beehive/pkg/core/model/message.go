@@ -32,6 +32,7 @@ const (
 	ResourceTypeMissionState     = "missionstate"
 	ResourceTypeEdgeCluster      = "edgecluster"
 	ResourceTypeEdgeClusterState = "edgeclusterstate"
+	ResourceTypeClusterGateway   = "clustergateway"
 )
 
 // Message struct

@@ -52,6 +52,7 @@ type clusterd struct {
 	missionDeployer          *MissionDeployer
 	missionStateRepoter      *MissionStateReporter
 	edgeClusterStateReporter *EdgeClusterStateReporter
+	clusterGatewayReporter   *ClusterGatewayReporter
 	uid                      types.UID
 	namespace                string
 	enable                   bool
@@ -102,9 +103,11 @@ func newClusterd(enable bool) (*clusterd, error) {
 
 	c.missionStateRepoter = NewMissionStateReporter(c, missionDeployer)
 	c.edgeClusterStateReporter = NewEdgeClusterStateReporter(c, missionDeployer)
+	c.clusterGatewayReporter = NewClusterGatewayReporter(c)
 
 	go c.missionStateRepoter.Run()
 	go c.edgeClusterStateReporter.Run()
+	go c.clusterGatewayReporter.Run()
 
 	return c, nil
 }

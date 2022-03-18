@@ -108,6 +108,7 @@ type UpstreamController struct {
 	ruleStatusChan            chan model.Message
 	edgeClusterStateChan      chan model.Message
 	missionStateChan          chan model.Message
+	clusterGatewayChan        chan model.Message
 
 	// lister
 	podLister       corelisters.PodLister
@@ -163,6 +164,8 @@ func (uc *UpstreamController) Start() error {
 	for i := 0; i < int(config.Config.Load.UpdateMissionStateWorkers); i++ {
 		go uc.updateMissionState()
 	}
+
+	go uc.updateClusterGatewayNeighbors()
 	return nil
 }
 
@@ -198,7 +201,14 @@ func (uc *UpstreamController) dispatchMessage() {
 		case model.ResourceTypePodStatus:
 			uc.podStatusChan <- msg
 		case model.ResourceTypeConfigmap:
-			uc.configMapChan <- msg
+			switch msg.GetOperation() {
+			case model.QueryOperation:
+				uc.configMapChan <- msg
+			case model.UpdateOperation:
+				uc.clusterGatewayChan <- msg
+			default:
+				klog.Errorf("message: %s, operation type: %s unsupported", msg.GetID(), msg.GetOperation())
+			}
 		case model.ResourceTypeSecret:
 			uc.secretChan <- msg
 		case common.ResourceTypePersistentVolume:
@@ -1255,4 +1265,65 @@ func NewUpstreamController(factory k8sinformer.SharedInformerFactory) (*Upstream
 	uc.edgeClusterStateChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterState)
 	uc.missionStateChan = make(chan model.Message, config.Config.Buffer.UpdateMissionState)
 	return uc, nil
+}
+
+func (uc *UpstreamController) updateClusterGatewayNeighbors() {
+	for {
+		select {
+		case <-beehiveContext.Done():
+			klog.Warning("stop updateClusterGatewayNeighbors")
+			return
+		case msg := <-uc.clusterGatewayChan:
+			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
+
+			namespace, err := messagelayer.GetNamespace(msg)
+			if err != nil {
+				klog.Warningf("message: %s process failure, get namespace failed with error: %s", msg.GetID(), err)
+				continue
+			}
+			name, err := messagelayer.GetResourceName(msg)
+			if err != nil {
+				klog.Warningf("message: %s process failure, get resource name failed with error: %s", msg.GetID(), err)
+				continue
+			}
+
+			subClusterGatewayConfigMap, ok := msg.Content.(v1.ConfigMap)
+			if !ok {
+				klog.Warningf("Failed to get podUID from msg, pod namesapce: %s, pod name: %s", namespace, name)
+				continue
+			}
+			neighborHostIP := subClusterGatewayConfigMap.Data["gateway_host_ip"]
+			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), "cluster-gateway-config", metaV1.GetOptions{})
+			if configMap != nil {
+				neighborArray := make([]string, 0)
+				if configMap.Data == nil {
+					configMap.Data = make(map[string]string)
+				}
+				if neighbors, ok := configMap.Data["gateway_neighbors"]; ok {
+					neighborArray = strings.Split(neighbors, ",")
+					if !contains(neighborArray, neighborHostIP) {
+						neighborArray = append(neighborArray, neighborHostIP)
+					}
+				} else {
+					neighborArray = append(neighborArray, neighborHostIP)
+				}
+				configMap.Data["gateway_neighbors"] = strings.Join(neighborArray, ",")
+			}
+
+			_, err = uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
+			if err != nil {
+				klog.Warningf("Failed to delete pod, namespace: %s, name: %s, err: %v", namespace, name, err)
+				continue
+			}
+			klog.V(4).Infof("Successfully terminate and remove pod from etcd, namespace: %s, name: %s", namespace, name)
+		}
+	}
+}
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
