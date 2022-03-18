@@ -109,6 +109,7 @@ const (
 	DefaultDeletePodBuffer                  = 1024
 	DefaultUpdateEdgeClusterStateBuffer     = 1024
 	DefaultUpdateMissionStateBuffer         = 1024
+	DefaultUpdateClusterGatewayBuffer       = 1024
 
 	DefaultPodEventBuffer           = 1
 	DefaultConfigMapEventBuffer     = 1

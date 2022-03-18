@@ -275,6 +275,8 @@ type EdgeControllerBuffer struct {
 	UpdateEdgeClusterState int32 `json:"updateEdgeClusterState,omitempty"`
 	// default 1
 	EdgeClustersEvent int32 `json:"edgeClustersEvent,omitempty"`
+	// default 1024
+	UpdateClusterGateway int32 `json:"updateClusterGateway,omitempty"`
 }
 
 // ControllerContext indicates the message layer context for all controllers

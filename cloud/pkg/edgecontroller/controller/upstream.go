@@ -185,7 +185,6 @@ func (uc *UpstreamController) dispatchMessage() {
 
 		klog.V(5).Infof("dispatch message ID: %s", msg.GetID())
 		klog.V(5).Infof("dispatch message content: %++v", msg)
-
 		resourceType, err := messagelayer.GetResourceType(msg)
 		if err != nil {
 			klog.Warningf("parse message: %s resource type with error: %s,", msg.GetID(), err)
@@ -1264,6 +1263,7 @@ func NewUpstreamController(factory k8sinformer.SharedInformerFactory) (*Upstream
 	uc.ruleStatusChan = make(chan model.Message, config.Config.Buffer.UpdateNodeStatus)
 	uc.edgeClusterStateChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterState)
 	uc.missionStateChan = make(chan model.Message, config.Config.Buffer.UpdateMissionState)
+	uc.clusterGatewayChan = make(chan model.Message, config.Config.Buffer.UpdateClusterGateway)
 	return uc, nil
 }
 
@@ -1286,10 +1286,18 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 				klog.Warningf("message: %s process failure, get resource name failed with error: %s", msg.GetID(), err)
 				continue
 			}
+			data, err := msg.GetContentData()
+			if err != nil {
+				klog.Warningf("message: %s process failure, get content data failed with error: %s", msg.GetID(), err)
+				return
+			}
 
-			subClusterGatewayConfigMap, ok := msg.Content.(v1.ConfigMap)
-			if !ok {
-				klog.Warningf("Failed to get podUID from msg, pod namesapce: %s, pod name: %s", namespace, name)
+			var subClusterGatewayConfigMap v1.ConfigMap
+			if err := json.Unmarshal(data, &subClusterGatewayConfigMap); err != nil {
+				return
+			}
+			if err != nil {
+				klog.Warningf("Failed to get cluster gateway from msg, cluster namesapce: %s, cluster name: %s", namespace, name)
 				continue
 			}
 			neighborHostIP := subClusterGatewayConfigMap.Data["gateway_host_ip"]
@@ -1309,7 +1317,6 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 				}
 				configMap.Data["gateway_neighbors"] = strings.Join(neighborArray, ",")
 			}
-
 			_, err = uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
 			if err != nil {
 				klog.Warningf("Failed to delete pod, namespace: %s, name: %s, err: %v", namespace, name, err)
