@@ -1294,12 +1294,10 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 
 			var subClusterGatewayConfigMap v1.ConfigMap
 			if err := json.Unmarshal(data, &subClusterGatewayConfigMap); err != nil {
+				klog.Warningf("Failed to get cluster gateway from msg, cluster namesapce: %s, cluster name: %s", namespace, name)
 				return
 			}
-			if err != nil {
-				klog.Warningf("Failed to get cluster gateway from msg, cluster namesapce: %s, cluster name: %s", namespace, name)
-				continue
-			}
+
 			neighborHostIP := subClusterGatewayConfigMap.Data["gateway_host_ip"]
 			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), "cluster-gateway-config", metaV1.GetOptions{})
 			if configMap != nil {
