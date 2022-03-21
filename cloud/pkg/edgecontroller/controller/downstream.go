@@ -137,7 +137,7 @@ func (dc *DownstreamController) syncConfigMap() {
 			// It is used to inform the local cluster gateway changes to its neighbors
 			if configMap.Name == "cluster-gateway-config" {
 				dc.lc.EdgeClusters.Range(func(key, value interface{}) bool {
-					if value.(bool) == true {
+					if value.(bool) {
 						gatewayMsg := model.NewMessage("")
 						gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
 						gatewayRes, err := messagelayer.BuildResource(fmt.Sprint(key), configMap.Namespace, model.ResourceTypeConfigmap, configMap.Name)
