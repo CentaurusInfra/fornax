@@ -151,7 +151,7 @@ func (e *clusterd) syncCloud() {
 				continue
 			}
 		}
-		klog.V(4).Infof("result content is %s", result.Content)
+		klog.V(2).Infof("result content is %s", result.Content)
 		_, resType, resID, err := util.ParseResourceEdgeCluster(result.GetResource(), result.GetOperation())
 		if err != nil {
 			klog.Errorf("failed in edge resource parsing: %v", err)
@@ -159,7 +159,17 @@ func (e *clusterd) syncCloud() {
 		}
 		switch resType {
 		case constants.ResourceTypeMission:
-			if op == model.ResponseOperation && resID == "" {
+			if result.GetSource() == metamanager.MetaManagerModuleName {
+				data, err := result.GetContentData()
+				if err != nil {
+					klog.Errorf("failed to get content data: %v", err)
+					continue
+				}
+				if err = e.clusterGatewayReporter.UnmarshalAndUpdateNeighbors(data); err != nil {
+					klog.Errorf("failed to update neighbors: %v", err)
+					continue
+				}
+			} else if op == model.ResponseOperation && resID == "" {
 				if result.GetSource() != metamanager.MetaManagerModuleName && result.GetSource() != EdgeController {
 					klog.Errorf("recevied mission list from unrecognized source : %v", result.GetSource())
 					continue

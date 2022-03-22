@@ -25,6 +25,7 @@ import (
 	"runtime"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/klog/v2"
 
@@ -140,4 +141,32 @@ func GetPodSandboxImage() string {
 	default:
 		return constants.DefaultPodSandboxImage
 	}
+}
+
+func GetUpdatedClusterGatewayNeighbors(name, ip string, configMap *v1.ConfigMap) (string, bool, error) {
+	nameAndIPStr := fmt.Sprintf("%s=%s", name, ip)
+	updated := false
+	if configMap != nil {
+		neighborArray := make([]string, 0)
+		if configMap.Data == nil {
+			configMap.Data = make(map[string]string)
+		}
+		if neighbors, ok := configMap.Data["gateway_neighbors"]; ok {
+			neighborArray = strings.Split(neighbors, ",")
+			for idx, neighbor := range neighborArray {
+				nameAndIPArr := strings.Split(neighbor, "=")
+				if nameAndIPArr[0] == name && nameAndIPArr[1] != ip {
+					neighborArray[idx] = nameAndIPStr
+					updated = true
+					break
+				}
+			}
+		} else {
+			neighborArray = append(neighborArray, nameAndIPStr)
+			updated = true
+		}
+		configMap.Data["gateway_neighbors"] = strings.Join(neighborArray, ",")
+		return configMap.Data["gateway_neighbors"], updated, nil
+	}
+	return "", false, fmt.Errorf("failed to update neighbor %s since the config map is empty", nameAndIPStr)
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/constants"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/manager"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/messagelayer"
+	commonconstants "github.com/kubeedge/kubeedge/common/constants"
 )
 
 // DownstreamController watch kubernetes api server and send change to edge
@@ -135,7 +136,7 @@ func (dc *DownstreamController) syncConfigMap() {
 			}
 
 			// It is used to inform the local cluster gateway changes to its neighbors
-			if configMap.Name == "cluster-gateway-config" {
+			if configMap.Name == commonconstants.ClusterGatewayConfigMap {
 				dc.lc.EdgeClusters.Range(func(key, value interface{}) bool {
 					if value.(bool) {
 						gatewayMsg := model.NewMessage("")
@@ -164,7 +165,6 @@ func (dc *DownstreamController) syncConfigMap() {
 					klog.Warningf("build message resource failed with error: %s", err)
 					continue
 				}
-
 				msg := model.NewMessage("").
 					SetResourceVersion(configMap.ResourceVersion).
 					BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, operation).

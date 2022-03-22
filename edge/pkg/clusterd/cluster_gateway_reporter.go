@@ -17,16 +17,20 @@ limitations under the License.
 package clusterd
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 
+	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/clusterd/helper"
+	"github.com/kubeedge/kubeedge/pkg/util"
 )
 
 type ClusterGatewayReporter struct {
@@ -37,18 +41,19 @@ type ClusterGatewayReporter struct {
 func NewClusterGatewayReporter(c *clusterd) *ClusterGatewayReporter {
 	return &ClusterGatewayReporter{
 		clusterd:                     c,
-		clusterGatewayUpdateInterval: 60 * time.Second,
+		clusterGatewayUpdateInterval: time.Duration(config.Config.ClusterGatewayUpdateInterval) * time.Second,
 	}
 }
 
 func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
-	clusterGatewayHostIP, err := GetClusterGatewayHostIP()
+	gateway_name, gateway_host_ip, err := GetClusterGatewayNameAndHostIP()
 	if err != nil {
 		return err
 	}
 	configMap := &corev1.ConfigMap{}
 	configMap.Data = make(map[string]string)
-	configMap.Data["gateway_host_ip"] = clusterGatewayHostIP
+	configMap.Data["gateway_name"] = gateway_name
+	configMap.Data["gateway_host_ip"] = gateway_host_ip
 	configMap.ClusterName = config.Config.Name
 	err = reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(configMap)
 	if err != nil {
@@ -60,7 +65,7 @@ func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
 
 func (reporter *ClusterGatewayReporter) syncClusterGatewayConfigMap() {
 	if err := reporter.updateClusterGatewayConfigMap(); err != nil {
-		klog.Errorf("Unable to update cluster gateway config maps: %v", err)
+		klog.Errorf("unable to update cluster gateway config maps: %v", err)
 	}
 }
 
@@ -71,21 +76,56 @@ func (reporter *ClusterGatewayReporter) Run() {
 	go utilwait.Until(reporter.syncClusterGatewayConfigMap, reporter.clusterGatewayUpdateInterval, utilwait.NeverStop)
 }
 
-func GetClusterGatewayHostIP() (string, error) {
-	var res string
+func GetClusterGatewayNameAndHostIP() (string, string, error) {
+	var gateway_name string
+	var gateway_ip string
 
-	getClusterGatewayHostIPCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data.gateway_host_ip}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
-	output, err := helper.ExecCommandToCluster(getClusterGatewayHostIPCmd)
+	getClusterGatewayDataPCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
+	output, err := helper.ExecCommandToCluster(getClusterGatewayDataPCmd)
 	if err != nil {
 		klog.Errorf("Failed to get cluster gateway host ip: %v", err)
-		return res, err
+		return gateway_name, gateway_ip, err
 	}
 
 	if strings.TrimSpace(output) == "" {
 		klog.V(4).Infof("There is no cluster gateway host ip.")
-		return res, err
+		return gateway_name, gateway_ip, err
 	}
 
-	res = string(output)
-	return res, nil
+	var dataMap map[string]string
+
+	if err := json.Unmarshal([]byte(output), &dataMap); err != nil {
+		klog.Errorf("Error in unmarshall cluster data json: (%s), error: %v", output, err)
+		return gateway_name, gateway_ip, err
+	}
+	return dataMap["gateway_name"], dataMap["gateway_host_ip"], nil
+}
+
+func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []byte) (err error) {
+	var lists []string
+	if err = json.Unmarshal(content, &lists); err != nil {
+		return err
+	}
+	if existingConfigMap, err := reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Get(constants.ClusterGatewayConfigMap); err != nil {
+		for _, list := range lists {
+			var configMap v1.ConfigMap
+			err = json.Unmarshal([]byte(list), &configMap)
+			if err != nil {
+				return err
+			}
+			if _, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], existingConfigMap); updated && err == nil {
+				if err := reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(existingConfigMap); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+
+		}
+	} else {
+		return err
+	}
+
+	return nil
+
 }

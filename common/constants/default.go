@@ -165,4 +165,8 @@ const (
 	//missionstatepruner
 	DefaultStateSyncInterval  = 60
 	DefaultEdgeClusterTimeout = 60
+
+	// configmap
+	ClusterGatewayConfigMap             = "cluster-gateway-config"
+	DefaultClusterGatewayUpdateInterval = 10
 )

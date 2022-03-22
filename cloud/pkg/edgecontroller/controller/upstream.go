@@ -57,6 +57,7 @@ import (
 	routerrule "github.com/kubeedge/kubeedge/cloud/pkg/router/rule"
 	common "github.com/kubeedge/kubeedge/common/constants"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
+	"github.com/kubeedge/kubeedge/pkg/util"
 )
 
 // SortedContainerStatuses define A type to help sort container statuses based on container names.
@@ -1274,61 +1275,45 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 			klog.Warning("stop updateClusterGatewayNeighbors")
 			return
 		case msg := <-uc.clusterGatewayChan:
-			klog.V(5).Infof("message: %s, operation is: %s, and resource is %s", msg.GetID(), msg.GetOperation(), msg.GetResource())
+			klog.V(5).Infof("operation is: %s, and resource is %s", msg.GetOperation(), msg.GetResource())
 
 			namespace, err := messagelayer.GetNamespace(msg)
 			if err != nil {
-				klog.Warningf("message: %s process failure, get namespace failed with error: %s", msg.GetID(), err)
+				klog.Warningf("process failure, get namespace failed with error: %s", err)
 				continue
 			}
 			name, err := messagelayer.GetResourceName(msg)
 			if err != nil {
-				klog.Warningf("message: %s process failure, get resource name failed with error: %s", msg.GetID(), err)
+				klog.Warningf("process failure, get resource name failed with error: %s", err)
 				continue
 			}
 			data, err := msg.GetContentData()
 			if err != nil {
-				klog.Warningf("message: %s process failure, get content data failed with error: %s", msg.GetID(), err)
+				klog.Warningf("process failure, get content data failed with error: %s", err)
 				return
 			}
 
 			var subClusterGatewayConfigMap v1.ConfigMap
 			if err := json.Unmarshal(data, &subClusterGatewayConfigMap); err != nil {
-				klog.Warningf("Failed to get cluster gateway from msg, cluster namesapce: %s, cluster name: %s", namespace, name)
+				klog.Warningf("failed to get cluster gateway from msg, cluster namesapce: %s, cluster name: %s", namespace, name)
 				return
 			}
 
+			neighborName := subClusterGatewayConfigMap.Data["gateway_name"]
 			neighborHostIP := subClusterGatewayConfigMap.Data["gateway_host_ip"]
-			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), "cluster-gateway-config", metaV1.GetOptions{})
-			if configMap != nil {
-				neighborArray := make([]string, 0)
-				if configMap.Data == nil {
-					configMap.Data = make(map[string]string)
-				}
-				if neighbors, ok := configMap.Data["gateway_neighbors"]; ok {
-					neighborArray = strings.Split(neighbors, ",")
-					if !contains(neighborArray, neighborHostIP) {
-						neighborArray = append(neighborArray, neighborHostIP)
-					}
-				} else {
-					neighborArray = append(neighborArray, neighborHostIP)
-				}
-				configMap.Data["gateway_neighbors"] = strings.Join(neighborArray, ",")
-			}
-			_, err = uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
+			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), common.ClusterGatewayConfigMap, metaV1.GetOptions{})
 			if err != nil {
-				klog.Warningf("Failed to delete pod, namespace: %s, name: %s, err: %v", namespace, name, err)
-				continue
+				klog.Warningf("Failed to get configmap, namespace: %s, name: %s, err: %v", namespace, name, err)
 			}
-			klog.V(4).Infof("Successfully terminate and remove pod from etcd, namespace: %s, name: %s", namespace, name)
+			if _, updated, err := util.GetUpdatedClusterGatewayNeighbors(neighborName, neighborHostIP, configMap); updated && err == nil {
+				_, err = uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
+				if err != nil {
+					klog.Warningf("Failed to updated neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
+					continue
+				}
+			} else if err != nil {
+				klog.Warningf("Failed to get neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
+			}
 		}
 	}
-}
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
