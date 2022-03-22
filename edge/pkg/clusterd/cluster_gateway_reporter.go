@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -50,7 +49,7 @@ func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
 	if err != nil {
 		return err
 	}
-	configMap := &corev1.ConfigMap{}
+	configMap := &v1.ConfigMap{}
 	configMap.Data = make(map[string]string)
 	configMap.Data["gateway_name"] = gatewayName
 	configMap.Data["gateway_host_ip"] = gatewayHostIP
@@ -124,9 +123,7 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 		return err
 	}
 
-	klog.Infof("***********incomming lists: %v", lists)
 	for _, list := range lists {
-		klog.Infof("***********incomming list: %v", list)
 		var configMap v1.ConfigMap
 		err = json.Unmarshal([]byte(list), &configMap)
 		if err != nil {
@@ -137,18 +134,18 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 			return err
 		}
 
-		updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], neighbors)
-		klog.Infof("***********updated config name %v ip %v neighbor %s", configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], neighbors)
-		klog.Infof("***********updated str %v flag %v err %v", updatedNeighbors, updated, err)
-		neighborUpdateCommand := fmt.Sprintf("%s patch configmap %s --kubeconfig=%s --patch '{\"data\":{\"gateway_neighbors\":\"%s\"}}' --type=merge", config.Config.KubectlCli, constants.ClusterGatewayConfigMap, config.Config.Kubeconfig, updatedNeighbors)
-		if _, err = helper.ExecCommandToCluster(neighborUpdateCommand); err != nil {
-			if strings.Contains(err.Error(), "Error from server (NotFound):") {
-				klog.Infof("configMap %v is deleted.", constants.ClusterGatewayConfigMap)
-				return nil
+		if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], neighbors); updated && err == nil {
+			neighborUpdateCommand := fmt.Sprintf("%s patch configmap %s --kubeconfig=%s --patch '{\"data\":{\"gateway_neighbors\":\"%s\"}}' --type=merge", config.Config.KubectlCli, constants.ClusterGatewayConfigMap, config.Config.Kubeconfig, updatedNeighbors)
+			if _, err = helper.ExecCommandToCluster(neighborUpdateCommand); err != nil {
+				if strings.Contains(err.Error(), "Error from server (NotFound):") {
+					klog.Infof("configMap %v is deleted.", constants.ClusterGatewayConfigMap)
+					return nil
+				}
+				klog.Errorf("Error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
 			}
-			klog.Errorf("Error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
+		} else {
+			klog.Errorf("Error when get the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
 		}
-
 	}
 	return nil
 }

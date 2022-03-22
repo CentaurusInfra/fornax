@@ -157,7 +157,6 @@ func (e *clusterd) syncCloud() {
 			klog.Errorf("failed in edge resource parsing: %v", err)
 			continue
 		}
-		klog.Errorf("***********incomming result: %v", result)
 		switch resType {
 		case constants.ResourceTypeMission:
 			if result.GetSource() == metamanager.MetaManagerModuleName {
