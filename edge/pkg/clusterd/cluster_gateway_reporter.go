@@ -101,29 +101,54 @@ func GetClusterGatewayNameAndHostIP() (string, string, error) {
 	return dataMap["gateway_name"], dataMap["gateway_host_ip"], nil
 }
 
+func (reporter *ClusterGatewayReporter) GetClusterGatewayNeighbors() (string, error) {
+	var neighbors string
+
+	getNeighborsCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data.gateway_neighbors}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
+	output, err := helper.ExecCommandToCluster(getNeighborsCmd)
+	if err != nil {
+		klog.Errorf("Failed to get cluster gateway host ip: %v", err)
+		return neighbors, err
+	}
+
+	if strings.TrimSpace(output) == "" {
+		klog.V(4).Infof("There is no cluster gateway host ip.")
+		return "", nil
+	}
+	return string(output), nil
+}
+
 func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []byte) (err error) {
 	var lists []string
 	if err = json.Unmarshal(content, &lists); err != nil {
 		return err
 	}
-	if existingConfigMap, err := reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Get(constants.ClusterGatewayConfigMap); err != nil {
-		for _, list := range lists {
-			var configMap v1.ConfigMap
-			err = json.Unmarshal([]byte(list), &configMap)
-			if err != nil {
-				return err
-			}
-			if _, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], existingConfigMap); updated && err == nil {
-				if err := reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(existingConfigMap); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
 
+	klog.Infof("***********incomming lists: %v", lists)
+	for _, list := range lists {
+		klog.Infof("***********incomming list: %v", list)
+		var configMap v1.ConfigMap
+		err = json.Unmarshal([]byte(list), &configMap)
+		if err != nil {
+			return err
 		}
-	} else {
-		return err
+		neighbors, err := reporter.GetClusterGatewayNeighbors()
+		if err != nil {
+			return err
+		}
+
+		updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], neighbors)
+		klog.Infof("***********updated config name %v ip %v neighbor %s", configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], neighbors)
+		klog.Infof("***********updated str %v flag %v err %v", updatedNeighbors, updated, err)
+		neighborUpdateCommand := fmt.Sprintf("%s patch configmap %s --kubeconfig=%s --patch '{\"data\":{\"gateway_neighbors\":\"%s\"}}' --type=merge", config.Config.KubectlCli, constants.ClusterGatewayConfigMap, config.Config.Kubeconfig, updatedNeighbors)
+		if _, err = helper.ExecCommandToCluster(neighborUpdateCommand); err != nil {
+			if strings.Contains(err.Error(), "Error from server (NotFound):") {
+				klog.Infof("configMap %v is deleted.", constants.ClusterGatewayConfigMap)
+				return nil
+			}
+			klog.Errorf("Error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
+		}
+
 	}
 	return nil
 }
