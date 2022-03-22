@@ -51,8 +51,8 @@ func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
 	}
 	configMap := &v1.ConfigMap{}
 	configMap.Data = make(map[string]string)
-	configMap.Data["gateway_name"] = gatewayName
-	configMap.Data["gateway_host_ip"] = gatewayHostIP
+	configMap.Data[constants.ClusterGatewayConfigMapClusterName] = gatewayName
+	configMap.Data[constants.ClusterGatewayConfigMapClusterHostIP] = gatewayHostIP
 	configMap.ClusterName = config.Config.Name
 	err = reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(configMap)
 	if err != nil {
@@ -97,7 +97,7 @@ func GetClusterGatewayNameAndHostIP() (string, string, error) {
 		klog.Errorf("Error in unmarshall cluster data json: (%s), error: %v", output, err)
 		return gatewayName, gatewayIP, err
 	}
-	return dataMap["gateway_name"], dataMap["gateway_host_ip"], nil
+	return dataMap[constants.ClusterGatewayConfigMapClusterName], dataMap[constants.ClusterGatewayConfigMapClusterHostIP], nil
 }
 
 func (reporter *ClusterGatewayReporter) GetClusterGatewayNeighbors() (string, error) {
@@ -134,7 +134,7 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 			return err
 		}
 
-		if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"], neighbors); updated && err == nil {
+		if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data[constants.ClusterGatewayConfigMapClusterName], configMap.Data[constants.ClusterGatewayConfigMapClusterHostIP], neighbors); updated && err == nil {
 			neighborUpdateCommand := fmt.Sprintf("%s patch configmap %s --kubeconfig=%s --patch '{\"data\":{\"gateway_neighbors\":\"%s\"}}' --type=merge", config.Config.KubectlCli, constants.ClusterGatewayConfigMap, config.Config.Kubeconfig, updatedNeighbors)
 			if _, err = helper.ExecCommandToCluster(neighborUpdateCommand); err != nil {
 				if strings.Contains(err.Error(), "Error from server (NotFound):") {
