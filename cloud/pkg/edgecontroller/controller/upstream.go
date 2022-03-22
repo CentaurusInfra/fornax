@@ -1305,7 +1305,12 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 			if err != nil {
 				klog.Warningf("Failed to get configmap, namespace: %s, name: %s, err: %v", namespace, name, err)
 			}
-			if _, updated, err := util.GetUpdatedClusterGatewayNeighbors(neighborName, neighborHostIP, configMap); updated && err == nil {
+			neighbors := ""
+			if configMap.Data != nil {
+				neighbors = configMap.Data["gateway_neighbors"]
+			}
+			if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(neighborName, neighborHostIP, neighbors); updated && err == nil {
+				configMap.Data["gateway_neighbors"] = updatedNeighbors
 				_, err = uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
 				if err != nil {
 					klog.Warningf("Failed to updated neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
