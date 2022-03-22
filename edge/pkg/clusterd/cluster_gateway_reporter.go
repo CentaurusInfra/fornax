@@ -46,14 +46,14 @@ func NewClusterGatewayReporter(c *clusterd) *ClusterGatewayReporter {
 }
 
 func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
-	gateway_name, gateway_host_ip, err := GetClusterGatewayNameAndHostIP()
+	gatewayName, gatewayHostIP, err := GetClusterGatewayNameAndHostIP()
 	if err != nil {
 		return err
 	}
 	configMap := &corev1.ConfigMap{}
 	configMap.Data = make(map[string]string)
-	configMap.Data["gateway_name"] = gateway_name
-	configMap.Data["gateway_host_ip"] = gateway_host_ip
+	configMap.Data["gateway_name"] = gatewayName
+	configMap.Data["gateway_host_ip"] = gatewayHostIP
 	configMap.ClusterName = config.Config.Name
 	err = reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(configMap)
 	if err != nil {
@@ -77,26 +77,26 @@ func (reporter *ClusterGatewayReporter) Run() {
 }
 
 func GetClusterGatewayNameAndHostIP() (string, string, error) {
-	var gateway_name string
-	var gateway_ip string
+	var gatewayName string
+	var gatewayIP string
 
 	getClusterGatewayDataPCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
 	output, err := helper.ExecCommandToCluster(getClusterGatewayDataPCmd)
 	if err != nil {
 		klog.Errorf("Failed to get cluster gateway host ip: %v", err)
-		return gateway_name, gateway_ip, err
+		return gatewayName, gatewayIP, err
 	}
 
 	if strings.TrimSpace(output) == "" {
 		klog.V(4).Infof("There is no cluster gateway host ip.")
-		return gateway_name, gateway_ip, err
+		return gatewayName, gatewayIP, err
 	}
 
 	var dataMap map[string]string
 
 	if err := json.Unmarshal([]byte(output), &dataMap); err != nil {
 		klog.Errorf("Error in unmarshall cluster data json: (%s), error: %v", output, err)
-		return gateway_name, gateway_ip, err
+		return gatewayName, gatewayIP, err
 	}
 	return dataMap["gateway_name"], dataMap["gateway_host_ip"], nil
 }
@@ -125,7 +125,5 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 	} else {
 		return err
 	}
-
 	return nil
-
 }
