@@ -338,6 +338,9 @@ type EdgeControllerLoad struct {
 	// UpdateMissionStatusWorkers indicates the load of update mission status
 	// default 4
 	UpdateMissionStateWorkers int32 `json:"updateMissionStatusWorkers,omitempty"`
+	// UpdateClusterGatewayWorkers indicates the load of update cluster gateway
+	// default 1
+	UpdateClusterGatewayWorkers int32 `json:"updateClusterGatewayWorkers,omitempty"`
 }
 
 // DeviceController indicates the device controller

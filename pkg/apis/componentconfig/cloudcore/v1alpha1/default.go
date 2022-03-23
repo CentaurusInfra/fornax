@@ -131,6 +131,7 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					UpdateRuleStatusWorkers:           constants.DefaultUpdateRuleStatusWorkers,
 					UpdateEdgeClusterStateWorkers:     constants.DefaultUpdateEdgeClusterStateWorkers,
 					UpdateMissionStateWorkers:         constants.DefaultUpdateMissionStateWorkers,
+					UpdateClusterGatewayWorkers:       constants.DefaultUpdateClusterGatewayWorkers,
 				},
 			},
 			DeviceController: &DeviceController{

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 
@@ -69,8 +69,8 @@ func (reporter *ClusterGatewayReporter) syncClusterGatewayConfigMap() {
 }
 
 func (reporter *ClusterGatewayReporter) Run() {
-	klog.Infof("Starting edgecluster state reporter.")
-	defer klog.Infof("Shutting down edgecluster state reporter")
+	klog.Infof("Starting cluster gateway reporter.")
+	defer klog.Infof("Shutting down cluster gateway reporter")
 
 	go utilwait.Until(reporter.syncClusterGatewayConfigMap, reporter.clusterGatewayUpdateInterval, utilwait.NeverStop)
 }

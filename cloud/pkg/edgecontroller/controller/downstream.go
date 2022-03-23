@@ -148,6 +148,7 @@ func (dc *DownstreamController) syncConfigMap() {
 						}
 						gatewayMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, gatewayRes, operation)
 						gatewayMsg.Content = configMap
+						klog.V(3).Infof("The gateway configmap message is %v", gatewayMsg)
 						dc.SendMessage(gatewayMsg)
 					}
 					return true

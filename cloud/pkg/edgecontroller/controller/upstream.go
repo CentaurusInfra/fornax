@@ -165,8 +165,9 @@ func (uc *UpstreamController) Start() error {
 	for i := 0; i < int(config.Config.Load.UpdateMissionStateWorkers); i++ {
 		go uc.updateMissionState()
 	}
-
-	go uc.updateClusterGatewayNeighbors()
+	for i := 0; i < int(config.Config.Load.UpdateClusterGatewayWorkers); i++ {
+		go uc.updateClusterGatewayNeighbors()
+	}
 	return nil
 }
 
@@ -186,6 +187,7 @@ func (uc *UpstreamController) dispatchMessage() {
 
 		klog.V(5).Infof("dispatch message ID: %s", msg.GetID())
 		klog.V(5).Infof("dispatch message content: %++v", msg)
+
 		resourceType, err := messagelayer.GetResourceType(msg)
 		if err != nil {
 			klog.Warningf("parse message: %s resource type with error: %s,", msg.GetID(), err)
@@ -201,6 +203,7 @@ func (uc *UpstreamController) dispatchMessage() {
 		case model.ResourceTypePodStatus:
 			uc.podStatusChan <- msg
 		case model.ResourceTypeConfigmap:
+			klog.V(3).Infof("gateway %v message %v", msg.GetOperation(), msg)
 			switch msg.GetOperation() {
 			case model.QueryOperation:
 				uc.configMapChan <- msg
@@ -1275,7 +1278,7 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 			klog.Warning("stop updateClusterGatewayNeighbors")
 			return
 		case msg := <-uc.clusterGatewayChan:
-			klog.V(5).Infof("operation is: %s, and resource is %s", msg.GetOperation(), msg.GetResource())
+			klog.V(3).Infof("upstream gateway message %v operation is: %s, and resource is %s", msg, msg.GetOperation(), msg.GetResource())
 
 			namespace, err := messagelayer.GetNamespace(msg)
 			if err != nil {
@@ -1301,21 +1304,24 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 
 			neighborName := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapClusterName]
 			neighborHostIP := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapClusterHostIP]
+			klog.V(3).Infof("upstream gateway neighborName %v, neighborHostIP %v", neighborName, neighborHostIP)
 			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), common.ClusterGatewayConfigMap, metaV1.GetOptions{})
 			if err != nil {
 				klog.Warningf("Failed to get configmap, namespace: %s, name: %s, err: %v", namespace, name, err)
 			}
+			klog.V(3).Infof("upstream gateway configmap %v", configMap)
 			neighbors := ""
 			if configMap.Data != nil {
 				neighbors = configMap.Data["gateway_neighbors"]
 			}
 			if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(neighborName, neighborHostIP, neighbors); updated && err == nil {
 				configMap.Data["gateway_neighbors"] = updatedNeighbors
-				_, err = uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
+				updatedConfigMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
 				if err != nil {
 					klog.Warningf("Failed to updated neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
 					continue
 				}
+				klog.V(3).Infof("upstream gateway configmap updated %v", updatedConfigMap)
 			} else if err != nil {
 				klog.Warningf("Failed to get neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
 			}

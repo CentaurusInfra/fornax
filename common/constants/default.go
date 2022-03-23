@@ -94,6 +94,7 @@ const (
 	DefaultUpdateRuleStatusWorkers           = 4
 	DefaultUpdateEdgeClusterStateWorkers     = 1
 	DefaultUpdateMissionStateWorkers         = 4
+	DefaultUpdateClusterGatewayWorkers       = 1
 
 	DefaultUpdatePodStatusBuffer            = 1024
 	DefaultUpdateNodeStatusBuffer           = 1024
