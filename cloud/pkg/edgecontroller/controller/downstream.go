@@ -141,7 +141,7 @@ func (dc *DownstreamController) syncConfigMap() {
 					if value.(bool) {
 						gatewayMsg := model.NewMessage("")
 						gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
-						gatewayRes, err := messagelayer.BuildResource(fmt.Sprint(key), configMap.Namespace, model.ResourceTypeConfigmap, configMap.Name)
+						gatewayRes, err := messagelayer.BuildResource(fmt.Sprint(key), configMap.Namespace, model.ResourceTypeConfigmap, fmt.Sprint(key))
 						if err != nil {
 							klog.Warningf("Built message resource failed with error: %v", err)
 							return false
@@ -388,6 +388,7 @@ func (dc *DownstreamController) syncMissions() {
 					klog.Warning("Failed to assert key to sting")
 					return true
 				}
+
 				msg := model.NewMessage("")
 				msg.SetResourceVersion(mission.ResourceVersion)
 				resource, err := messagelayer.BuildResource(clusterName, "default", model.ResourceTypeMission, mission.Name)
