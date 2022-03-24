@@ -144,7 +144,7 @@ func (dc *DownstreamController) syncConfigMap() {
 					}
 					gatewayMsg := model.NewMessage("")
 					gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
-					gatewayRes, err := messagelayer.BuildResource(clusterName, configMap.Namespace, model.ResourceTypeConfigmap, clusterName)
+					gatewayRes, err := messagelayer.BuildResource(clusterName, configMap.Namespace, model.ResourceTypeClusterGateway, clusterName)
 					if err != nil {
 						klog.Warningf("Built message resource failed with error: %v", err)
 						return false

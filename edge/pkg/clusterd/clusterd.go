@@ -188,7 +188,7 @@ func (e *clusterd) syncCloud() {
 				klog.Errorf("handle missionList failed: %v", err)
 				continue
 			}
-		case model.ResourceTypeConfigmap:
+		case model.ResourceTypeClusterGateway:
 			var configMap v1.ConfigMap
 			err = json.Unmarshal(content, &configMap)
 			if err != nil {

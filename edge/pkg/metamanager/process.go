@@ -107,7 +107,7 @@ func isClusterdResource(resType string) bool {
 		resType == constants.ResourceTypeMissionList ||
 		resType == constants.ResourceTypeEdgeCluster ||
 		resType == constants.ResourceTypeEdgeClusterList ||
-		resType == model.ResourceTypeConfigmap
+		resType == model.ResourceTypeClusterGateway
 }
 
 func isConnected() bool {
@@ -197,6 +197,7 @@ func (m *metaManager) processUpdate(message model.Message) {
 	imitator.DefaultV2Client.Inject(message)
 
 	resKey, resType, _ := parseResource(message.GetResource())
+
 	if resourceUnchanged(resType, resKey, content) {
 		resp := message.NewRespByMessage(&message, OK)
 		if isClusterdResource(resType) {
