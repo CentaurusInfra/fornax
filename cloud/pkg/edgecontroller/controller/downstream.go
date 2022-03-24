@@ -389,6 +389,7 @@ func (dc *DownstreamController) syncMissions() {
 					klog.Warning("Failed to assert key to sting")
 					return true
 				}
+
 				msg := model.NewMessage("")
 				msg.SetResourceVersion(mission.ResourceVersion)
 				resource, err := messagelayer.BuildResource(clusterName, "default", model.ResourceTypeMission, mission.Name)
