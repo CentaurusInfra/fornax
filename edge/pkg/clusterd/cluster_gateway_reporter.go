@@ -129,23 +129,29 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 		if err != nil {
 			return err
 		}
-		neighbors, err := reporter.GetClusterGatewayNeighbors()
-		if err != nil {
+		if err = reporter.UpdateNeighbor(configMap.Data[constants.ClusterGatewayConfigMapClusterName], configMap.Data[constants.ClusterGatewayConfigMapClusterHostIP]); err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(configMap.Data[constants.ClusterGatewayConfigMapClusterName], configMap.Data[constants.ClusterGatewayConfigMapClusterHostIP], neighbors); updated && err == nil {
-			neighborUpdateCommand := fmt.Sprintf("%s patch configmap %s --kubeconfig=%s --patch '{\"data\":{\"gateway_neighbors\":\"%s\"}}' --type=merge", config.Config.KubectlCli, constants.ClusterGatewayConfigMap, config.Config.Kubeconfig, updatedNeighbors)
-			if _, err = helper.ExecCommandToCluster(neighborUpdateCommand); err != nil {
-				if strings.Contains(err.Error(), "Error from server (NotFound):") {
-					klog.Infof("configMap %v is deleted.", constants.ClusterGatewayConfigMap)
-					return nil
-				}
-				klog.Errorf("Error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
+func (reporter *ClusterGatewayReporter) UpdateNeighbor(gatewayName, gatewayHost string) (err error) {
+	neighbors, err := reporter.GetClusterGatewayNeighbors()
+	if err != nil {
+		return err
+	}
+	if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(gatewayName, gatewayHost, neighbors); updated && err == nil {
+		neighborUpdateCommand := fmt.Sprintf("%s patch configmap %s --kubeconfig=%s --patch '{\"data\":{\"gateway_neighbors\":\"%s\"}}' --type=merge", config.Config.KubectlCli, constants.ClusterGatewayConfigMap, config.Config.Kubeconfig, updatedNeighbors)
+		if _, err = helper.ExecCommandToCluster(neighborUpdateCommand); err != nil {
+			if strings.Contains(err.Error(), "Error from server (NotFound):") {
+				klog.Infof("configMap %v is deleted.", constants.ClusterGatewayConfigMap)
+				return nil
 			}
-		} else {
-			klog.Errorf("Error when get the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
+			klog.Errorf("Error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
 		}
+	} else {
+		klog.Errorf("Error when get the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
 	}
 	return nil
 }

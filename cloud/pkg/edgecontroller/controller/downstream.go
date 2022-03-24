@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	v1 "k8s.io/api/core/v1"
@@ -138,19 +137,21 @@ func (dc *DownstreamController) syncConfigMap() {
 			// It is used to inform the local cluster gateway changes to its neighbors
 			if configMap.Name == commonconstants.ClusterGatewayConfigMap {
 				dc.lc.EdgeClusters.Range(func(key, value interface{}) bool {
-					if value.(bool) {
-						gatewayMsg := model.NewMessage("")
-						gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
-						gatewayRes, err := messagelayer.BuildResource(fmt.Sprint(key), configMap.Namespace, model.ResourceTypeConfigmap, configMap.Name)
-						if err != nil {
-							klog.Warningf("Built message resource failed with error: %v", err)
-							return false
-						}
-						gatewayMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, gatewayRes, operation)
-						gatewayMsg.Content = configMap
-						klog.V(3).Infof("The gateway configmap message is %v", gatewayMsg)
-						dc.SendMessage(gatewayMsg)
+					clusterName, ok := key.(string)
+					if !ok {
+						klog.Warning("Failed to assert key to sting")
+						return true
 					}
+					gatewayMsg := model.NewMessage("")
+					gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
+					gatewayRes, err := messagelayer.BuildResource(clusterName, configMap.Namespace, model.ResourceTypeConfigmap, clusterName)
+					if err != nil {
+						klog.Warningf("Built message resource failed with error: %v", err)
+						return false
+					}
+					gatewayMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, gatewayRes, operation)
+					gatewayMsg.Content = configMap
+					dc.SendMessage(gatewayMsg)
 					return true
 				})
 			}

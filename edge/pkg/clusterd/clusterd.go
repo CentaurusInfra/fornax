@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
@@ -106,8 +107,8 @@ func newClusterd(enable bool) (*clusterd, error) {
 	c.clusterGatewayReporter = NewClusterGatewayReporter(c)
 
 	go c.missionStateRepoter.Run()
-	go c.edgeClusterStateReporter.Run()
 	go c.clusterGatewayReporter.Run()
+	go c.edgeClusterStateReporter.Run()
 
 	return c, nil
 }
@@ -159,17 +160,7 @@ func (e *clusterd) syncCloud() {
 		}
 		switch resType {
 		case constants.ResourceTypeMission:
-			if result.GetSource() == metamanager.MetaManagerModuleName {
-				data, err := result.GetContentData()
-				if err != nil {
-					klog.Errorf("failed to get content data: %v", err)
-					continue
-				}
-				if err = e.clusterGatewayReporter.UnmarshalAndUpdateNeighbors(data); err != nil {
-					klog.Errorf("failed to update neighbors: %v", err)
-					continue
-				}
-			} else if op == model.ResponseOperation && resID == "" {
+			if op == model.ResponseOperation && resID == "" {
 				if result.GetSource() != metamanager.MetaManagerModuleName && result.GetSource() != EdgeController {
 					klog.Errorf("recevied mission list from unrecognized source : %v", result.GetSource())
 					continue
@@ -197,7 +188,16 @@ func (e *clusterd) syncCloud() {
 				klog.Errorf("handle missionList failed: %v", err)
 				continue
 			}
-
+		case model.ResourceTypeConfigmap:
+			var configMap v1.ConfigMap
+			err = json.Unmarshal(content, &configMap)
+			if err != nil {
+				klog.Errorf("marshal error %v", err)
+			}
+			if err = e.clusterGatewayReporter.UpdateNeighbor(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"]); err != nil {
+				klog.Errorf("failed to update neighbors: %v", err)
+				continue
+			}
 		default:
 			klog.Errorf("resource type %s is not supported", resType)
 			continue
