@@ -107,6 +107,7 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					UpdateEdgeClusterState:     constants.DefaultUpdateEdgeClusterStateBuffer,
 					EdgeClustersEvent:          constants.DefaultEdgeClustersEventBuffer,
 					UpdateMissionState:         constants.DefaultUpdateMissionStateBuffer,
+					UpdateClusterGateway:       constants.DefaultUpdateClusterGatewayBuffer,
 				},
 				Context: &ControllerContext{
 					SendModule:       metaconfig.ModuleNameCloudHub,
@@ -130,6 +131,7 @@ func NewDefaultCloudCoreConfig() *CloudCoreConfig {
 					UpdateRuleStatusWorkers:           constants.DefaultUpdateRuleStatusWorkers,
 					UpdateEdgeClusterStateWorkers:     constants.DefaultUpdateEdgeClusterStateWorkers,
 					UpdateMissionStateWorkers:         constants.DefaultUpdateMissionStateWorkers,
+					UpdateClusterGatewayWorkers:       constants.DefaultUpdateClusterGatewayWorkers,
 				},
 			},
 			DeviceController: &DeviceController{

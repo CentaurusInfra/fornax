@@ -484,4 +484,8 @@ type Clusterd struct {
 	ResyncInterval int32 `json:"resyncInterval,omitempty"`
 
 	MissionStateWatchWorkers int `json:"missionStateWatchWorkers,omitempty"`
+
+	// clusterGatewayUpdateInterval indicates cluster gateway name and ip update frequency (second)
+	// default 10
+	ClusterGatewayUpdateInterval int32 `json:"clusterGatewayUpdateInterval,omitempty"`
 }

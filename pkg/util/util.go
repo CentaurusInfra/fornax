@@ -141,3 +141,30 @@ func GetPodSandboxImage() string {
 		return constants.DefaultPodSandboxImage
 	}
 }
+
+func GetUpdatedClusterGatewayNeighbors(name, ip, neighbors string) (string, bool, error) {
+	nameAndIPStr := fmt.Sprintf("%s=%s", name, ip)
+	isValueUpdated := false
+	isKeyFound := false
+	neighborArray := make([]string, 0)
+	klog.V(3).Infof("name %v ip %v neighbors %v", name, ip, neighbors)
+	if neighbors != "" {
+		neighborArray = strings.Split(neighbors, ",")
+		for idx, neighbor := range neighborArray {
+			nameAndIPArr := strings.Split(neighbor, "=")
+			if nameAndIPArr[0] == name {
+				isKeyFound = true
+				if nameAndIPArr[1] != ip {
+					neighborArray[idx] = nameAndIPStr
+					isValueUpdated = true
+				}
+				break
+			}
+		}
+	}
+	klog.V(3).Infof("isKeyFound %v, isValueUpdated %v, neighborArray %v", isKeyFound, isValueUpdated, neighborArray)
+	if !isKeyFound {
+		neighborArray = append(neighborArray, nameAndIPStr)
+	}
+	return strings.Join(neighborArray, ","), isValueUpdated || !isKeyFound, nil
+}

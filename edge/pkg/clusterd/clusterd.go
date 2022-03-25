@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
@@ -52,6 +53,7 @@ type clusterd struct {
 	missionDeployer          *MissionDeployer
 	missionStateRepoter      *MissionStateReporter
 	edgeClusterStateReporter *EdgeClusterStateReporter
+	clusterGatewayReporter   *ClusterGatewayReporter
 	uid                      types.UID
 	namespace                string
 	enable                   bool
@@ -102,8 +104,10 @@ func newClusterd(enable bool) (*clusterd, error) {
 
 	c.missionStateRepoter = NewMissionStateReporter(c, missionDeployer)
 	c.edgeClusterStateReporter = NewEdgeClusterStateReporter(c, missionDeployer)
+	c.clusterGatewayReporter = NewClusterGatewayReporter(c)
 
 	go c.missionStateRepoter.Run()
+	go c.clusterGatewayReporter.Run()
 	go c.edgeClusterStateReporter.Run()
 
 	return c, nil
@@ -184,7 +188,16 @@ func (e *clusterd) syncCloud() {
 				klog.Errorf("handle missionList failed: %v", err)
 				continue
 			}
-
+		case model.ResourceTypeClusterGateway:
+			var configMap v1.ConfigMap
+			err = json.Unmarshal(content, &configMap)
+			if err != nil {
+				klog.Errorf("marshal error %v", err)
+			}
+			if err = e.clusterGatewayReporter.UpdateNeighbor(configMap.Data["gateway_name"], configMap.Data["gateway_host_ip"]); err != nil {
+				klog.Errorf("failed to update neighbors: %v", err)
+				continue
+			}
 		default:
 			klog.Errorf("resource type %s is not supported", resType)
 			continue

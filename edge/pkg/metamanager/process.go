@@ -106,7 +106,8 @@ func isClusterdResource(resType string) bool {
 	return resType == constants.ResourceTypeMission ||
 		resType == constants.ResourceTypeMissionList ||
 		resType == constants.ResourceTypeEdgeCluster ||
-		resType == constants.ResourceTypeEdgeClusterList
+		resType == constants.ResourceTypeEdgeClusterList ||
+		resType == model.ResourceTypeClusterGateway
 }
 
 func isConnected() bool {

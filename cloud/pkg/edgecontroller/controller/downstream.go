@@ -26,6 +26,7 @@ import (
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/constants"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/manager"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/messagelayer"
+	commonconstants "github.com/kubeedge/kubeedge/common/constants"
 )
 
 // DownstreamController watch kubernetes api server and send change to edge
@@ -133,6 +134,28 @@ func (dc *DownstreamController) syncConfigMap() {
 				continue // continue to next select
 			}
 
+			// It is used to inform the local cluster gateway changes to its neighbors
+			if configMap.Name == commonconstants.ClusterGatewayConfigMap {
+				dc.lc.EdgeClusters.Range(func(key, value interface{}) bool {
+					clusterName, ok := key.(string)
+					if !ok {
+						klog.Warning("Failed to assert key to sting")
+						return true
+					}
+					gatewayMsg := model.NewMessage("")
+					gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
+					gatewayRes, err := messagelayer.BuildResource(clusterName, configMap.Namespace, model.ResourceTypeClusterGateway, clusterName)
+					if err != nil {
+						klog.Warningf("Built message resource failed with error: %v", err)
+						return false
+					}
+					gatewayMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, gatewayRes, operation)
+					gatewayMsg.Content = configMap
+					dc.SendMessage(gatewayMsg)
+					return true
+				})
+			}
+
 			nodes := dc.lc.ConfigMapNodes(configMap.Namespace, configMap.Name)
 			if e.Type == watch.Deleted {
 				dc.lc.DeleteConfigMap(configMap.Namespace, configMap.Name)
@@ -144,6 +167,7 @@ func (dc *DownstreamController) syncConfigMap() {
 					klog.Warningf("build message resource failed with error: %s", err)
 					continue
 				}
+
 				msg := model.NewMessage("").
 					SetResourceVersion(configMap.ResourceVersion).
 					BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, operation).
@@ -326,7 +350,6 @@ func (dc *DownstreamController) syncRuleEndpoint() {
 				klog.Warningf("ruleEndpoint event type: %s unsupported", e.Type)
 				continue
 			}
-
 			dc.SendMessage(msg)
 		}
 	}
@@ -367,6 +390,7 @@ func (dc *DownstreamController) syncMissions() {
 					klog.Warning("Failed to assert key to sting")
 					return true
 				}
+
 				msg := model.NewMessage("")
 				msg.SetResourceVersion(mission.ResourceVersion)
 				resource, err := messagelayer.BuildResource(clusterName, "default", model.ResourceTypeMission, mission.Name)

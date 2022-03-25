@@ -172,6 +172,7 @@ func NewDefaultEdgeCoreConfig() *EdgeCoreConfig {
 				RegisterCluster:                true,
 				RegisterNamespace:              constants.DefaultRegisterNamespace,
 				MissionStateWatchWorkers:       constants.DefaultMissionStateWatchWorkers,
+				ClusterGatewayUpdateInterval:   constants.DefaultClusterGatewayUpdateInterval,
 			},
 		},
 	}
