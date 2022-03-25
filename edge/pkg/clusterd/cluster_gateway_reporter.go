@@ -69,8 +69,8 @@ func (reporter *ClusterGatewayReporter) syncClusterGatewayConfigMap() {
 }
 
 func (reporter *ClusterGatewayReporter) Run() {
-	klog.Infof("Starting cluster gateway reporter.")
-	defer klog.Infof("Shutting down cluster gateway reporter")
+	klog.Infof("starting cluster gateway reporter.")
+	defer klog.Infof("shutting down cluster gateway reporter")
 
 	go utilwait.Until(reporter.syncClusterGatewayConfigMap, reporter.clusterGatewayUpdateInterval, utilwait.NeverStop)
 }
@@ -82,19 +82,18 @@ func GetClusterGatewayNameAndHostIP() (string, string, error) {
 	getClusterGatewayDataPCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
 	output, err := helper.ExecCommandToCluster(getClusterGatewayDataPCmd)
 	if err != nil {
-		klog.Errorf("Failed to get cluster gateway host ip: %v", err)
+		klog.Errorf("failed to get cluster gateway host ip: %v", err)
 		return gatewayName, gatewayIP, err
 	}
 
 	if strings.TrimSpace(output) == "" {
-		klog.V(4).Infof("There is no cluster gateway host ip.")
 		return gatewayName, gatewayIP, err
 	}
 
 	var dataMap map[string]string
 
 	if err := json.Unmarshal([]byte(output), &dataMap); err != nil {
-		klog.Errorf("Error in unmarshall cluster data json: (%s), error: %v", output, err)
+		klog.Errorf("error in unmarshall cluster data json: (%s), error: %v", output, err)
 		return gatewayName, gatewayIP, err
 	}
 	return dataMap[constants.ClusterGatewayConfigMapClusterName], dataMap[constants.ClusterGatewayConfigMapClusterHostIP], nil
@@ -106,12 +105,10 @@ func (reporter *ClusterGatewayReporter) GetClusterGatewayNeighbors() (string, er
 	getNeighborsCmd := fmt.Sprintf(" %s get configmap cluster-gateway-config -o=jsonpath='{.data.gateway_neighbors}' --kubeconfig=%s", config.Config.KubectlCli, config.Config.Kubeconfig)
 	output, err := helper.ExecCommandToCluster(getNeighborsCmd)
 	if err != nil {
-		klog.Errorf("Failed to get cluster gateway host ip: %v", err)
+		klog.Errorf("failed to get cluster gateway host ip: %v", err)
 		return neighbors, err
 	}
-
 	if strings.TrimSpace(output) == "" {
-		klog.V(4).Infof("There is no cluster gateway host ip.")
 		return "", nil
 	}
 	return string(output), nil
@@ -122,7 +119,6 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 	if err = json.Unmarshal(content, &lists); err != nil {
 		return err
 	}
-
 	for _, list := range lists {
 		var configMap v1.ConfigMap
 		err = json.Unmarshal([]byte(list), &configMap)
@@ -148,10 +144,10 @@ func (reporter *ClusterGatewayReporter) UpdateNeighbor(gatewayName, gatewayHost 
 				klog.Infof("configMap %v is deleted.", constants.ClusterGatewayConfigMap)
 				return nil
 			}
-			klog.Errorf("Error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
+			klog.Errorf("error when checking the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
 		}
 	} else {
-		klog.Errorf("Error when get the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
+		klog.Errorf("error when get the configmap %v with the error: %v", constants.ClusterGatewayConfigMap, err)
 	}
 	return nil
 }

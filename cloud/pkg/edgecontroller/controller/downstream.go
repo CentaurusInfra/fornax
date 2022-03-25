@@ -167,10 +167,12 @@ func (dc *DownstreamController) syncConfigMap() {
 					klog.Warningf("build message resource failed with error: %s", err)
 					continue
 				}
+
 				msg := model.NewMessage("").
 					SetResourceVersion(configMap.ResourceVersion).
 					BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, resource, operation).
 					FillBody(configMap)
+
 				dc.SendMessage(msg)
 			}
 		}
@@ -348,7 +350,6 @@ func (dc *DownstreamController) syncRuleEndpoint() {
 				klog.Warningf("ruleEndpoint event type: %s unsupported", e.Type)
 				continue
 			}
-
 			dc.SendMessage(msg)
 		}
 	}
