@@ -4,5 +4,6 @@ metadata:
   name: cluster-gateway-config
   namespace: default
 data:
+  gateway_name: GATEWAY_NAME
   gateway_host_ip: CLUSTER_GATEWAY
 
