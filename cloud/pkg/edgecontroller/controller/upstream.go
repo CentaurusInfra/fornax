@@ -57,6 +57,7 @@ import (
 	routerrule "github.com/kubeedge/kubeedge/cloud/pkg/router/rule"
 	common "github.com/kubeedge/kubeedge/common/constants"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
+	"github.com/kubeedge/kubeedge/pkg/util"
 )
 
 // SortedContainerStatuses define A type to help sort container statuses based on container names.
@@ -108,6 +109,7 @@ type UpstreamController struct {
 	ruleStatusChan            chan model.Message
 	edgeClusterStateChan      chan model.Message
 	missionStateChan          chan model.Message
+	clusterGatewayChan        chan model.Message
 
 	// lister
 	podLister       corelisters.PodLister
@@ -163,6 +165,9 @@ func (uc *UpstreamController) Start() error {
 	for i := 0; i < int(config.Config.Load.UpdateMissionStateWorkers); i++ {
 		go uc.updateMissionState()
 	}
+	for i := 0; i < int(config.Config.Load.UpdateClusterGatewayWorkers); i++ {
+		go uc.updateClusterGatewayNeighbors()
+	}
 	return nil
 }
 
@@ -198,7 +203,14 @@ func (uc *UpstreamController) dispatchMessage() {
 		case model.ResourceTypePodStatus:
 			uc.podStatusChan <- msg
 		case model.ResourceTypeConfigmap:
-			uc.configMapChan <- msg
+			switch msg.GetOperation() {
+			case model.QueryOperation:
+				uc.configMapChan <- msg
+			case model.UpdateOperation:
+				uc.clusterGatewayChan <- msg
+			default:
+				klog.Errorf("message: %s, operation type: %s unsupported", msg.GetID(), msg.GetOperation())
+			}
 		case model.ResourceTypeSecret:
 			uc.secretChan <- msg
 		case common.ResourceTypePersistentVolume:
@@ -1254,5 +1266,65 @@ func NewUpstreamController(factory k8sinformer.SharedInformerFactory) (*Upstream
 	uc.ruleStatusChan = make(chan model.Message, config.Config.Buffer.UpdateNodeStatus)
 	uc.edgeClusterStateChan = make(chan model.Message, config.Config.Buffer.UpdateEdgeClusterState)
 	uc.missionStateChan = make(chan model.Message, config.Config.Buffer.UpdateMissionState)
+	uc.clusterGatewayChan = make(chan model.Message, config.Config.Buffer.UpdateClusterGateway)
 	return uc, nil
+}
+
+func (uc *UpstreamController) updateClusterGatewayNeighbors() {
+	for {
+		select {
+		case <-beehiveContext.Done():
+			klog.Warning("stop updateClusterGatewayNeighbors")
+			return
+		case msg := <-uc.clusterGatewayChan:
+			klog.V(3).Infof("upstream gateway message %v operation is: %s, and resource is %s", msg, msg.GetOperation(), msg.GetResource())
+
+			namespace, err := messagelayer.GetNamespace(msg)
+			if err != nil {
+				klog.Warningf("process failure, get namespace failed with error: %s", err)
+				continue
+			}
+			name, err := messagelayer.GetResourceName(msg)
+			if err != nil {
+				klog.Warningf("process failure, get resource name failed with error: %s", err)
+				continue
+			}
+			data, err := msg.GetContentData()
+			if err != nil {
+				klog.Warningf("process failure, get content data failed with error: %s", err)
+				return
+			}
+
+			var subClusterGatewayConfigMap v1.ConfigMap
+			if err := json.Unmarshal(data, &subClusterGatewayConfigMap); err != nil {
+				klog.Warningf("failed to get cluster gateway from msg, cluster namesapce: %s, cluster name: %s", namespace, name)
+				return
+			}
+
+			neighborName := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapClusterName]
+			neighborHostIP := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapClusterHostIP]
+			klog.V(3).Infof("upstream gateway neighborName %v, neighborHostIP %v", neighborName, neighborHostIP)
+			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), common.ClusterGatewayConfigMap, metaV1.GetOptions{})
+			if err != nil {
+				klog.Warningf("failed to get configmap, namespace: %s, name: %s, err: %v", namespace, name, err)
+				continue
+			}
+			klog.V(3).Infof("upstream gateway configmap %v", configMap)
+			neighbors := ""
+			if configMap.Data != nil {
+				neighbors = configMap.Data["gateway_neighbors"]
+			}
+			if updatedNeighbors, updated, err := util.GetUpdatedClusterGatewayNeighbors(neighborName, neighborHostIP, neighbors); updated && err == nil {
+				configMap.Data["gateway_neighbors"] = updatedNeighbors
+				updatedConfigMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Update(context.Background(), configMap, metaV1.UpdateOptions{})
+				if err != nil {
+					klog.Warningf("failed to updated neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
+					continue
+				}
+				klog.V(3).Infof("upstream gateway configmap updated %v", updatedConfigMap)
+			} else if err != nil {
+				klog.Warningf("failed to get neighbors, namespace: %s, name: %s, err: %v", namespace, name, err)
+			}
+		}
+	}
 }

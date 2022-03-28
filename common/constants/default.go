@@ -94,6 +94,7 @@ const (
 	DefaultUpdateRuleStatusWorkers           = 4
 	DefaultUpdateEdgeClusterStateWorkers     = 1
 	DefaultUpdateMissionStateWorkers         = 4
+	DefaultUpdateClusterGatewayWorkers       = 1
 
 	DefaultUpdatePodStatusBuffer            = 1024
 	DefaultUpdateNodeStatusBuffer           = 1024
@@ -109,6 +110,7 @@ const (
 	DefaultDeletePodBuffer                  = 1024
 	DefaultUpdateEdgeClusterStateBuffer     = 1024
 	DefaultUpdateMissionStateBuffer         = 1024
+	DefaultUpdateClusterGatewayBuffer       = 1024
 
 	DefaultPodEventBuffer           = 1
 	DefaultConfigMapEventBuffer     = 1
@@ -164,4 +166,10 @@ const (
 	//missionstatepruner
 	DefaultStateSyncInterval  = 60
 	DefaultEdgeClusterTimeout = 60
+
+	// configmap
+	ClusterGatewayConfigMap              = "cluster-gateway-config"
+	ClusterGatewayConfigMapClusterName   = "gateway_name"
+	ClusterGatewayConfigMapClusterHostIP = "gateway_host_ip"
+	DefaultClusterGatewayUpdateInterval  = 60
 )
