@@ -12,15 +12,12 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/kubeedge/cloud/cmd/config"
-	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/util"
 )
 
 var (
-	kubeconfig    string
 	genevePort    layers.UDPPort
 	firepowerPort layers.UDPPort
 	logLevel      string
@@ -45,7 +42,6 @@ var (
 
 // initialize the commandline options
 func InitFlag() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "/etc/kubernetes/admin.conf", "the kubeconfig file path to access kube apiserver")
 	config, err := config.NewGatewayConfiguration("gateway_config.json")
 	if err != nil {
 		panic(fmt.Errorf("error setting gateway agent configuration: %v", err))
@@ -117,19 +113,6 @@ func init() {
 func main() {
 	defer handle.Close()
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err)
-	}
-
-	quit := make(chan struct{})
-	defer close(quit)
-	kubeWatcher, err := util.NewKubeWatcher(config, quit)
-	if err != nil {
-		panic(err)
-	}
-	go kubeWatcher.Run()
-
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
 		klog.Fatalf("Error in setting up BPF filter: %v", err)
@@ -138,7 +121,7 @@ func main() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	for packet := range packetSource.Packets() {
-		if err := processPacket(&packet, kubeWatcher); err != nil {
+		if err := processPacket(&packet); err != nil {
 			klog.Errorf("Failed to process packet: %v, packet: %v", err, packet)
 		} else {
 			klog.V(3).Infof("Successfully processed packet")
@@ -147,17 +130,13 @@ func main() {
 	}
 }
 
-func processPacket(p *gopacket.Packet, watcher *util.KubeWatcher) error {
+func processPacket(p *gopacket.Packet) error {
 	packet := *p
 
 	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
 	ethernetFrame := ethernetLayer.(*layers.Ethernet)
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	ipPacket, _ := ipLayer.(*layers.IPv4)
-	appLayer := packet.ApplicationLayer()
-	klog.Infof("The playload is %v", string(appLayer.Payload()[8:]))
-	watcher.SaveSubnet(appLayer.Payload()[8:])
-
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	udpPacket := udpLayer.(*layers.UDP)
 
@@ -183,9 +162,6 @@ func processPacket(p *gopacket.Packet, watcher *util.KubeWatcher) error {
 
 	// it is a packet from the remote Inter-Cluster gateway
 	case udpPacketCopy.SrcPort == genevePort && udpPacketCopy.DstPort == firepowerPort:
-		if appLayer != nil {
-			klog.V(3).Infof("The playload is %v", string(appLayer.Payload()[8:]))
-		}
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = dividerHrdAddr
 
@@ -272,76 +248,3 @@ func send(l ...gopacket.SerializableLayer) error {
 
 	return handle.WritePacketData(buffer.Bytes())
 }
-
-// func syncSubnet(subnet *subnetv1.Subnet, remoteHostIP net.IP, remoteHostMac net.HardwareAddr, remotePort, localPort int) error {
-// 	iface, _, src, err := router.Route(remoteHostIP)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	eth := layers.Ethernet{
-// 		SrcMAC:       iface.HardwareAddr,
-// 		DstMAC:       remoteHostMac,
-// 		EthernetType: layers.EthernetTypeIPv4,
-// 	}
-// 	ip4 := layers.IPv4{
-// 		SrcIP:    src,
-// 		DstIP:    remoteIcgwIP,
-// 		Version:  4,
-// 		TTL:      64,
-// 		Protocol: layers.IPProtocolTCP,
-// 	}
-// 	tcp := layers.TCP{
-// 		SrcPort: layers.TCPPort(localPort),
-// 		DstPort: layers.TCPPort(remotePort),
-// 		SYN:     true,
-// 	}
-// 	err = tcp.SetNetworkLayerForChecksum(&ip4)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	udp := layers.UDP{
-// 		SrcPort: layers.UDPPort(localPort),
-// 		DstPort: layers.UDPPort(remotePort),
-// 	}
-// 	err = udp.SetNetworkLayerForChecksum(&ip4)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	subnetByteArray, err := json.Marshal(subnet)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	payload := gopacket.Payload(subnetByteArray)
-
-// 	if err := send(&eth, &ip4, &tcp, &udp, &payload); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// func runSubnetInformer(kubeconfig *rest.Config, quit chan struct{}) error {
-// 	subnetclientset, err := subnetclientset.NewForConfig(kubeconfig)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	subnetLW := cache.NewListWatchFromClient(subnetclientset.MizarV1().RESTClient(), "subnets", v1.NamespaceAll, fields.Everything())
-
-// 	subnetInformer := cache.NewSharedIndexInformer(subnetLW, &subnetv1.Subnet{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-// 	subnetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-// 		AddFunc: func(obj interface{}) {
-// 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
-// 				klog.V(3).Infof("A new subnet %s is trying to sync to %s", subnet.Name, subnet.Spec.RemoteGateways)
-// 				if err := syncSubnet(subnet, remoteIcgwIP, icgwHrdAddr, int(firepowerPort), int(genevePort)); err != nil {
-// 					klog.Fatalf("Error in synchronizing subnet %v: %v", subnet, err)
-// 				}
-// 			}
-// 		},
-// 	})
-
-// 	go subnetInformer.Run(quit)
-// 	return nil
-// }
