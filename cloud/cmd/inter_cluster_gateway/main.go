@@ -17,6 +17,7 @@ import (
 
 	"github.com/kubeedge/kubeedge/cloud/cmd/config"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv"
+	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/util"
 )
 
 var (
@@ -133,6 +134,14 @@ func main() {
 		panic(err)
 	}
 	go srv.RunGrpcServer(config, grpcPort)
+
+	quit := make(chan struct{})
+	defer close(quit)
+	kubeWatcher, err := util.NewKubeWatcher(config, grpcPort, quit)
+	if err != nil {
+		panic(err)
+	}
+	go kubeWatcher.Run()
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
