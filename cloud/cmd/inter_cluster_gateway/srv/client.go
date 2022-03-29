@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv/proto"
 	"google.golang.org/grpc"
+
+	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv/proto"
 )
 
 type Client struct {

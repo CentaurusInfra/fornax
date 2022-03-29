@@ -57,7 +57,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 	if err != nil {
 		return nil, err
 	}
-	subnetSelector := fields.ParseSelectorOrDie("metadata.name!=net0")
+	subnetSelector := fields.ParseSelectorOrDie("metadata.name!=net0 ")
 	subnetLW := cache.NewListWatchFromClient(subnetclientset.MizarV1().RESTClient(), "subnets", v1.NamespaceAll, subnetSelector)
 	subnetInformer := cache.NewSharedIndexInformer(subnetLW, &subnetv1.Subnet{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
@@ -125,6 +125,9 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
 				klog.V(3).Infof("A new subnet %s is created", subnet.Name)
+				if subnet.Spec.Virtual {
+					return
+				}
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 					klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
 					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
@@ -134,7 +137,7 @@ func (watcher *KubeWatcher) Run() {
 					defer conn.Close()
 					defer cancel()
 					request := &proto.CreateSubnetRequest{
-						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: "Init",
+						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: subnet.Spec.Status,
 						Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni}
 					returnMessage, err := client.CreateSubnet(ctx, request)
 					klog.V(3).Infof("The returnMessage is %v", returnMessage)
