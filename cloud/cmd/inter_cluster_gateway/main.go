@@ -12,15 +12,19 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/kubeedge/cloud/cmd/config"
+	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv"
 )
 
 var (
+	kubeconfig    string
 	genevePort    layers.UDPPort
 	firepowerPort layers.UDPPort
 	logLevel      string
+	grpcPort      int
 
 	remoteIcgwIPstr   string
 	localDividerIPstr string
@@ -42,6 +46,8 @@ var (
 
 // initialize the commandline options
 func InitFlag() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "/etc/kubernetes/admin.conf", "the kubeconfig file path to access kube apiserver")
+
 	config, err := config.NewGatewayConfiguration("gateway_config.json")
 	if err != nil {
 		panic(fmt.Errorf("error setting gateway agent configuration: %v", err))
@@ -61,6 +67,11 @@ func InitFlag() {
 	firepowerPort = layers.UDPPort((config.RemoteGateways[0].RemoteGatewayPort))
 	localDividerIPstr = config.LocalDividerIP
 	genevePort = layers.UDPPort((config.GenevePort))
+	grpcPort = config.GrpcPort
+
+	if remoteIcgwIPstr == "" {
+		return
+	}
 
 	remoteIcgwIP = net.ParseIP(remoteIcgwIPstr)
 	if remoteIcgwIP == nil {
@@ -99,6 +110,10 @@ func init() {
 		klog.Fatalf("error in initilization of router : %v", err)
 	}
 
+	if remoteIcgwIP == nil {
+		return
+	}
+
 	icgwHrdAddr, icgwSrc, err = getNextHopHwAddr(remoteIcgwIP)
 	if err != nil {
 		klog.Fatalf("error in getting divider next hop hardware address: %v", err)
@@ -112,6 +127,12 @@ func init() {
 
 func main() {
 	defer handle.Close()
+
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	go srv.RunGrpcServer(config, grpcPort)
 
 	geneveFilter := fmt.Sprintf("port %d", genevePort)
 	if err := handle.SetBPFFilter(geneveFilter); err != nil {
@@ -175,13 +196,13 @@ func processPacket(p *gopacket.Packet) error {
 		klog.V(3).Infof("Forwarding packet to local divider %v", localDividerIPstr)
 
 	default:
-		return fmt.Errorf("Unsupported packages")
+		return fmt.Errorf("unsupported packages")
 	}
 
 	buffer = gopacket.NewSerializeBuffer()
 
 	if err := udpPacketCopy.SetNetworkLayerForChecksum(&ipPacketCopy); err != nil {
-		return fmt.Errorf("Error in setup network layer checksum: %v", err)
+		return fmt.Errorf("error in setup network layer checksum: %v", err)
 	}
 
 	return send(&ethernetFrameCopy, &ipPacketCopy, &udpPacketCopy, gopacket.Payload(udpPacketCopy.Payload))

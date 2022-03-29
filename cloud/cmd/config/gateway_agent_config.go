@@ -13,6 +13,7 @@ type GatewayAgentConfiguration struct {
 	LocalDividerIP string
 	GenevePort     int
 	LogLevel       string
+	GrpcPort       int
 }
 
 type RemoteGateway struct {
