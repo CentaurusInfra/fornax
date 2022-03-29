@@ -104,13 +104,13 @@ func (watcher *KubeWatcher) Run() {
 					gateway := strings.Split(gatewayPair, "=")
 					watcher.gatewayMap[gateway[0]] = gateway[1]
 				}
-				klog.V(3).Infof("The gateway map is set to %v", watcher.gatewayMap)
+				klog.V(3).Infof("the gateway map is set to %v", watcher.gatewayMap)
 			}
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldCm, newCm := old.(*v1.ConfigMap), new.(*v1.ConfigMap)
 			if oldCm.Data["gateway_neighbors"] != newCm.Data["gateway_neighbors"] {
-				klog.V(3).Infof("The new gateway neighbors are set to %v", newCm.Data["gateway_neighbors"])
+				klog.V(3).Infof("the new gateway neighbors are set to %v", newCm.Data["gateway_neighbors"])
 				watcher.gatewayMap = make(map[string]string)
 				gatewayArr := strings.Split(newCm.Data["gateway_neighbors"], ",")
 				for _, gatewayPair := range gatewayArr {
@@ -124,15 +124,15 @@ func (watcher *KubeWatcher) Run() {
 	watcher.subnetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
-				klog.V(3).Infof("A new subnet %s is created", subnet.Name)
+				klog.V(3).Infof("a new subnet %s is created", subnet.Name)
 				if subnet.Spec.Virtual {
 					return
 				}
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
-					klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
+					klog.V(3).Infof("a new subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
 					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
 					if err != nil {
-						klog.Errorf("failed to sync vpc to %s with the error %v", gatewayHostIP, err)
+						klog.Errorf("failed to sync a new subnet to %s with the error %v", gatewayHostIP, err)
 					}
 					defer conn.Close()
 					defer cancel()
@@ -140,6 +140,30 @@ func (watcher *KubeWatcher) Run() {
 						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: subnet.Spec.Status,
 						Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni}
 					returnMessage, err := client.CreateSubnet(ctx, request)
+					klog.V(3).Infof("the returnMessage is %v", returnMessage)
+					if err != nil {
+						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+					}
+				}
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			if subnet, ok := obj.(*subnetv1.Subnet); ok {
+				klog.V(3).Infof("a new subnet %s is created", subnet.Name)
+				if subnet.Spec.Virtual {
+					return
+				}
+				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
+					klog.V(3).Infof("a deleted subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
+					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
+					if err != nil {
+						klog.Errorf("failed to sync a deleted subnet to %s with the error %v", gatewayHostIP, err)
+					}
+					defer conn.Close()
+					defer cancel()
+					request := &proto.DeleteSubnetRequest{
+						Name: subnet.Name, Namespace: subnet.Namespace}
+					returnMessage, err := client.DeleteSubnet(ctx, request)
 					klog.V(3).Infof("The returnMessage is %v", returnMessage)
 					if err != nil {
 						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
@@ -152,18 +176,38 @@ func (watcher *KubeWatcher) Run() {
 	watcher.vpcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if vpc, ok := obj.(*vpcv1.Vpc); ok {
-				klog.V(3).Infof("A new vpc %s is created", vpc.Name)
+				klog.V(3).Infof("a new vpc %s is created", vpc.Name)
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
-					klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
+					klog.V(3).Infof("a new vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
 					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
 					if err != nil {
-						klog.Errorf("failed to sync vpc to %s with the error %v", gatewayHostIP, err)
+						klog.Errorf("failed to sync a new vpc to %s with the error %v", gatewayHostIP, err)
 					}
 					defer conn.Close()
 					defer cancel()
 					request := &proto.CreateVpcGatewayRequest{Name: vpc.Name, Namespace: vpc.Namespace, GatewayName: watcher.gatewayName, GatewayHostIP: watcher.gatewayHostIP}
 					returnMessage, err := client.CreateVpcGateway(ctx, request)
-					klog.V(3).Infof("The returnMessage is %v", returnMessage)
+					klog.V(3).Infof("the returnMessage is %v", returnMessage)
+					if err != nil {
+						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+					}
+				}
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			if vpc, ok := obj.(*vpcv1.Vpc); ok {
+				klog.V(3).Infof("a deleted vpc %s is created", vpc.Name)
+				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
+					klog.V(3).Infof("a deleted vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
+					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
+					if err != nil {
+						klog.Errorf("failed to sync a deleted vpc to %s with the error %v", gatewayHostIP, err)
+					}
+					defer conn.Close()
+					defer cancel()
+					request := &proto.DeleteVpcGatewayRequest{Name: vpc.Name, Namespace: vpc.Namespace, GatewayName: watcher.gatewayName, GatewayHostIP: watcher.gatewayHostIP}
+					returnMessage, err := client.DeleteVpcGateway(ctx, request)
+					klog.V(3).Infof("the returnMessage is %v", returnMessage)
 					if err != nil {
 						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
 					}

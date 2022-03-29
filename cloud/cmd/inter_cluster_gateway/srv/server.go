@@ -72,7 +72,7 @@ func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcG
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
-	if gateways, ok := gatewayConfig.Data[request.GetGatewayName()]; ok {
+	if gateways, ok := gatewayConfig.Data[request.GetName()]; ok {
 		gatewayArray := strings.Split(gateways, ",")
 		updatedGatewayArray := make([]string, 0)
 		for _, gateway := range gatewayArray {
@@ -81,7 +81,7 @@ func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcG
 			}
 		}
 		if len(gatewayArray) != len(updatedGatewayArray) {
-			gatewayConfig.Data[request.GetGatewayName()] = strings.Join(updatedGatewayArray, "-")
+			gatewayConfig.Data[request.GetName()] = strings.Join(updatedGatewayArray, ",")
 			_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 			if err != nil {
 				return &proto.Response{ReturnCode: proto.Response_Error}, err
