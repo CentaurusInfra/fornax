@@ -100,7 +100,7 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if cm, ok := obj.(*v1.ConfigMap); ok {
 				watcher.gatewayName = cm.Data["gateway_name"]
-				watcher.gatewayName = cm.Data["gateway_host_ip"]
+				watcher.gatewayHostIP = cm.Data["gateway_host_ip"]
 				gatewayArr := strings.Split(cm.Data["gateway_neighbors"], ",")
 				for _, gatewayPair := range gatewayArr {
 					gateway := strings.Split(gatewayPair, "=")
@@ -148,25 +148,23 @@ func (watcher *KubeWatcher) Run() {
 	watcher.vpcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if vpc, ok := obj.(*vpcv1.Vpc); ok {
-				if _, existed := watcher.vpcMap[vpc.Spec.Vni]; !existed {
-					watcher.vpcMap[vpc.Spec.Vni] = vpc
-					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
-						klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
-						gatewayAddress := fmt.Sprintf("%s:%d", gatewayHostIP, watcher.grpcPort)
-						conn, err := grpc.Dial(gatewayAddress, grpc.WithInsecure(), grpc.WithBlock())
-						if err != nil {
-							klog.Errorf("failed to sync vpc to %s with the error %v", gatewayAddress, err)
-						}
-						defer conn.Close()
-						client := proto.NewMizarServiceClient(conn)
-						ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-						defer cancel()
-						request := &proto.CreateVpcGatewayRequest{Name: vpc.Name, Namespace: vpc.Namespace, GatewayName: watcher.gatewayName, GatewayHostIP: watcher.gatewayHostIP}
-						returnMessage, err := client.CreateVpcGateway(ctx, request)
-						klog.V(3).Infof("The returnMessage is %v", returnMessage)
-						if err != nil {
-							klog.Errorf("return from %s with the message %v to %s with the error %v", gatewayAddress, returnMessage, err)
-						}
+				klog.V(3).Infof("A new vpc %s is created", vpc.Name)
+				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
+					klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
+					gatewayAddress := fmt.Sprintf("%s:%d", gatewayHostIP, watcher.grpcPort)
+					conn, err := grpc.Dial(gatewayAddress, grpc.WithInsecure(), grpc.WithBlock())
+					if err != nil {
+						klog.Errorf("failed to sync vpc to %s with the error %v", gatewayAddress, err)
+					}
+					defer conn.Close()
+					client := proto.NewMizarServiceClient(conn)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+					defer cancel()
+					request := &proto.CreateVpcGatewayRequest{Name: vpc.Name, Namespace: vpc.Namespace, GatewayName: watcher.gatewayName, GatewayHostIP: watcher.gatewayHostIP}
+					returnMessage, err := client.CreateVpcGateway(ctx, request)
+					klog.V(3).Infof("The returnMessage is %v", returnMessage)
+					if err != nil {
+						klog.Errorf("return from %s with the message %v with the error %v", gatewayAddress, returnMessage, err)
 					}
 				}
 			}

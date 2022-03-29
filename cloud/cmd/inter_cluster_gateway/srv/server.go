@@ -50,9 +50,15 @@ func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcG
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
 	if gateways, ok := gatewayConfig.Data[request.GetGatewayName()]; ok {
-		gatewayConfig.Data[request.GetGatewayName()] = fmt.Sprintf("%s,%s", gateways, request.GetGatewayHostIP())
+		ipArr := strings.Split(gateways, ",")
+		for _, ip := range ipArr {
+			if ip == request.GetGatewayHostIP() {
+				return &proto.Response{ReturnCode: proto.Response_OK, Message: "The vpc gateway has already been added"}, nil
+			}
+		}
+		gatewayConfig.Data[request.GetName()] = fmt.Sprintf("%s,%s", gateways, request.GetGatewayHostIP())
 	} else {
-		gatewayConfig.Data[request.GetGatewayName()] = request.GetGatewayHostIP()
+		gatewayConfig.Data[request.GetName()] = request.GetGatewayHostIP()
 	}
 	_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 	if err != nil {
