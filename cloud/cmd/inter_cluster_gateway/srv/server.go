@@ -99,6 +99,7 @@ func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRe
 	subnet.Spec.Prefix = request.GetPrefix()
 	subnet.Spec.Vni = request.GetVni()
 	subnet.Spec.Vpc = request.GetVpc()
+	subnet.Spec.Status = request.GetStatus()
 	subnet.Spec.Bouncers = 1
 	subnet.Spec.Virtual = true
 	_, err := s.subnetClientset.MizarV1().Subnets(subnet.Namespace).Create(context.TODO(), subnet, metav1.CreateOptions{})

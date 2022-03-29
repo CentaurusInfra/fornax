@@ -19,8 +19,8 @@ func NewClient(port, timeout int) *Client {
 }
 
 func (c *Client) Connect(ip string) (*grpc.ClientConn, proto.MizarServiceClient, context.Context, context.CancelFunc, error) {
-	grpcHostUrl := fmt.Sprintf("%s:%d", ip, c.port)
-	conn, err := grpc.Dial(grpcHostUrl, grpc.WithInsecure(), grpc.WithBlock())
+	grpcHostURL := fmt.Sprintf("%s:%d", ip, c.port)
+	conn, err := grpc.Dial(grpcHostURL, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return conn, nil, nil, nil, err
 	}

@@ -134,7 +134,7 @@ func (watcher *KubeWatcher) Run() {
 					defer conn.Close()
 					defer cancel()
 					request := &proto.CreateSubnetRequest{
-						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP,
+						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: "Init",
 						Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni}
 					returnMessage, err := client.CreateSubnet(ctx, request)
 					klog.V(3).Infof("The returnMessage is %v", returnMessage)
