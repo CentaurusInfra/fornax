@@ -88,9 +88,7 @@ func init() {
 	if err != nil {
 		klog.Fatalf("error in initilization of router : %v", err)
 	}
-
-	localHostIP = GetLocalHostIP()
-	localGatewayHost = fmt.Sprintf("%s:%d", localHostIP, FirepowerPort)
+	localGatewayHost = fmt.Sprintf("%s:%d", "127.0.0.1", FirepowerPort)
 }
 
 // getNextHopHwAddr() finds out the next-hop hardware address if we want to send the packet to the destination IP

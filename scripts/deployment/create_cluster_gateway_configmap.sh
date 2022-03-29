@@ -3,7 +3,7 @@
 source cluster_gateway.properties
 
 # Remove the old configmap file
-rm -f cluster_gatewway_configmap.yaml
+rm -f cluster_gateway_configmap.yaml
 
 # Create a new configmap file from portal)host.properties
 echo "Replacing [CLUSTER HOST] with $gateway_name and $gateway_host_ip in configmap"
