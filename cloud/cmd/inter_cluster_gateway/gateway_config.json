@@ -8,5 +8,6 @@
     "GenevePort": 6081,
     "LocalDividerIP": "",
     "LogLevel": "3",
-    "GrpcPort": 8090
+    "GrpcPort": 8090,
+    "GprcTimeout": 10
 }

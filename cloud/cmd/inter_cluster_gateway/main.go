@@ -26,6 +26,7 @@ var (
 	firepowerPort layers.UDPPort
 	logLevel      string
 	grpcPort      int
+	grpcTimeout   int
 
 	remoteIcgwIPstr   string
 	localDividerIPstr string
@@ -69,6 +70,7 @@ func InitFlag() {
 	localDividerIPstr = config.LocalDividerIP
 	genevePort = layers.UDPPort((config.GenevePort))
 	grpcPort = config.GrpcPort
+	grpcTimeout = config.GrpcTimeout
 
 	if remoteIcgwIPstr == "" {
 		return
@@ -137,7 +139,7 @@ func main() {
 
 	quit := make(chan struct{})
 	defer close(quit)
-	kubeWatcher, err := util.NewKubeWatcher(config, grpcPort, quit)
+	kubeWatcher, err := util.NewKubeWatcher(config, srv.NewClient(grpcPort, grpcTimeout), quit)
 	if err != nil {
 		panic(err)
 	}

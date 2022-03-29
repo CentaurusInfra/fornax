@@ -3,13 +3,10 @@ package util
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"strings"
-	"time"
 
-	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -25,6 +22,7 @@ import (
 	subnetv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/v1"
 	vpcclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/vpc/client/clientset/versioned"
 	vpcv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/vpc/v1"
+	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv/proto"
 )
 
@@ -43,10 +41,10 @@ type KubeWatcher struct {
 	subnetInterface          subnetinterface.SubnetInterface
 	gatewayName              string
 	gatewayHostIP            string
-	grpcPort                 int
+	client                   *srv.Client
 }
 
-func NewKubeWatcher(kubeconfig *rest.Config, grpcPort int, quit chan struct{}) (*KubeWatcher, error) {
+func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struct{}) (*KubeWatcher, error) {
 	gatewayconfigmapclientset, err := kubernetes.NewForConfig(kubeconfig)
 	if err != nil {
 		return nil, err
@@ -91,7 +89,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, grpcPort int, quit chan struct{}) (
 		vpcGatewayMap:            make(map[string]GatewayConfig),
 		gatewayMap:               make(map[string]string),
 		subnetInterface:          subnetclientset.MizarV1().Subnets("default"),
-		grpcPort:                 grpcPort,
+		client:                   client,
 	}, nil
 }
 
@@ -151,20 +149,17 @@ func (watcher *KubeWatcher) Run() {
 				klog.V(3).Infof("A new vpc %s is created", vpc.Name)
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 					klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
-					gatewayAddress := fmt.Sprintf("%s:%d", gatewayHostIP, watcher.grpcPort)
-					conn, err := grpc.Dial(gatewayAddress, grpc.WithInsecure(), grpc.WithBlock())
+					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
 					if err != nil {
-						klog.Errorf("failed to sync vpc to %s with the error %v", gatewayAddress, err)
+						klog.Errorf("failed to sync vpc to %s with the error %v", gatewayHostIP, err)
 					}
 					defer conn.Close()
-					client := proto.NewMizarServiceClient(conn)
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 					defer cancel()
 					request := &proto.CreateVpcGatewayRequest{Name: vpc.Name, Namespace: vpc.Namespace, GatewayName: watcher.gatewayName, GatewayHostIP: watcher.gatewayHostIP}
 					returnMessage, err := client.CreateVpcGateway(ctx, request)
 					klog.V(3).Infof("The returnMessage is %v", returnMessage)
 					if err != nil {
-						klog.Errorf("return from %s with the message %v with the error %v", gatewayAddress, returnMessage, err)
+						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
 					}
 				}
 			}

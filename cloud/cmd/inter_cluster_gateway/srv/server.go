@@ -49,7 +49,7 @@ func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcG
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
-	if gateways, ok := gatewayConfig.Data[request.GetGatewayName()]; ok {
+	if gateways, ok := gatewayConfig.Data[request.GetName()]; ok {
 		ipArr := strings.Split(gateways, ",")
 		for _, ip := range ipArr {
 			if ip == request.GetGatewayHostIP() {

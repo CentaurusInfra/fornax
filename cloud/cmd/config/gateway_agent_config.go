@@ -14,6 +14,7 @@ type GatewayAgentConfiguration struct {
 	GenevePort     int
 	LogLevel       string
 	GrpcPort       int
+	GrpcTimeout    int
 }
 
 type RemoteGateway struct {
