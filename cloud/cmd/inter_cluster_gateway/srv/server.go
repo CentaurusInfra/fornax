@@ -94,11 +94,12 @@ func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcG
 func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRequest) (*proto.Response, error) {
 	subnet := &subnetv1.Subnet{}
 	subnet.Name = request.GetName()
-	subnet.Namespace = request.GetName()
+	subnet.Namespace = request.GetNamespace()
 	subnet.Spec.IP = request.GetIP()
 	subnet.Spec.Prefix = request.GetPrefix()
 	subnet.Spec.Vni = request.GetVni()
 	subnet.Spec.Vpc = request.GetVpc()
+	subnet.Spec.Bouncers = 1
 	subnet.Spec.Virtual = true
 	_, err := s.subnetClientset.MizarV1().Subnets(subnet.Namespace).Create(context.TODO(), subnet, metav1.CreateOptions{})
 	if err != nil {

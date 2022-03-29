@@ -9,5 +9,5 @@
     "LocalDividerIP": "",
     "LogLevel": "3",
     "GrpcPort": 8090,
-    "GprcTimeout": 10
+    "GrpcTimeout": 10
 }

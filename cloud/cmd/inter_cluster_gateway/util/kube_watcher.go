@@ -124,19 +124,22 @@ func (watcher *KubeWatcher) Run() {
 	watcher.subnetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
-				klog.V(3).Infof("A new subnet %s is trying to sync to %s", subnet.Name, subnet.Spec.RemoteGateways)
-				if _, existed := watcher.subnetMap[subnet.Name]; !existed {
-					watcher.subnetMap[subnet.Name] = subnet
-					if !subnet.Spec.Virtual {
-						subnet.Spec.RemoteGateways = []string{localGatewayHost}
-						klog.V(3).Infof("The remote gateways are set to %v", subnet.Spec.RemoteGateways)
-						if vpcGateway, existed := watcher.vpcGatewayMap[subnet.Spec.Vni]; existed {
-							for _, remoteGatewayHost := range vpcGateway.RemoteGatewayHosts {
-								if err := syncSubnet(subnet, remoteGatewayHost.Remote, remoteGatewayHost.IP, remoteGatewayHost.Mac, remoteGatewayHost.Port, int(GenevePort)); err != nil {
-									klog.Fatalf("Error in synchronizing subnet %v: %v", subnet, err)
-								}
-							}
-						}
+				klog.V(3).Infof("A new subnet %s is created", subnet.Name)
+				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
+					klog.V(3).Infof("A new vpc %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
+					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
+					if err != nil {
+						klog.Errorf("failed to sync vpc to %s with the error %v", gatewayHostIP, err)
+					}
+					defer conn.Close()
+					defer cancel()
+					request := &proto.CreateSubnetRequest{
+						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP,
+						Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni}
+					returnMessage, err := client.CreateSubnet(ctx, request)
+					klog.V(3).Infof("The returnMessage is %v", returnMessage)
+					if err != nil {
+						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
 					}
 				}
 			}
