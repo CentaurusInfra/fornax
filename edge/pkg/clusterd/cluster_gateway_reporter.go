@@ -96,7 +96,7 @@ func GetClusterGatewayNameAndHostIP() (string, string, error) {
 		klog.Errorf("error in unmarshall cluster data json: (%s), error: %v", output, err)
 		return gatewayName, gatewayIP, err
 	}
-	return dataMap[constants.ClusterGatewayConfigMapClusterName], dataMap[constants.ClusterGatewayConfigMapClusterHostIP], nil
+	return dataMap[constants.ClusterGatewayConfigMapGatewayName], dataMap[constants.ClusterGatewayConfigMapGatewayHostIP], nil
 }
 
 func (reporter *ClusterGatewayReporter) GetClusterGatewayNeighbors() (string, error) {
