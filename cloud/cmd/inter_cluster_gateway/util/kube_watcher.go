@@ -135,11 +135,11 @@ func (watcher *KubeWatcher) Run() {
 					defer cancel()
 					vpcGateway := strings.Split(diff, "=")
 					var returnMessage *proto.Response
-					if compare == 1 {
+					if compare == 1 && vpcGateway[1] != gatewayHostIP {
 						request := &proto.CreateVpcGatewayRequest{
 							Name: vpcGateway[0], Namespace: "default", GatewayHostIP: vpcGateway[1]}
 						returnMessage, err = client.CreateVpcGateway(ctx, request)
-					} else if compare == -1 {
+					} else if compare == -1 && vpcGateway[1] != gatewayHostIP {
 						request := &proto.DeleteVpcGatewayRequest{
 							Name: vpcGateway[0], Namespace: "default", GatewayHostIP: vpcGateway[1]}
 						returnMessage, err = client.DeleteVpcGateway(ctx, request)
