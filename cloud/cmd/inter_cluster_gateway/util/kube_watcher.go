@@ -24,6 +24,7 @@ import (
 	vpcv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/vpc/v1"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv/proto"
+	"github.com/kubeedge/kubeedge/common/constants"
 )
 
 type KubeWatcher struct {
@@ -97,9 +98,9 @@ func (watcher *KubeWatcher) Run() {
 	watcher.gatewayconfigmapInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if cm, ok := obj.(*v1.ConfigMap); ok {
-				watcher.gatewayName = cm.Data["gateway_name"]
-				watcher.gatewayHostIP = cm.Data["gateway_host_ip"]
-				gatewayArr := strings.Split(cm.Data["gateway_neighbors"], ",")
+				watcher.gatewayName = cm.Data[constants.ClusterGatewayConfigMapGatewayName]
+				watcher.gatewayHostIP = cm.Data[constants.ClusterGatewayConfigMapGatewayHostIP]
+				gatewayArr := strings.Split(cm.Data[constants.ClusterGatewayConfigMapGatewayNeighbors], ",")
 				for _, gatewayPair := range gatewayArr {
 					gateway := strings.Split(gatewayPair, "=")
 					watcher.gatewayMap[gateway[0]] = gateway[1]
@@ -109,15 +110,45 @@ func (watcher *KubeWatcher) Run() {
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldCm, newCm := old.(*v1.ConfigMap), new.(*v1.ConfigMap)
-			if oldCm.Data["gateway_neighbors"] != newCm.Data["gateway_neighbors"] {
-				klog.V(3).Infof("the new gateway neighbors are set to %v", newCm.Data["gateway_neighbors"])
+			// Updated the current gateway neighbors
+			if oldCm.Data[constants.ClusterGatewayConfigMapGatewayNeighbors] != newCm.Data[constants.ClusterGatewayConfigMapGatewayNeighbors] {
 				watcher.gatewayMap = make(map[string]string)
-				gatewayArr := strings.Split(newCm.Data["gateway_neighbors"], ",")
+				gatewayArr := strings.Split(newCm.Data[constants.ClusterGatewayConfigMapGatewayNeighbors], ",")
 				for _, gatewayPair := range gatewayArr {
 					gateway := strings.Split(gatewayPair, "=")
 					watcher.gatewayMap[gateway[0]] = gateway[1]
 				}
-				klog.V(3).Infof("The gateway map is updated to %v", watcher.gatewayMap)
+				klog.V(3).Infof("the gateway map is updated to %v", watcher.gatewayMap)
+			}
+			// Updated the vpc gateway info
+			klog.V(3).Infof("a new vpc is created/deleted in a neighbor and the vpc gateway pair is updated from %s to %s",
+				oldCm.Data[constants.ClusterGatewayConfigMapVpcGateways], newCm.Data[constants.ClusterGatewayConfigMapVpcGateways])
+			compare, diff := compareAndDiffVpcGateways(newCm.Data[constants.ClusterGatewayConfigMapVpcGateways],
+				oldCm.Data[constants.ClusterGatewayConfigMapVpcGateways])
+			if compare != 0 {
+				for _, gatewayHostIP := range watcher.gatewayMap {
+					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
+					if err != nil {
+						klog.Errorf("failed to sync a deleted subnet to %s with the error %v", gatewayHostIP, err)
+					}
+					defer conn.Close()
+					defer cancel()
+					vpcGateway := strings.Split(diff, "=")
+					var returnMessage *proto.Response
+					if compare == 1 {
+						request := &proto.CreateVpcGatewayRequest{
+							Name: vpcGateway[0], Namespace: "default", GatewayHostIP: vpcGateway[1]}
+						returnMessage, err = client.CreateVpcGateway(ctx, request)
+					} else if compare == -1 {
+						request := &proto.DeleteVpcGatewayRequest{
+							Name: vpcGateway[0], Namespace: "default", GatewayHostIP: vpcGateway[1]}
+						returnMessage, err = client.DeleteVpcGateway(ctx, request)
+					}
+					klog.V(3).Infof("The returnMessage is %v", returnMessage)
+					if err != nil {
+						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+					}
+				}
 			}
 		},
 	})
@@ -149,24 +180,23 @@ func (watcher *KubeWatcher) Run() {
 		},
 		DeleteFunc: func(obj interface{}) {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
-				klog.V(3).Infof("a new subnet %s is created", subnet.Name)
-				if subnet.Spec.Virtual {
-					return
-				}
-				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
-					klog.V(3).Infof("a deleted subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
-					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
-					if err != nil {
-						klog.Errorf("failed to sync a deleted subnet to %s with the error %v", gatewayHostIP, err)
-					}
-					defer conn.Close()
-					defer cancel()
-					request := &proto.DeleteSubnetRequest{
-						Name: subnet.Name, Namespace: subnet.Namespace}
-					returnMessage, err := client.DeleteSubnet(ctx, request)
-					klog.V(3).Infof("The returnMessage is %v", returnMessage)
-					if err != nil {
-						klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+				klog.V(3).Infof("a new subnet %s is deleted", subnet.Name)
+				if !subnet.Spec.Virtual {
+					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
+						klog.V(3).Infof("a deleted subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
+						conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
+						if err != nil {
+							klog.Errorf("failed to sync a deleted subnet to %s with the error %v", gatewayHostIP, err)
+						}
+						defer conn.Close()
+						defer cancel()
+						request := &proto.DeleteSubnetRequest{
+							Name: subnet.Name, Namespace: subnet.Namespace}
+						returnMessage, err := client.DeleteSubnet(ctx, request)
+						klog.V(3).Infof("The returnMessage is %v", returnMessage)
+						if err != nil {
+							klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+						}
 					}
 				}
 			}
@@ -260,4 +290,27 @@ func (watcher *KubeWatcher) SaveSubnet(payload []byte) {
 	if _, err = watcher.subnetInterface.Create(context.TODO(), &subnet, metav1.CreateOptions{}); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func compareAndDiffVpcGateways(str1, str2 string) (int, string) {
+	compareResult := 0
+	diffResult := ""
+	if len(str1) < len(str2) {
+		compareResult = -1
+		_, diffResult = compareAndDiffVpcGateways(str2, str1)
+	} else if len(str1) > len(str2) {
+		compareResult = 1
+		str2Map := make(map[string]bool)
+		str2Arr := strings.Split(str2, ",")
+		for _, key := range str2Arr {
+			str2Map[key] = true
+		}
+		str1Arr := strings.Split(str1, ",")
+		for _, key := range str1Arr {
+			if _, ok := str2Map[key]; !ok {
+				return compareResult, key
+			}
+		}
+	}
+	return compareResult, diffResult
 }

@@ -14,6 +14,7 @@ import (
 	subnetclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/client/clientset/versioned"
 	subnetv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/v1"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv/proto"
+	"github.com/kubeedge/kubeedge/common/constants"
 )
 
 type server struct {
@@ -45,21 +46,24 @@ func RunGrpcServer(conf *rest.Config, port int) {
 }
 
 func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcGatewayRequest) (*proto.Response, error) {
-	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), "cluster-gateway-config", metav1.GetOptions{})
+	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
-	if gateways, ok := gatewayConfig.Data[request.GetName()]; ok {
-		ipArr := strings.Split(gateways, ",")
-		for _, ip := range ipArr {
-			if ip == request.GetGatewayHostIP() {
+	updatedVpcGateways := make([]string, 0)
+	if vpcGateways, ok := gatewayConfig.Data[constants.ClusterGatewayConfigMapVpcGateways]; ok {
+		vpcGatewayArr := strings.Split(vpcGateways, ",")
+		for _, vpcGateway := range vpcGatewayArr {
+			vpcGatewayPair := strings.Split(vpcGateway, "=")
+			if vpcGatewayPair[0] == request.GetName() && vpcGatewayPair[1] == request.GetGatewayHostIP() {
 				return &proto.Response{ReturnCode: proto.Response_OK, Message: "The vpc gateway has already been added"}, nil
 			}
+			updatedVpcGateways = append(updatedVpcGateways, vpcGateway)
 		}
-		gatewayConfig.Data[request.GetName()] = fmt.Sprintf("%s,%s", gateways, request.GetGatewayHostIP())
-	} else {
-		gatewayConfig.Data[request.GetName()] = request.GetGatewayHostIP()
 	}
+	updatedVpcGateways = append(updatedVpcGateways, fmt.Sprintf("%s=%s", request.GetName(), request.GetGatewayHostIP()))
+	gatewayConfig.Data[constants.ClusterGatewayConfigMapVpcGateways] = strings.Join(updatedVpcGateways, ",")
+
 	_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
@@ -68,20 +72,22 @@ func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcG
 }
 
 func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcGatewayRequest) (*proto.Response, error) {
-	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), "cluster-gateway-config", metav1.GetOptions{})
+	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
-	if gateways, ok := gatewayConfig.Data[request.GetName()]; ok {
-		gatewayArray := strings.Split(gateways, ",")
-		updatedGatewayArray := make([]string, 0)
-		for _, gateway := range gatewayArray {
-			if gateway != request.GetGatewayHostIP() {
-				updatedGatewayArray = append(updatedGatewayArray, gateway)
+	if vpcGateways, ok := gatewayConfig.Data[constants.ClusterGatewayConfigMapVpcGateways]; ok {
+		updatedVpcGateways := make([]string, 0)
+		vpcGatewayArr := strings.Split(vpcGateways, ",")
+		for _, vpcGateway := range vpcGatewayArr {
+			vpcGatewayPair := strings.Split(vpcGateway, "=")
+			if vpcGatewayPair[0] != request.GetName() || vpcGatewayPair[1] != request.GetGatewayHostIP() {
+				updatedVpcGateways = append(updatedVpcGateways, vpcGateway)
 			}
 		}
-		if len(gatewayArray) != len(updatedGatewayArray) {
-			gatewayConfig.Data[request.GetName()] = strings.Join(updatedGatewayArray, ",")
+
+		if len(vpcGatewayArr) != len(updatedVpcGateways) {
+			gatewayConfig.Data[constants.ClusterGatewayConfigMapVpcGateways] = strings.Join(updatedVpcGateways, ",")
 			_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 			if err != nil {
 				return &proto.Response{ReturnCode: proto.Response_Error}, err

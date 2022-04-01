@@ -168,8 +168,10 @@ const (
 	DefaultEdgeClusterTimeout = 60
 
 	// configmap
-	ClusterGatewayConfigMap              = "cluster-gateway-config"
-	ClusterGatewayConfigMapClusterName   = "gateway_name"
-	ClusterGatewayConfigMapClusterHostIP = "gateway_host_ip"
-	DefaultClusterGatewayUpdateInterval  = 60
+	ClusterGatewayConfigMap                 = "cluster-gateway-config"
+	ClusterGatewayConfigMapGatewayName      = "gateway_name"
+	ClusterGatewayConfigMapGatewayHostIP    = "gateway_host_ip"
+	ClusterGatewayConfigMapGatewayNeighbors = "gateway_neighbors"
+	ClusterGatewayConfigMapVpcGateways      = "vpc_gateways"
+	DefaultClusterGatewayUpdateInterval     = 60
 )

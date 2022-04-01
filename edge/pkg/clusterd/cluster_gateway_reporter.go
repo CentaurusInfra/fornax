@@ -51,8 +51,8 @@ func (reporter *ClusterGatewayReporter) updateClusterGatewayConfigMap() error {
 	}
 	configMap := &v1.ConfigMap{}
 	configMap.Data = make(map[string]string)
-	configMap.Data[constants.ClusterGatewayConfigMapClusterName] = gatewayName
-	configMap.Data[constants.ClusterGatewayConfigMapClusterHostIP] = gatewayHostIP
+	configMap.Data[constants.ClusterGatewayConfigMapGatewayName] = gatewayName
+	configMap.Data[constants.ClusterGatewayConfigMapGatewayHostIP] = gatewayHostIP
 	configMap.ClusterName = config.Config.Name
 	err = reporter.clusterd.metaClient.ConfigMaps(reporter.clusterd.namespace).Update(configMap)
 	if err != nil {
@@ -125,7 +125,7 @@ func (reporter *ClusterGatewayReporter) UnmarshalAndUpdateNeighbors(content []by
 		if err != nil {
 			return err
 		}
-		if err = reporter.UpdateNeighbor(configMap.Data[constants.ClusterGatewayConfigMapClusterName], configMap.Data[constants.ClusterGatewayConfigMapClusterHostIP]); err != nil {
+		if err = reporter.UpdateNeighbor(configMap.Data[constants.ClusterGatewayConfigMapGatewayName], configMap.Data[constants.ClusterGatewayConfigMapGatewayHostIP]); err != nil {
 			return err
 		}
 	}
