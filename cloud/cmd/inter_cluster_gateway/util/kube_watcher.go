@@ -35,7 +35,7 @@ type KubeWatcher struct {
 	dividerInformer          cache.SharedIndexInformer
 	gatewayconfigmapInformer cache.SharedIndexInformer
 	subnetMap                map[string]*subnetv1.Subnet
-	dividerMap               map[string]*dividerv1.Divider
+	dividerMap               map[string]map[string]*dividerv1.Divider
 	vpcMap                   map[string]*vpcv1.Vpc
 	vpcGatewayMap            map[string]GatewayConfig
 	gatewayMap               map[string]string
@@ -58,7 +58,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 	if err != nil {
 		return nil, err
 	}
-	subnetSelector := fields.ParseSelectorOrDie("metadata.name!=net0 ")
+	subnetSelector := fields.ParseSelectorOrDie("metadata.name!=net0")
 	subnetLW := cache.NewListWatchFromClient(subnetclientset.MizarV1().RESTClient(), "subnets", v1.NamespaceAll, subnetSelector)
 	subnetInformer := cache.NewSharedIndexInformer(subnetLW, &subnetv1.Subnet{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
@@ -85,7 +85,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 		vpcInformer:              vpcInformer,
 		dividerInformer:          dividerInformer,
 		subnetMap:                make(map[string]*subnetv1.Subnet),
-		dividerMap:               make(map[string]*dividerv1.Divider),
+		dividerMap:               make(map[string]map[string]*dividerv1.Divider),
 		vpcMap:                   make(map[string]*vpcv1.Vpc),
 		vpcGatewayMap:            make(map[string]GatewayConfig),
 		gatewayMap:               make(map[string]string),
@@ -250,23 +250,16 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if divider, ok := obj.(*dividerv1.Divider); ok {
 				klog.V(3).Infof("A new divider %s is added", divider.Name)
-				if _, existed := watcher.dividerMap[divider.Name]; !existed {
-					watcher.dividerMap[divider.Name] = divider
-					if gateway, existed := watcher.vpcGatewayMap[divider.Spec.Vni]; existed {
-						localDividerIP := net.ParseIP(divider.Spec.IP)
-						if localDividerIP == nil {
-							klog.Fatalf("Invalid local divider IP: %v", divider.Spec.IP)
-						}
-						localDividerIP = localDividerIP.To4()
-						localDividerHosts := gateway.LocalDividerHosts
-						dividerHrdAddr, dividerSrc, err := getNextHopHwAddr(localDividerIP)
-						if err != nil {
-							klog.Fatalf("error in getting dividernext hop hardware address: %v", err)
-						}
-						localDividerHosts = append(localDividerHosts, LocalDividerHost{IP: dividerSrc, Mac: dividerHrdAddr})
-						gateway.LocalDividerHosts = localDividerHosts
-						watcher.vpcGatewayMap[divider.Spec.Vni] = gateway
-					}
+				if _, existed := watcher.dividerMap[divider.Spec.Vni]; !existed {
+					watcher.dividerMap[divider.Spec.Vni] = make(map[string]*dividerv1.Divider)
+				}
+				watcher.dividerMap[divider.Spec.Vni][divider.GetName()] = divider
+
+				dividerHrdAddr, dividerSrc, err := GetNextHopHwAddr(net.IP(divider.Spec.IP))
+				klog.V(3).Infof("The divider ip %v and mac %v", divider.Spec.IP, divider.Spec.Mac)
+				klog.V(3).Infof("The divider src ip %v and mac %v", dividerSrc, dividerHrdAddr)
+				if err != nil {
+					klog.Fatalf("error in getting dividernext hop hardware address: %v", err)
 				}
 			}
 		},

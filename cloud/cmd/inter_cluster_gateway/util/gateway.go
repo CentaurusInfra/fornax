@@ -201,3 +201,57 @@ func syncSubnet(subnet *subnetv1.Subnet, remoteGatewayIP net.IP, remoteHostIP ne
 
 	return nil
 }
+
+// GetNextHopHwAddr() finds out the next-hop hardware address if we want to send the packet to the destination IP
+func GetNextHopHwAddr(destIP net.IP) (net.HardwareAddr, net.IP, error) {
+	iface, gateway, src, err := router.Route(destIP)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error in getting icgw route : %v", err)
+	}
+
+	start := time.Now()
+	arpDst := destIP
+	if gateway != nil {
+		arpDst = gateway
+	}
+	// Prepare the layers to send for an ARP request.
+	eth := layers.Ethernet{
+		SrcMAC:       iface.HardwareAddr,
+		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		EthernetType: layers.EthernetTypeARP,
+	}
+	arp := layers.ARP{
+		AddrType:          layers.LinkTypeEthernet,
+		Protocol:          layers.EthernetTypeIPv4,
+		HwAddressSize:     6,
+		ProtAddressSize:   4,
+		Operation:         layers.ARPRequest,
+		SourceHwAddress:   []byte(iface.HardwareAddr),
+		SourceProtAddress: []byte(src),
+		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
+		DstProtAddress:    []byte(arpDst),
+	}
+	// Send a single ARP request packet since it is just a PoC work, may consider retry in the future
+	if err := send(&eth, &arp); err != nil {
+		return nil, nil, err
+	}
+	// Wait 3 seconds for an ARP reply.
+	for {
+		if time.Since(start) > time.Second*3 {
+			return nil, nil, errors.New("timeout getting ARP reply")
+		}
+		data, _, err := handle.ReadPacketData()
+		if err == pcap.NextErrorTimeoutExpired {
+			continue
+		} else if err != nil {
+			return nil, nil, err
+		}
+		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
+		if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
+			arp := arpLayer.(*layers.ARP)
+			if net.IP(arp.SourceProtAddress).Equal(net.IP(arpDst)) {
+				return net.HardwareAddr(arp.SourceHwAddress), src, nil
+			}
+		}
+	}
+}
