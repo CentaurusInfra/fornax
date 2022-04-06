@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"strings"
@@ -35,14 +36,20 @@ type KubeWatcher struct {
 	dividerInformer          cache.SharedIndexInformer
 	gatewayconfigmapInformer cache.SharedIndexInformer
 	subnetMap                map[string]*subnetv1.Subnet
-	dividerMap               map[string]map[string]*dividerv1.Divider
+	dividerMap               map[string]map[string]NextHopAddr
 	vpcMap                   map[string]*vpcv1.Vpc
 	vpcGatewayMap            map[string]GatewayConfig
 	gatewayMap               map[string]string
+	subnetGatewayMap         map[*net.IPNet]NextHopAddr
 	subnetInterface          subnetinterface.SubnetInterface
 	gatewayName              string
 	gatewayHostIP            string
 	client                   *srv.Client
+}
+
+type NextHopAddr struct {
+	SrcIP   net.IP
+	HrdAddr net.HardwareAddr
 }
 
 func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struct{}) (*KubeWatcher, error) {
@@ -50,6 +57,17 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 	if err != nil {
 		return nil, err
 	}
+	gatewayMap := make(map[string]string)
+	if gatewayInfo, err := gatewayconfigmapclientset.CoreV1().ConfigMaps("default").Get(context.TODO(), "cluster-gateway-config", metav1.GetOptions{}); err == nil {
+		if gateways := gatewayInfo.Data["vpc_gateways"]; gateways != "" {
+			gatewayArr := strings.Split(gateways, ",")
+			for _, gatewayPair := range gatewayArr {
+				gateway := strings.Split(gatewayPair, "=")
+				gatewayMap[gateway[0]] = gateway[1]
+			}
+		}
+	}
+	klog.V(3).Infof("The current gateway is %v", gatewayMap)
 	gatewayconfigmapSelector := fields.ParseSelectorOrDie("metadata.name=cluster-gateway-config")
 	gatewayconfigmapLW := cache.NewListWatchFromClient(gatewayconfigmapclientset.CoreV1().RESTClient(), "configmaps", v1.NamespaceAll, gatewayconfigmapSelector)
 	gatewayconfigmapInformer := cache.NewSharedIndexInformer(gatewayconfigmapLW, &v1.ConfigMap{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
@@ -85,10 +103,11 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 		vpcInformer:              vpcInformer,
 		dividerInformer:          dividerInformer,
 		subnetMap:                make(map[string]*subnetv1.Subnet),
-		dividerMap:               make(map[string]map[string]*dividerv1.Divider),
+		dividerMap:               make(map[string]map[string]NextHopAddr),
 		vpcMap:                   make(map[string]*vpcv1.Vpc),
 		vpcGatewayMap:            make(map[string]GatewayConfig),
-		gatewayMap:               make(map[string]string),
+		subnetGatewayMap:         make(map[*net.IPNet]NextHopAddr),
+		gatewayMap:               gatewayMap,
 		subnetInterface:          subnetclientset.MizarV1().Subnets("default"),
 		client:                   client,
 	}, nil
@@ -157,6 +176,23 @@ func (watcher *KubeWatcher) Run() {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
 				klog.V(3).Infof("a new subnet %s is created", subnet.Name)
 				if subnet.Spec.Virtual {
+					if len(subnet.Spec.RemoteGateways) == 0 {
+						return
+					}
+					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", subnet.Spec.IP, subnet.Spec.Prefix)); err == nil {
+						remoteIcgwIP := net.ParseIP(subnet.Spec.RemoteGateways[0])
+						if remoteIcgwIP == nil {
+							klog.Fatalf("Invalid remote gateway host  IP: %v", subnet.Spec.RemoteGateways[0])
+						}
+						remoteIcgwIP = remoteIcgwIP.To4()
+						icgwHrdAddr, icgwSrc, err := getNextHopHwAddr(remoteIcgwIP)
+						if err != nil {
+							klog.Fatalf("error in getting divider next hop hardware address: %v", err)
+						} else {
+							watcher.subnetGatewayMap[cidr] = NextHopAddr{SrcIP: icgwSrc, HrdAddr: icgwHrdAddr}
+							klog.V(3).Infof("The remote gateway ip %v and mac %v", icgwSrc, icgwHrdAddr)
+						}
+					}
 					return
 				}
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
@@ -169,7 +205,7 @@ func (watcher *KubeWatcher) Run() {
 					defer cancel()
 					request := &proto.CreateSubnetRequest{
 						Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: subnet.Spec.Status,
-						Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni}
+						Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni, RemoteGateway: watcher.gatewayHostIP}
 					returnMessage, err := client.CreateSubnet(ctx, request)
 					klog.V(3).Infof("the returnMessage is %v", returnMessage)
 					if err != nil {
@@ -251,15 +287,21 @@ func (watcher *KubeWatcher) Run() {
 			if divider, ok := obj.(*dividerv1.Divider); ok {
 				klog.V(3).Infof("A new divider %s is added", divider.Name)
 				if _, existed := watcher.dividerMap[divider.Spec.Vni]; !existed {
-					watcher.dividerMap[divider.Spec.Vni] = make(map[string]*dividerv1.Divider)
+					watcher.dividerMap[divider.Spec.Vni] = make(map[string]NextHopAddr)
 				}
-				watcher.dividerMap[divider.Spec.Vni][divider.GetName()] = divider
 
-				dividerHrdAddr, dividerSrc, err := GetNextHopHwAddr(net.IP(divider.Spec.IP))
+				localDividerIP := net.ParseIP(divider.Spec.IP)
+				if localDividerIP == nil {
+					klog.Errorf("Invalid local divider IP: %v", divider.Spec.IP)
+				}
+				localDividerIP = localDividerIP.To4()
+				dividerHrdAddr, dividerSrc, err := GetNextHopHwAddr(localDividerIP)
 				klog.V(3).Infof("The divider ip %v and mac %v", divider.Spec.IP, divider.Spec.Mac)
 				klog.V(3).Infof("The divider src ip %v and mac %v", dividerSrc, dividerHrdAddr)
 				if err != nil {
-					klog.Fatalf("error in getting dividernext hop hardware address: %v", err)
+					klog.Errorf("error in getting dividernext hop hardware address: %v", err)
+				} else {
+					watcher.dividerMap[divider.Spec.Vni][divider.GetName()] = NextHopAddr{SrcIP: dividerSrc, HrdAddr: dividerHrdAddr}
 				}
 			}
 		},

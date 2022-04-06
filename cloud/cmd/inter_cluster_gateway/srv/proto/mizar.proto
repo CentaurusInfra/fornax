@@ -18,6 +18,7 @@ message CreateSubnetRequest {
     string Vpc = 6;
     string Vni = 7;
     string Status = 8;
+    string RemoteGateway = 9;
 }
 
 message DeleteVpcGatewayRequest {
