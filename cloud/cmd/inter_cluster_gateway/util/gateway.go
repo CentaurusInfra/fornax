@@ -10,7 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 type GatewayConfig struct {
