@@ -225,7 +225,6 @@ func (watcher *KubeWatcher) Run() {
 					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", subnet.Spec.IP, subnet.Spec.Prefix)); err == nil {
 						delete(watcher.subnetGatewayMap, cidr)
 					}
-					return
 				} else {
 					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 						klog.V(3).Infof("a deleted subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
@@ -297,7 +296,7 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if divider, ok := obj.(*dividerv1.Divider); ok {
 				klog.V(3).Infof("A new divider %s is added", divider.Name)
-				if _, existed := watcher.vpcMap[divider.Spec.Vni]; !existed {
+				if _, existed := watcher.vpcMap[divider.Spec.Vni]; existed {
 					vpc := watcher.vpcMap[divider.Spec.Vni]
 					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", vpc.Spec.IP, vpc.Spec.Prefix)); err == nil {
 						if _, existed := watcher.dividerMap[cidr]; !existed {

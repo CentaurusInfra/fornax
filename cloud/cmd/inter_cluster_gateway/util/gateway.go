@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/routing"
+	"k8s.io/klog"
 )
 
 type GatewayConfig struct {
@@ -42,6 +43,30 @@ var (
 	localHostIP      net.IP
 	localGatewayHost string
 )
+
+// Initialize the config vuales to use in packet forwarding
+func init() {
+	var err error
+
+	opts = gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+
+	buffer = gopacket.NewSerializeBuffer()
+
+	// refer to https://www.youtube.com/watch?v=APDnbmTKjgM for a nice talk about what these values are
+	handle, err = pcap.OpenLive("eth0", int32(65535), false, -1*time.Second)
+
+	if err != nil {
+		klog.Fatalf("error in initializing handle: %v", err)
+	}
+
+	router, err = routing.New()
+	if err != nil {
+		klog.Fatalf("error in initilization of router : %v", err)
+	}
+}
 
 func Send(l ...gopacket.SerializableLayer) error {
 	if err := gopacket.SerializeLayers(buffer, opts, l...); err != nil {
