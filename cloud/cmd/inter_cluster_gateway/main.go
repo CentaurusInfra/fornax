@@ -1,9 +1,9 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"time"
@@ -28,18 +28,18 @@ var (
 	grpcPort      int
 	grpcTimeout   int
 
-	remoteIcgwIPstr   string
-	localDividerIPstr string
+	// remoteIcgwIPstr   string
+	// localDividerIPstr string
 
-	localDividerIP net.IP
-	remoteIcgwIP   net.IP
-	router         routing.Router
+	// localDividerIP net.IP
+	// remoteIcgwIP   net.IP
+	router routing.Router
 
-	icgwHrdAddr    net.HardwareAddr
-	dividerHrdAddr net.HardwareAddr
+	// icgwHrdAddr    net.HardwareAddr
+	// dividerHrdAddr net.HardwareAddr
 
-	icgwSrc    net.IP
-	dividerSrc net.IP
+	// icgwSrc    net.IP
+	// dividerSrc net.IP
 
 	handle *pcap.Handle
 	opts   gopacket.SerializeOptions
@@ -65,28 +65,28 @@ func InitFlag() {
 	}
 
 	//There shall be multiple remote gateways. However, the current implementation only works for one gateway
-	remoteIcgwIPstr = config.RemoteGateways[0].RemoteGatewayIP
-	firepowerPort = layers.UDPPort((config.RemoteGateways[0].RemoteGatewayPort))
-	localDividerIPstr = config.LocalDividerIP
+	// remoteIcgwIPstr = config.RemoteGateways[0].RemoteGatewayIP
+	firepowerPort = layers.UDPPort((config.GatewayPort))
+	// localDividerIPstr = config.LocalDividerIP
 	genevePort = layers.UDPPort((config.GenevePort))
 	grpcPort = config.GrpcPort
 	grpcTimeout = config.GrpcTimeout
 
-	if remoteIcgwIPstr == "" {
-		return
-	}
+	// if remoteIcgwIPstr == "" {
+	// 	return
+	// }
 
-	remoteIcgwIP = net.ParseIP(remoteIcgwIPstr)
-	if remoteIcgwIP == nil {
-		klog.Fatalf("Invalid remote ICGW IP: %v", remoteIcgwIPstr)
-	}
-	remoteIcgwIP = remoteIcgwIP.To4()
+	// remoteIcgwIP = net.ParseIP(remoteIcgwIPstr)
+	// if remoteIcgwIP == nil {
+	// 	klog.Fatalf("Invalid remote ICGW IP: %v", remoteIcgwIPstr)
+	// }
+	// remoteIcgwIP = remoteIcgwIP.To4()
 
-	localDividerIP = net.ParseIP(localDividerIPstr)
-	if localDividerIP == nil {
-		klog.Fatalf("Invalid local divider IP: %v", localDividerIPstr)
-	}
-	localDividerIP = localDividerIP.To4()
+	// localDividerIP = net.ParseIP(localDividerIPstr)
+	// if localDividerIP == nil {
+	// 	klog.Fatalf("Invalid local divider IP: %v", localDividerIPstr)
+	// }
+	// localDividerIP = localDividerIP.To4()
 }
 
 // Initialize the config vuales to use in packet forwarding
@@ -113,19 +113,19 @@ func init() {
 		klog.Fatalf("error in initilization of router : %v", err)
 	}
 
-	if remoteIcgwIP == nil {
-		return
-	}
+	// if remoteIcgwIP == nil {
+	// 	return
+	// }
 
-	icgwHrdAddr, icgwSrc, err = getNextHopHwAddr(remoteIcgwIP)
-	if err != nil {
-		klog.Fatalf("error in getting divider next hop hardware address: %v", err)
-	}
+	// icgwHrdAddr, icgwSrc, err = getNextHopHwAddr(remoteIcgwIP)
+	// if err != nil {
+	// 	klog.Fatalf("error in getting divider next hop hardware address: %v", err)
+	// }
 
-	dividerHrdAddr, dividerSrc, err = getNextHopHwAddr(localDividerIP)
-	if err != nil {
-		klog.Fatalf("error in getting dividernext hop hardware address: %v", err)
-	}
+	// dividerHrdAddr, dividerSrc, err = getNextHopHwAddr(localDividerIP)
+	// if err != nil {
+	// 	klog.Fatalf("error in getting dividernext hop hardware address: %v", err)
+	// }
 }
 
 func main() {
@@ -153,7 +153,7 @@ func main() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	for packet := range packetSource.Packets() {
-		if err := processPacket(&packet); err != nil {
+		if err := processPacket(&packet, kubeWatcher.GetSubnetGatewayMap(), kubeWatcher.GetDividerMap()); err != nil {
 			klog.Errorf("Failed to process packet: %v, packet: %v", err, packet)
 		} else {
 			klog.V(3).Infof("Successfully processed packet")
@@ -162,7 +162,7 @@ func main() {
 	}
 }
 
-func processPacket(p *gopacket.Packet) error {
+func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]util.NextHopAddr, dividerMap map[*net.IPNet][]util.NextHopAddr) error {
 	packet := *p
 
 	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
@@ -179,6 +179,7 @@ func processPacket(p *gopacket.Packet) error {
 	switch {
 	// when receiving a geneve packet, note that only local clusters send geneve packets to the Inter-Cluster Gateway
 	case udpPacketCopy.DstPort == genevePort:
+		remoteIcgwIP, icgwSrc, icgwHrdAddr := getRemoteGateway(ipPacketCopy.DstIP, gatewayMap)
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = icgwHrdAddr
 
@@ -190,10 +191,11 @@ func processPacket(p *gopacket.Packet) error {
 		udpPacketCopy.SrcPort = genevePort
 		udpPacketCopy.DstPort = firepowerPort
 
-		klog.V(3).Infof("Forwarding packet to remote icgw %v", remoteIcgwIPstr)
+		klog.V(3).Infof("Forwarding packet to remote icgw %v", remoteIcgwIP)
 
 	// it is a packet from the remote Inter-Cluster gateway
 	case udpPacketCopy.SrcPort == genevePort && udpPacketCopy.DstPort == firepowerPort:
+		localDividerIP, dividerSrc, dividerHrdAddr := getDivider(ipPacketCopy.DstIP, dividerMap)
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = dividerHrdAddr
 
@@ -204,7 +206,7 @@ func processPacket(p *gopacket.Packet) error {
 		udpPacketCopy.SrcPort = firepowerPort
 		udpPacketCopy.DstPort = genevePort
 
-		klog.V(3).Infof("Forwarding packet to local divider %v", localDividerIPstr)
+		klog.V(3).Infof("Forwarding packet to local divider %v", localDividerIP)
 
 	default:
 		return fmt.Errorf("unsupported packages")
@@ -216,67 +218,25 @@ func processPacket(p *gopacket.Packet) error {
 		return fmt.Errorf("error in setup network layer checksum: %v", err)
 	}
 
-	return send(&ethernetFrameCopy, &ipPacketCopy, &udpPacketCopy, gopacket.Payload(udpPacketCopy.Payload))
+	return util.Send(&ethernetFrameCopy, &ipPacketCopy, &udpPacketCopy, gopacket.Payload(udpPacketCopy.Payload))
 }
 
-// getNextHopHwAddr() finds out the next-hop hardware address if we want to send the packet to the destination IP
-func getNextHopHwAddr(destIP net.IP) (net.HardwareAddr, net.IP, error) {
-	iface, gateway, src, err := router.Route(destIP)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error in getting icgw route : %v", err)
-	}
-
-	start := time.Now()
-	arpDst := destIP
-	if gateway != nil {
-		arpDst = gateway
-	}
-	// Prepare the layers to send for an ARP request.
-	eth := layers.Ethernet{
-		SrcMAC:       iface.HardwareAddr,
-		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		EthernetType: layers.EthernetTypeARP,
-	}
-	arp := layers.ARP{
-		AddrType:          layers.LinkTypeEthernet,
-		Protocol:          layers.EthernetTypeIPv4,
-		HwAddressSize:     6,
-		ProtAddressSize:   4,
-		Operation:         layers.ARPRequest,
-		SourceHwAddress:   []byte(iface.HardwareAddr),
-		SourceProtAddress: []byte(src),
-		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
-		DstProtAddress:    []byte(arpDst),
-	}
-	// Send a single ARP request packet since it is just a PoC work, may consider retry in the future
-	if err := send(&eth, &arp); err != nil {
-		return nil, nil, err
-	}
-	// Wait 3 seconds for an ARP reply.
-	for {
-		if time.Since(start) > time.Second*3 {
-			return nil, nil, errors.New("timeout getting ARP reply")
-		}
-		data, _, err := handle.ReadPacketData()
-		if err == pcap.NextErrorTimeoutExpired {
-			continue
-		} else if err != nil {
-			return nil, nil, err
-		}
-		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
-		if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
-			arp := arpLayer.(*layers.ARP)
-			if net.IP(arp.SourceProtAddress).Equal(net.IP(arpDst)) {
-				return net.HardwareAddr(arp.SourceHwAddress), src, nil
-			}
+func getRemoteGateway(dstIP net.IP, gatewayMap map[*net.IPNet]util.NextHopAddr) (net.IP, net.IP, net.HardwareAddr) {
+	for cidr, addr := range gatewayMap {
+		if cidr.Contains(dstIP) {
+			return addr.LocalIP, addr.SrcIP, addr.HrdAddr
 		}
 	}
+	return nil, nil, nil
 }
 
-func send(l ...gopacket.SerializableLayer) error {
-	if err := gopacket.SerializeLayers(buffer, opts, l...); err != nil {
-		return err
+func getDivider(dstIP net.IP, dividerMap map[*net.IPNet][]util.NextHopAddr) (net.IP, net.IP, net.HardwareAddr) {
+	for cidr, dividerList := range dividerMap {
+		if cidr.Contains(dstIP) {
+			randomIndex := rand.Intn(len(dividerList))
+			addr := dividerList[randomIndex]
+			return addr.LocalIP, addr.SrcIP, addr.HrdAddr
+		}
 	}
-
-	return handle.WritePacketData(buffer.Bytes())
+	return nil, nil, nil
 }

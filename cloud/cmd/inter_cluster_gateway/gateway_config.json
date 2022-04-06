@@ -1,12 +1,6 @@
 {
-    "RemoteGateways": [ 
-        {   
-            "RemoteGatewayIP": "",
-            "RemoteGatewayPort": 2615
-        }
-    ],
+    "GatewayPort": 2615,
     "GenevePort": 6081,
-    "LocalDividerIP": "",
     "LogLevel": "3",
     "GrpcPort": 8090,
     "GrpcTimeout": 10
