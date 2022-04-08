@@ -296,6 +296,9 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if divider, ok := obj.(*dividerv1.Divider); ok {
 				klog.V(3).Infof("A new divider %s is added", divider.Name)
+				if divider.Spec.Vpc == "vpc0" {
+					return
+				}
 				if _, existed := watcher.vpcMap[divider.Spec.Vni]; existed {
 					vpc := watcher.vpcMap[divider.Spec.Vni]
 					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", vpc.Spec.IP, vpc.Spec.Prefix)); err == nil {

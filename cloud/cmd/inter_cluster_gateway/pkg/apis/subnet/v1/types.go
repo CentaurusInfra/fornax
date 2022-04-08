@@ -26,7 +26,6 @@ type SubnetSpec struct {
 	Virtual        bool     `json:"virtual"`
 	RemoteGateways []string `json:"remotegateways"`
 	Bouncers       int      `json:"bouncers"`
-	CreateTime     string   `json:"createtime"`
 	ProvisionDelay string   `json:"provisiondelay"`
 }
 

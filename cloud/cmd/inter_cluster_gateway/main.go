@@ -175,6 +175,9 @@ func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]util.NextHopAdd
 	ethernetFrameCopy := *ethernetFrame
 	ipPacketCopy := *ipPacket
 	udpPacketCopy := *udpPacket
+	// for _, layer := range packet.Layers() {
+	// 	fmt.Println("PACKET LAYER:", layer.LayerType())
+	// }
 
 	switch {
 	// when receiving a geneve packet, note that only local clusters send geneve packets to the Inter-Cluster Gateway
