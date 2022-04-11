@@ -18,15 +18,15 @@ import (
 
 // SubnetSpec defines the desired subnets
 type SubnetSpec struct {
-	IP             string   `json:"ip"`
-	Prefix         string   `json:"prefix"`
-	Vni            string   `json:"vni"`
-	Vpc            string   `json:"vpc"`
-	Status         string   `json:"status"`
-	Virtual        bool     `json:"virtual"`
-	RemoteGateways []string `json:"remotegateways"`
-	Bouncers       int      `json:"bouncers"`
-	ProvisionDelay string   `json:"provisiondelay"`
+	IP             string `json:"ip"`
+	Prefix         string `json:"prefix"`
+	Vni            string `json:"vni"`
+	Vpc            string `json:"vpc"`
+	Status         string `json:"status"`
+	Virtual        bool   `json:"virtual"`
+	Bouncers       int    `json:"bouncers"`
+	CreateTime     string `json:"createtime"`
+	ProvisionDelay string `json:"provisiondelay"`
 }
 
 // +genclient

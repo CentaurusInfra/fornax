@@ -35,7 +35,7 @@ type KubeWatcher struct {
 	vpcInformer              cache.SharedIndexInformer
 	dividerInformer          cache.SharedIndexInformer
 	gatewayconfigmapInformer cache.SharedIndexInformer
-	subnetMap                map[string]*subnetv1.Subnet
+	subnetMap                map[string]subnetv1.Subnet
 	dividerMap               map[*net.IPNet][]NextHopAddr
 	vpcMap                   map[string]*vpcv1.Vpc
 	vpcGatewayMap            map[string]GatewayConfig
@@ -66,6 +66,17 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 				gateway := strings.Split(gatewayPair, "=")
 				gatewayMap[gateway[0]] = gateway[1]
 			}
+		}
+	}
+
+	subclientset, err := subnetclientset.NewForConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	subMap := make(map[string]subnetv1.Subnet)
+	if subList, err := subclientset.MizarV1().Subnets("default").List(context.TODO(), metav1.ListOptions{}); err == nil {
+		for _, sub := range subList.Items {
+			subMap[sub.Name] = sub
 		}
 	}
 	klog.V(3).Infof("The current gateway is %v", gatewayMap)
@@ -103,7 +114,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 		subnetInformer:           subnetInformer,
 		vpcInformer:              vpcInformer,
 		dividerInformer:          dividerInformer,
-		subnetMap:                make(map[string]*subnetv1.Subnet),
+		subnetMap:                subMap,
 		dividerMap:               make(map[*net.IPNet][]NextHopAddr),
 		vpcMap:                   make(map[string]*vpcv1.Vpc),
 		vpcGatewayMap:            make(map[string]GatewayConfig),
@@ -170,31 +181,36 @@ func (watcher *KubeWatcher) Run() {
 					}
 				}
 			}
+			if oldCm.Data[constants.ClusterGatewayConfigMapSubGateways] != newCm.Data[constants.ClusterGatewayConfigMapSubGateways] {
+				subGateways := newCm.Data[constants.ClusterGatewayConfigMapSubGateways]
+				subGatewayArr := strings.Split(subGateways, ",")
+				for _, subGateway := range subGatewayArr {
+					subGatewayPair := strings.Split(subGateway, "=")
+					if sub, ok := watcher.subnetMap[subGatewayPair[0]]; ok {
+						if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", sub.Spec.IP, sub.Spec.Prefix)); err == nil {
+							remoteIcgwIP := net.ParseIP(subGatewayPair[1])
+							if remoteIcgwIP == nil {
+								klog.Errorf("Invalid remote gateway host  IP: %v", subGatewayPair[1])
+							}
+							remoteIcgwIP = remoteIcgwIP.To4()
+							icgwHrdAddr, icgwSrc, err := GetNextHopHwAddr(remoteIcgwIP)
+							if err != nil {
+								klog.Errorf("error in getting divider next hop hardware address: %v", err)
+							} else {
+								watcher.subnetGatewayMap[cidr] = NextHopAddr{LocalIP: remoteIcgwIP, SrcIP: icgwSrc, HrdAddr: icgwHrdAddr}
+								klog.V(3).Infof("The remote gateway ip %v and mac %v", icgwSrc, icgwHrdAddr)
+							}
+						}
+					}
+				}
+			}
 		},
 	})
 	watcher.subnetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
 				klog.V(3).Infof("a new subnet %s is created", subnet.Name)
-				if subnet.Spec.Virtual {
-					if len(subnet.Spec.RemoteGateways) == 0 {
-						return
-					}
-					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", subnet.Spec.IP, subnet.Spec.Prefix)); err == nil {
-						remoteIcgwIP := net.ParseIP(subnet.Spec.RemoteGateways[0])
-						if remoteIcgwIP == nil {
-							klog.Errorf("Invalid remote gateway host  IP: %v", subnet.Spec.RemoteGateways[0])
-						}
-						remoteIcgwIP = remoteIcgwIP.To4()
-						icgwHrdAddr, icgwSrc, err := GetNextHopHwAddr(remoteIcgwIP)
-						if err != nil {
-							klog.Errorf("error in getting divider next hop hardware address: %v", err)
-						} else {
-							watcher.subnetGatewayMap[cidr] = NextHopAddr{LocalIP: remoteIcgwIP, SrcIP: icgwSrc, HrdAddr: icgwHrdAddr}
-							klog.V(3).Infof("The remote gateway ip %v and mac %v", icgwSrc, icgwHrdAddr)
-						}
-					}
-				} else {
+				if !subnet.Spec.Virtual {
 					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 						klog.V(3).Infof("a new subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
 						conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
@@ -205,7 +221,8 @@ func (watcher *KubeWatcher) Run() {
 						defer cancel()
 						request := &proto.CreateSubnetRequest{
 							Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: subnet.Spec.Status,
-							Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni, RemoteGateway: watcher.gatewayHostIP}
+							Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni, RemoteGateway: watcher.gatewayHostIP,
+							Bouncers: int32(subnet.Spec.Bouncers)}
 						returnMessage, err := client.CreateSubnet(ctx, request)
 						klog.V(3).Infof("the returnMessage is %v", returnMessage)
 						if err != nil {
@@ -218,14 +235,7 @@ func (watcher *KubeWatcher) Run() {
 		DeleteFunc: func(obj interface{}) {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
 				klog.V(3).Infof("a new subnet %s is deleted", subnet.Name)
-				if subnet.Spec.Virtual {
-					if len(subnet.Spec.RemoteGateways) == 0 {
-						return
-					}
-					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", subnet.Spec.IP, subnet.Spec.Prefix)); err == nil {
-						delete(watcher.subnetGatewayMap, cidr)
-					}
-				} else {
+				if !subnet.Spec.Virtual {
 					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 						klog.V(3).Infof("a deleted subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
 						conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)

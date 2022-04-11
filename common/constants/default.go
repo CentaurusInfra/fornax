@@ -173,5 +173,6 @@ const (
 	ClusterGatewayConfigMapGatewayHostIP    = "gateway_host_ip"
 	ClusterGatewayConfigMapGatewayNeighbors = "gateway_neighbors"
 	ClusterGatewayConfigMapVpcGateways      = "vpc_gateways"
+	ClusterGatewayConfigMapSubGateways      = "subnet_gateways"
 	DefaultClusterGatewayUpdateInterval     = 60
 )
