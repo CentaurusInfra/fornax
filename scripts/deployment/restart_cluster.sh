@@ -58,11 +58,13 @@ while IFS= read -r slave
 do
     echo ">>>> joining from $slave using $joincmd to $kubeadmjoinlog"
     ssh -n $slave "$joincmd" > $kubeadmjoinlog 2>&1 & # remove & here to see log in its entirety
+    echo ">>> copying admin.conf to $slave"
+    scp /etc/kubernetes/admin.conf $slave:/etc/kubernetes/
 done < "$slavehosts"
 wait 
 
 echo ">> installing gateway configmap"
-sh ./create_cluster_gateway_configmap.sh
+bash ./create_cluster_gateway_configmap.sh
 
 echo ">> installing mizar"
 kubectl create -f mizar.goose.yaml > $mizarlog 2>&1
