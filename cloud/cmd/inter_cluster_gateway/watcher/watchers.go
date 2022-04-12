@@ -442,7 +442,6 @@ func (watcher *KubeWatcher) Run() {
 				if key, val, err := getDividerMapEntryvpcMap(watcher.vpcMap, divider, watcher.packetWatcher); err == nil {
 					watcher.dividerMap[key] = val
 				}
-
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
