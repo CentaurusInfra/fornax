@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -131,6 +132,7 @@ func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRe
 	subnet.Spec.Status = request.GetStatus()
 	subnet.Spec.Bouncers = int(request.GetBouncers())
 	subnet.Spec.Virtual = true
+	subnet.Spec.CreateTime = time.Now().String()
 	_, err := s.subnetClientset.MizarV1().Subnets(subnet.Namespace).Create(context.Background(), subnet, metav1.CreateOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err

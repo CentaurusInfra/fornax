@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"time"
@@ -17,7 +16,7 @@ import (
 
 	"github.com/kubeedge/kubeedge/cloud/cmd/config"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv"
-	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/util"
+	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/watcher"
 )
 
 var (
@@ -42,7 +41,6 @@ var (
 	// dividerSrc net.IP
 
 	handle *pcap.Handle
-	opts   gopacket.SerializeOptions
 	buffer gopacket.SerializeBuffer
 )
 
@@ -94,11 +92,6 @@ func init() {
 	var err error
 	InitFlag()
 
-	opts = gopacket.SerializeOptions{
-		FixLengths:       true,
-		ComputeChecksums: true,
-	}
-
 	buffer = gopacket.NewSerializeBuffer()
 
 	// refer to https://www.youtube.com/watch?v=APDnbmTKjgM for a nice talk about what these values are
@@ -139,7 +132,8 @@ func main() {
 
 	quit := make(chan struct{})
 	defer close(quit)
-	kubeWatcher, err := util.NewKubeWatcher(config, srv.NewClient(grpcPort, grpcTimeout), quit)
+	packetWatcher := watcher.NewPacketWatcher(router, handle, buffer)
+	kubeWatcher, err := watcher.NewKubeWatcher(config, srv.NewClient(grpcPort, grpcTimeout), packetWatcher, quit)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +147,7 @@ func main() {
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	for packet := range packetSource.Packets() {
-		if err := processPacket(&packet, kubeWatcher.GetSubnetGatewayMap(), kubeWatcher.GetDividerMap()); err != nil {
+		if err := processPacket(&packet, kubeWatcher.GetSubnetGatewayMap(), kubeWatcher.GetDividerMap(), packetWatcher); err != nil {
 			klog.Errorf("Failed to process packet: %v, packet: %v", err, packet)
 		} else {
 			klog.V(3).Infof("Successfully processed packet")
@@ -162,7 +156,7 @@ func main() {
 	}
 }
 
-func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]util.NextHopAddr, dividerMap map[*net.IPNet][]util.NextHopAddr) error {
+func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]watcher.NextHopAddr, dividerMap map[*net.IPNet]watcher.NextHopAddr, packetWatcher *watcher.PacketWatcher) error {
 	packet := *p
 
 	ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
@@ -227,10 +221,10 @@ func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]util.NextHopAdd
 		return fmt.Errorf("error in setup network layer checksum: %v", err)
 	}
 
-	return util.Send(&ethernetFrameCopy, &ipPacketCopy, &udpPacketCopy, gopacket.Payload(udpPacketCopy.Payload))
+	return packetWatcher.Send(&ethernetFrameCopy, &ipPacketCopy, &udpPacketCopy, gopacket.Payload(udpPacketCopy.Payload))
 }
 
-func getRemoteGateway(dstIP net.IP, gatewayMap map[*net.IPNet]util.NextHopAddr) (net.IP, net.IP, net.HardwareAddr) {
+func getRemoteGateway(dstIP net.IP, gatewayMap map[*net.IPNet]watcher.NextHopAddr) (net.IP, net.IP, net.HardwareAddr) {
 	for cidr, addr := range gatewayMap {
 		if cidr.Contains(dstIP) {
 			return addr.LocalIP, addr.SrcIP, addr.HrdAddr
@@ -239,12 +233,10 @@ func getRemoteGateway(dstIP net.IP, gatewayMap map[*net.IPNet]util.NextHopAddr) 
 	return nil, nil, nil
 }
 
-func getDivider(dstIP net.IP, dividerMap map[*net.IPNet][]util.NextHopAddr) (net.IP, net.IP, net.HardwareAddr) {
-	for cidr, dividerList := range dividerMap {
+func getDivider(dstIP net.IP, dividerMap map[*net.IPNet]watcher.NextHopAddr) (net.IP, net.IP, net.HardwareAddr) {
+	for cidr, divider := range dividerMap {
 		if cidr.Contains(dstIP) {
-			randomIndex := rand.Intn(len(dividerList))
-			addr := dividerList[randomIndex]
-			return addr.LocalIP, addr.SrcIP, addr.HrdAddr
+			return divider.LocalIP, divider.SrcIP, divider.HrdAddr
 		}
 	}
 	return nil, nil, nil

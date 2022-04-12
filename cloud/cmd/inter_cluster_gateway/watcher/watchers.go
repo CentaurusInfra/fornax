@@ -1,12 +1,14 @@
-package util
+package watcher
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"strings"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +18,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/routing"
 	dividerclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/divider/client/clientset/versioned"
 	dividerv1 "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/divider/v1"
 	subnetclientset "github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/pkg/apis/subnet/client/clientset/versioned"
@@ -28,6 +34,124 @@ import (
 	"github.com/kubeedge/kubeedge/common/constants"
 )
 
+type GatewayConfig struct {
+	RemoteGatewayHosts []RemoteGatewayHost
+	LocalDividerHosts  []LocalDividerHost
+}
+
+type RemoteGatewayHost struct {
+	Remote net.IP
+	IP     net.IP
+	Mac    net.HardwareAddr
+	Port   int
+}
+
+type LocalDividerHost struct {
+	IP  net.IP
+	Mac net.HardwareAddr
+}
+
+const (
+	GenevePort    = 6081
+	FirepowerPort = 2615
+)
+
+type NextHopAddr struct {
+	LocalIP net.IP
+	SrcIP   net.IP
+	HrdAddr net.HardwareAddr
+}
+
+var (
+	router           routing.Router
+	handle           *pcap.Handle
+	opts             gopacket.SerializeOptions
+	buffer           gopacket.SerializeBuffer
+	localHostIP      net.IP
+	localGatewayHost string
+)
+
+type PacketWatcher struct {
+	router routing.Router
+	handle *pcap.Handle
+	opts   gopacket.SerializeOptions
+	buffer gopacket.SerializeBuffer
+}
+
+func NewPacketWatcher(router routing.Router, handle *pcap.Handle, buffer gopacket.SerializeBuffer) *PacketWatcher {
+	return &PacketWatcher{
+		router: router,
+		handle: handle,
+		buffer: buffer,
+		opts: gopacket.SerializeOptions{
+			FixLengths:       true,
+			ComputeChecksums: true,
+		},
+	}
+}
+
+// GetNextHopHwAddr() finds out the next-hop hardware address if we want to send the packet to the destination IP
+func (pw *PacketWatcher) GetNextHopHwAddr(destIP net.IP) (net.HardwareAddr, net.IP, error) {
+	iface, gateway, src, err := pw.router.Route(destIP)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error in getting icgw route : %v", err)
+	}
+
+	start := time.Now()
+	arpDst := destIP
+	if gateway != nil {
+		arpDst = gateway
+	}
+	// Prepare the layers to send for an ARP request.
+	eth := layers.Ethernet{
+		SrcMAC:       iface.HardwareAddr,
+		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		EthernetType: layers.EthernetTypeARP,
+	}
+	arp := layers.ARP{
+		AddrType:          layers.LinkTypeEthernet,
+		Protocol:          layers.EthernetTypeIPv4,
+		HwAddressSize:     6,
+		ProtAddressSize:   4,
+		Operation:         layers.ARPRequest,
+		SourceHwAddress:   []byte(iface.HardwareAddr),
+		SourceProtAddress: []byte(src),
+		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
+		DstProtAddress:    []byte(arpDst),
+	}
+	// Send a single ARP request packet since it is just a PoC work, may consider retry in the future
+	if err := pw.Send(&eth, &arp); err != nil {
+		return nil, nil, err
+	}
+	// Wait 3 seconds for an ARP reply.
+	for {
+		if time.Since(start) > time.Second*3 {
+			return nil, nil, errors.New("timeout getting ARP reply")
+		}
+		data, _, err := pw.handle.ReadPacketData()
+		if err == pcap.NextErrorTimeoutExpired {
+			continue
+		} else if err != nil {
+			return nil, nil, err
+		}
+		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
+		if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
+			arp := arpLayer.(*layers.ARP)
+			if net.IP(arp.SourceProtAddress).Equal(net.IP(arpDst)) {
+				return net.HardwareAddr(arp.SourceHwAddress), src, nil
+			}
+		}
+	}
+}
+
+func (pw *PacketWatcher) Send(l ...gopacket.SerializableLayer) error {
+	if err := gopacket.SerializeLayers(pw.buffer, pw.opts, l...); err != nil {
+		return err
+	}
+
+	return pw.handle.WritePacketData(pw.buffer.Bytes())
+}
+
 type KubeWatcher struct {
 	kubeconfig               *rest.Config
 	quit                     chan struct{}
@@ -36,7 +160,7 @@ type KubeWatcher struct {
 	dividerInformer          cache.SharedIndexInformer
 	gatewayconfigmapInformer cache.SharedIndexInformer
 	subnetMap                map[string]subnetv1.Subnet
-	dividerMap               map[*net.IPNet][]NextHopAddr
+	dividerMap               map[*net.IPNet]NextHopAddr
 	vpcMap                   map[string]*vpcv1.Vpc
 	vpcGatewayMap            map[string]GatewayConfig
 	gatewayMap               map[string]string
@@ -45,46 +169,72 @@ type KubeWatcher struct {
 	gatewayName              string
 	gatewayHostIP            string
 	client                   *srv.Client
+	packetWatcher            *PacketWatcher
 }
 
-type NextHopAddr struct {
-	LocalIP net.IP
-	SrcIP   net.IP
-	HrdAddr net.HardwareAddr
-}
+func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *PacketWatcher, quit chan struct{}) (*KubeWatcher, error) {
+	subMap := make(map[string]subnetv1.Subnet)
+	if subclientset, err := subnetclientset.NewForConfig(kubeConfig); err == nil {
+		if subList, err := subclientset.MizarV1().Subnets("default").List(context.TODO(), metav1.ListOptions{}); err == nil {
+			for _, sub := range subList.Items {
+				subMap[sub.Name] = sub
+			}
+		}
+	} else {
+		return nil, err
+	}
 
-func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struct{}) (*KubeWatcher, error) {
-	gatewayconfigmapclientset, err := kubernetes.NewForConfig(kubeconfig)
+	vpcMap := make(map[string]*vpcv1.Vpc)
+	if vpcclientset, err := vpcclientset.NewForConfig(kubeConfig); err == nil {
+		if vpcList, err := vpcclientset.MizarV1().Vpcs("default").List(context.TODO(), metav1.ListOptions{}); err == nil {
+			for _, vpc := range vpcList.Items {
+				vpcMap[vpc.Spec.Vni] = &vpc
+			}
+		}
+	} else {
+		return nil, err
+	}
+
+	divMap := make(map[*net.IPNet]NextHopAddr)
+	if divclientset, err := dividerclientset.NewForConfig(kubeConfig); err == nil {
+		if divList, err := divclientset.MizarV1().Dividers("default").List(context.TODO(), metav1.ListOptions{}); err == nil {
+			for _, div := range divList.Items {
+				if key, val, err := getDividerMapEntryvpcMap(vpcMap, &div, packetWatcher); err == nil {
+					divMap[key] = val
+				} else {
+					klog.Warningf("failed to generate divider map entry with the error %v", err)
+				}
+			}
+		}
+	} else {
+		return nil, err
+	}
+
+	gatewayconfigmapclientset, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err
 	}
 	gatewayMap := make(map[string]string)
-	if gatewayInfo, err := gatewayconfigmapclientset.CoreV1().ConfigMaps("default").Get(context.TODO(), "cluster-gateway-config", metav1.GetOptions{}); err == nil {
-		if gateways := gatewayInfo.Data["vpc_gateways"]; gateways != "" {
+	var subGatewayMap map[*net.IPNet]NextHopAddr
+	if gatewayInfo, err := gatewayconfigmapclientset.CoreV1().ConfigMaps("default").Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
+		if gateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapVpcGateways]; gateways != "" {
 			gatewayArr := strings.Split(gateways, ",")
 			for _, gatewayPair := range gatewayArr {
 				gateway := strings.Split(gatewayPair, "=")
 				gatewayMap[gateway[0]] = gateway[1]
 			}
 		}
-	}
-
-	subclientset, err := subnetclientset.NewForConfig(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-	subMap := make(map[string]subnetv1.Subnet)
-	if subList, err := subclientset.MizarV1().Subnets("default").List(context.TODO(), metav1.ListOptions{}); err == nil {
-		for _, sub := range subList.Items {
-			subMap[sub.Name] = sub
+		if subGateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapSubGateways]; subGateways != "" {
+			subGatewayMap = getSubnetGatewayMap(subGateways, subMap, packetWatcher)
 		}
 	}
+
 	klog.V(3).Infof("The current gateway is %v", gatewayMap)
 	gatewayconfigmapSelector := fields.ParseSelectorOrDie("metadata.name=cluster-gateway-config")
 	gatewayconfigmapLW := cache.NewListWatchFromClient(gatewayconfigmapclientset.CoreV1().RESTClient(), "configmaps", v1.NamespaceAll, gatewayconfigmapSelector)
 	gatewayconfigmapInformer := cache.NewSharedIndexInformer(gatewayconfigmapLW, &v1.ConfigMap{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
-	subnetclientset, err := subnetclientset.NewForConfig(kubeconfig)
+	subnetclientset, err := subnetclientset.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +242,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 	subnetLW := cache.NewListWatchFromClient(subnetclientset.MizarV1().RESTClient(), "subnets", v1.NamespaceAll, subnetSelector)
 	subnetInformer := cache.NewSharedIndexInformer(subnetLW, &subnetv1.Subnet{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
-	vpcclientset, err := vpcclientset.NewForConfig(kubeconfig)
+	vpcclientset, err := vpcclientset.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +250,7 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 	vpcLW := cache.NewListWatchFromClient(vpcclientset.MizarV1().RESTClient(), "vpcs", v1.NamespaceAll, vpcSelector)
 	vpcInformer := cache.NewSharedIndexInformer(vpcLW, &vpcv1.Vpc{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
-	dividerclientset, err := dividerclientset.NewForConfig(kubeconfig)
+	dividerclientset, err := dividerclientset.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -108,20 +258,21 @@ func NewKubeWatcher(kubeconfig *rest.Config, client *srv.Client, quit chan struc
 	dividerInformer := cache.NewSharedIndexInformer(dividerLW, &dividerv1.Divider{}, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
 	return &KubeWatcher{
-		kubeconfig:               kubeconfig,
+		kubeconfig:               kubeConfig,
 		quit:                     quit,
 		gatewayconfigmapInformer: gatewayconfigmapInformer,
 		subnetInformer:           subnetInformer,
 		vpcInformer:              vpcInformer,
 		dividerInformer:          dividerInformer,
 		subnetMap:                subMap,
-		dividerMap:               make(map[*net.IPNet][]NextHopAddr),
-		vpcMap:                   make(map[string]*vpcv1.Vpc),
+		dividerMap:               divMap,
+		vpcMap:                   vpcMap,
 		vpcGatewayMap:            make(map[string]GatewayConfig),
-		subnetGatewayMap:         make(map[*net.IPNet]NextHopAddr),
+		subnetGatewayMap:         subGatewayMap,
 		gatewayMap:               gatewayMap,
 		subnetInterface:          subnetclientset.MizarV1().Subnets("default"),
 		client:                   client,
+		packetWatcher:            packetWatcher,
 	}, nil
 }
 
@@ -182,27 +333,7 @@ func (watcher *KubeWatcher) Run() {
 				}
 			}
 			if oldCm.Data[constants.ClusterGatewayConfigMapSubGateways] != newCm.Data[constants.ClusterGatewayConfigMapSubGateways] {
-				subGateways := newCm.Data[constants.ClusterGatewayConfigMapSubGateways]
-				subGatewayArr := strings.Split(subGateways, ",")
-				for _, subGateway := range subGatewayArr {
-					subGatewayPair := strings.Split(subGateway, "=")
-					if sub, ok := watcher.subnetMap[subGatewayPair[0]]; ok {
-						if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", sub.Spec.IP, sub.Spec.Prefix)); err == nil {
-							remoteIcgwIP := net.ParseIP(subGatewayPair[1])
-							if remoteIcgwIP == nil {
-								klog.Errorf("Invalid remote gateway host  IP: %v", subGatewayPair[1])
-							}
-							remoteIcgwIP = remoteIcgwIP.To4()
-							icgwHrdAddr, icgwSrc, err := GetNextHopHwAddr(remoteIcgwIP)
-							if err != nil {
-								klog.Errorf("error in getting divider next hop hardware address: %v", err)
-							} else {
-								watcher.subnetGatewayMap[cidr] = NextHopAddr{LocalIP: remoteIcgwIP, SrcIP: icgwSrc, HrdAddr: icgwHrdAddr}
-								klog.V(3).Infof("The remote gateway ip %v and mac %v", icgwSrc, icgwHrdAddr)
-							}
-						}
-					}
-				}
+				watcher.subnetGatewayMap = getSubnetGatewayMap(newCm.Data[constants.ClusterGatewayConfigMapSubGateways], watcher.subnetMap, watcher.packetWatcher)
 			}
 		},
 	})
@@ -306,30 +437,10 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if divider, ok := obj.(*dividerv1.Divider); ok {
 				klog.V(3).Infof("A new divider %s is added", divider.Name)
-				if divider.Spec.Vpc == "vpc0" {
-					return
+				if key, val, err := getDividerMapEntryvpcMap(watcher.vpcMap, divider, watcher.packetWatcher); err == nil {
+					watcher.dividerMap[key] = val
 				}
-				if _, existed := watcher.vpcMap[divider.Spec.Vni]; existed {
-					vpc := watcher.vpcMap[divider.Spec.Vni]
-					if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", vpc.Spec.IP, vpc.Spec.Prefix)); err == nil {
-						if _, existed := watcher.dividerMap[cidr]; !existed {
-							watcher.dividerMap[cidr] = make([]NextHopAddr, 0)
-						}
-						localDividerIP := net.ParseIP(divider.Spec.IP)
-						if localDividerIP == nil {
-							klog.Errorf("Invalid local divider IP: %v", divider.Spec.IP)
-						}
-						localDividerIP = localDividerIP.To4()
-						dividerHrdAddr, dividerSrc, err := GetNextHopHwAddr(localDividerIP)
-						klog.V(3).Infof("The divider ip %v and mac %v", divider.Spec.IP, divider.Spec.Mac)
-						klog.V(3).Infof("The divider src ip %v and mac %v", dividerSrc, dividerHrdAddr)
-						if err != nil {
-							klog.Errorf("error in getting dividernext hop hardware address: %v", err)
-						} else {
-							watcher.dividerMap[cidr] = append(watcher.dividerMap[cidr], NextHopAddr{LocalIP: localDividerIP, SrcIP: dividerSrc, HrdAddr: dividerHrdAddr})
-						}
-					}
-				}
+
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
@@ -369,7 +480,7 @@ func (watcher *KubeWatcher) GetSubnetGatewayMap() map[*net.IPNet]NextHopAddr {
 	return watcher.subnetGatewayMap
 }
 
-func (watcher *KubeWatcher) GetDividerMap() map[*net.IPNet][]NextHopAddr {
+func (watcher *KubeWatcher) GetDividerMap() map[*net.IPNet]NextHopAddr {
 	return watcher.dividerMap
 }
 
@@ -394,4 +505,55 @@ func compareAndDiffVpcGateways(str1, str2 string) (int, string) {
 		}
 	}
 	return compareResult, diffResult
+}
+
+func getDividerMapEntryvpcMap(vpcMap map[string]*vpcv1.Vpc, divider *dividerv1.Divider, pw *PacketWatcher) (*net.IPNet, NextHopAddr, error) {
+	if _, existed := vpcMap[divider.Spec.Vni]; existed {
+		vpc := vpcMap[divider.Spec.Vni]
+		if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", vpc.Spec.IP, vpc.Spec.Prefix)); err == nil {
+			localDividerIP := net.ParseIP(divider.Spec.IP)
+			if localDividerIP == nil {
+				klog.Errorf("Invalid local divider IP: %v", divider.Spec.IP)
+				return nil, NextHopAddr{}, err
+			}
+			localDividerIP = localDividerIP.To4()
+			dividerHrdAddr, dividerSrc, err := pw.GetNextHopHwAddr(localDividerIP)
+			klog.V(3).Infof("The divider ip %v and mac %v", divider.Spec.IP, divider.Spec.Mac)
+			klog.V(3).Infof("The divider src ip %v and mac %v", dividerSrc, dividerHrdAddr)
+			if err != nil {
+				klog.Errorf("error in getting dividernext hop hardware address: %v", err)
+				return nil, NextHopAddr{}, err
+			} else {
+				return cidr, NextHopAddr{LocalIP: localDividerIP, SrcIP: dividerSrc, HrdAddr: dividerHrdAddr}, nil
+			}
+		} else {
+			return nil, NextHopAddr{}, err
+		}
+	}
+	return nil, NextHopAddr{}, nil
+}
+
+func getSubnetGatewayMap(subGateways string, subnetMap map[string]subnetv1.Subnet, packetWatcher *PacketWatcher) map[*net.IPNet]NextHopAddr {
+	subnetGatewayMap := make(map[*net.IPNet]NextHopAddr)
+	subGatewayArr := strings.Split(subGateways, ",")
+	for _, subGateway := range subGatewayArr {
+		subGatewayPair := strings.Split(subGateway, "=")
+		if sub, ok := subnetMap[subGatewayPair[0]]; ok {
+			if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", sub.Spec.IP, sub.Spec.Prefix)); err == nil {
+				remoteIcgwIP := net.ParseIP(subGatewayPair[1])
+				if remoteIcgwIP == nil {
+					klog.Errorf("Invalid remote gateway host  IP: %v", subGatewayPair[1])
+				}
+				remoteIcgwIP = remoteIcgwIP.To4()
+				icgwHrdAddr, icgwSrc, err := packetWatcher.GetNextHopHwAddr(remoteIcgwIP)
+				if err != nil {
+					klog.Errorf("error in getting divider next hop hardware address: %v", err)
+				} else {
+					subnetGatewayMap[cidr] = NextHopAddr{LocalIP: remoteIcgwIP, SrcIP: icgwSrc, HrdAddr: icgwHrdAddr}
+					klog.V(3).Infof("The remote gateway ip %v and mac %v", icgwSrc, icgwHrdAddr)
+				}
+			}
+		}
+	}
+	return subnetGatewayMap
 }
