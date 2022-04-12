@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"google.golang.org/grpc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +47,7 @@ func RunGrpcServer(conf *rest.Config, port int) {
 }
 
 func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcGatewayRequest) (*proto.Response, error) {
-	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.Background(), constants.ClusterGatewayConfigMap, metav1.GetOptions{})
+	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
@@ -66,7 +65,7 @@ func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcG
 	updatedVpcGateways = append(updatedVpcGateways, fmt.Sprintf("%s=%s", request.GetName(), request.GetGatewayHostIP()))
 	gatewayConfig.Data[constants.ClusterGatewayConfigMapVpcGateways] = strings.Join(updatedVpcGateways, ",")
 
-	_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.Background(), gatewayConfig, metav1.UpdateOptions{})
+	_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
@@ -74,7 +73,7 @@ func (s *server) CreateVpcGateway(ctx context.Context, request *proto.CreateVpcG
 }
 
 func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcGatewayRequest) (*proto.Response, error) {
-	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.Background(), constants.ClusterGatewayConfigMap, metav1.GetOptions{})
+	gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
@@ -90,7 +89,7 @@ func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcG
 
 		if len(vpcGatewayArr) != len(updatedVpcGateways) {
 			gatewayConfig.Data[constants.ClusterGatewayConfigMapVpcGateways] = strings.Join(updatedVpcGateways, ",")
-			_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.Background(), gatewayConfig, metav1.UpdateOptions{})
+			_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 			if err != nil {
 				return &proto.Response{ReturnCode: proto.Response_Error}, err
 			}
@@ -100,11 +99,11 @@ func (s *server) DeleteVpcGateway(ctx context.Context, request *proto.DeleteVpcG
 }
 
 func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRequest) (*proto.Response, error) {
-	if subnet, err := s.subnetClientset.MizarV1().Subnets(request.GetNamespace()).Get(context.Background(), request.GetName(), metav1.GetOptions{}); err == nil && subnet != nil {
+	if subnet, err := s.subnetClientset.MizarV1().Subnets(request.GetNamespace()).Get(context.TODO(), request.GetName(), metav1.GetOptions{}); err == nil && subnet != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, errors.New("duplicated subnet")
 	}
 
-	if gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.Background(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
+	if gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
 		updatedSubGateways := make([]string, 0)
 		if subGateways, ok := gatewayConfig.Data[constants.ClusterGatewayConfigMapSubGateways]; ok && len(subGateways) > 0 {
 			subGatewayArr := strings.Split(subGateways, ",")
@@ -117,7 +116,7 @@ func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRe
 		}
 		updatedSubGateways = append(updatedSubGateways, fmt.Sprintf("%s=%s", request.GetName(), request.GetRemoteGateway()))
 		gatewayConfig.Data[constants.ClusterGatewayConfigMapSubGateways] = strings.Join(updatedSubGateways, ",")
-		_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.Background(), gatewayConfig, metav1.UpdateOptions{})
+		_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 		if err != nil {
 			return &proto.Response{ReturnCode: proto.Response_Error}, err
 		}
@@ -129,11 +128,10 @@ func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRe
 	subnet.Spec.Prefix = request.GetPrefix()
 	subnet.Spec.Vni = request.GetVni()
 	subnet.Spec.Vpc = request.GetVpc()
-	subnet.Spec.Status = request.GetStatus()
+	subnet.Spec.Status = "Init"
 	subnet.Spec.Bouncers = int(request.GetBouncers())
 	subnet.Spec.Virtual = true
-	subnet.Spec.CreateTime = time.Now().String()
-	_, err := s.subnetClientset.MizarV1().Subnets(subnet.Namespace).Create(context.Background(), subnet, metav1.CreateOptions{})
+	_, err := s.subnetClientset.MizarV1().Subnets(subnet.Namespace).Create(context.TODO(), subnet, metav1.CreateOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}
@@ -141,7 +139,7 @@ func (s *server) CreateSubnet(ctx context.Context, request *proto.CreateSubnetRe
 }
 
 func (s *server) DeleteSubnet(ctx context.Context, request *proto.DeleteSubnetRequest) (*proto.Response, error) {
-	if gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.Background(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
+	if gatewayConfig, err := s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
 		updatedSubGateways := make([]string, 0)
 		if subGateways, ok := gatewayConfig.Data[constants.ClusterGatewayConfigMapSubGateways]; ok && len(subGateways) > 0 {
 			subGatewayArr := strings.Split(subGateways, ",")
@@ -153,12 +151,12 @@ func (s *server) DeleteSubnet(ctx context.Context, request *proto.DeleteSubnetRe
 			}
 		}
 		gatewayConfig.Data[constants.ClusterGatewayConfigMapSubGateways] = strings.Join(updatedSubGateways, ",")
-		_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.Background(), gatewayConfig, metav1.UpdateOptions{})
+		_, err = s.clientset.CoreV1().ConfigMaps(request.GetNamespace()).Update(context.TODO(), gatewayConfig, metav1.UpdateOptions{})
 		if err != nil {
 			return &proto.Response{ReturnCode: proto.Response_Error}, err
 		}
 	}
-	err := s.subnetClientset.MizarV1().Subnets(request.GetNamespace()).Delete(context.Background(), request.GetName(), metav1.DeleteOptions{})
+	err := s.subnetClientset.MizarV1().Subnets(request.GetNamespace()).Delete(context.TODO(), request.GetName(), metav1.DeleteOptions{})
 	if err != nil {
 		return &proto.Response{ReturnCode: proto.Response_Error}, err
 	}

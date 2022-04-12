@@ -25,7 +25,6 @@ type SubnetSpec struct {
 	Status         string `json:"status"`
 	Virtual        bool   `json:"virtual"`
 	Bouncers       int    `json:"bouncers"`
-	CreateTime     string `json:"createtime"`
 	ProvisionDelay string `json:"provisiondelay"`
 }
 
