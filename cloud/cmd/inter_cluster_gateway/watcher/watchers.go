@@ -216,7 +216,8 @@ func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *
 	}
 	gatewayMap := make(map[string]string)
 	var subGatewayMap map[*net.IPNet]NextHopAddr
-	if gatewayInfo, err := gatewayconfigmapclientset.CoreV1().ConfigMaps("default").Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
+	var gatewayInfo *v1.ConfigMap
+	if gatewayInfo, err = gatewayconfigmapclientset.CoreV1().ConfigMaps("default").Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
 		if gateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapVpcGateways]; gateways != "" {
 			gatewayArr := strings.Split(gateways, ",")
 			for _, gatewayPair := range gatewayArr {
@@ -273,6 +274,8 @@ func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *
 		subnetInterface:          subnetclientset.MizarV1().Subnets("default"),
 		client:                   client,
 		packetWatcher:            packetWatcher,
+		gatewayName:              gatewayInfo.Data[constants.ClusterGatewayConfigMapGatewayName],
+		gatewayHostIP:            gatewayInfo.Data[constants.ClusterGatewayConfigMapGatewayHostIP],
 	}, nil
 }
 
