@@ -10,14 +10,6 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -32,6 +24,13 @@ import (
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv"
 	"github.com/kubeedge/kubeedge/cloud/cmd/inter_cluster_gateway/srv/proto"
 	"github.com/kubeedge/kubeedge/common/constants"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 )
 
 type GatewayConfig struct {
@@ -526,11 +525,8 @@ func getDividerMapEntryvpcMap(vpcMap map[string]*vpcv1.Vpc, divider *dividerv1.D
 			if err != nil {
 				klog.Errorf("error in getting dividernext hop hardware address: %v", err)
 				return nil, NextHopAddr{}, err
-			} else {
-				return cidr, NextHopAddr{LocalIP: localDividerIP, SrcIP: dividerSrc, HrdAddr: dividerHrdAddr}, nil
 			}
-		} else {
-			return nil, NextHopAddr{}, err
+			return cidr, NextHopAddr{LocalIP: localDividerIP, SrcIP: dividerSrc, HrdAddr: dividerHrdAddr}, nil
 		}
 	}
 	return nil, NextHopAddr{}, nil
