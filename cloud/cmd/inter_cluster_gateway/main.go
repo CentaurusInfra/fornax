@@ -125,10 +125,10 @@ func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]watcher.NextHop
 	udpPacketCopy := *udpPacket
 	var internalDstIP net.IP
 	if len(packet.Layers()) >= 5 {
-		internalIpLayer := packet.Layers()[5]
-		if internalIpLayer.LayerType() == layers.LayerTypeIPv4 {
-			internalIpPacket, _ := internalIpLayer.(*layers.IPv4)
-			internalDstIP = internalIpPacket.DstIP
+		internalIPLayer := packet.Layers()[5]
+		if internalIPLayer.LayerType() == layers.LayerTypeIPv4 {
+			internalIPPacket, _ := internalIPLayer.(*layers.IPv4)
+			internalDstIP = internalIPPacket.DstIP
 		}
 	}
 
