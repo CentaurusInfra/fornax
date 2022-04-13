@@ -165,24 +165,27 @@ func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]watcher.NextHop
 	ipPacket, _ := ipLayer.(*layers.IPv4)
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	udpPacket := udpLayer.(*layers.UDP)
-	icmpLayer := packet.Layer(layers.LayerTypeICMPv4)
-	icmpPacket := icmpLayer.(*layers.ICMPv4)
-	fmt.Println("ICMP :", icmpPacket)
 	ethernetFrameCopy := *ethernetFrame
 	ipPacketCopy := *ipPacket
 	udpPacketCopy := *udpPacket
-	for _, layer := range packet.Layers() {
-		fmt.Println("PACKET LAYER:", layer.LayerType())
-		if layer.LayerType() == layers.LayerTypeIPv4 {
-			ipp, _ := ipLayer.(*layers.IPv4)
-			fmt.Printf("src %v dis %v", ipp.SrcIP, ipp.DstIP)
+	var internalDstIP net.IP
+	if len(packet.Layers()) >= 5 {
+		internalIpLayer := packet.Layers()[5]
+		if internalIpLayer.LayerType() == layers.LayerTypeIPv4 {
+			internalIpPacket, _ := internalIpLayer.(*layers.IPv4)
+			internalDstIP = internalIpPacket.DstIP
 		}
+	}
+
+	if internalDstIP == nil {
+		klog.Errorf("failed to get internal dst ip from the packet %v", packet)
 	}
 
 	switch {
 	// when receiving a geneve packet, note that only local clusters send geneve packets to the Inter-Cluster Gateway
 	case udpPacketCopy.DstPort == genevePort:
-		remoteIcgwIP, icgwSrc, icgwHrdAddr := getRemoteGateway(ipPacketCopy.DstIP, gatewayMap)
+
+		remoteIcgwIP, icgwSrc, icgwHrdAddr := getRemoteGateway(internalDstIP, gatewayMap)
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = icgwHrdAddr
 
@@ -198,7 +201,7 @@ func processPacket(p *gopacket.Packet, gatewayMap map[*net.IPNet]watcher.NextHop
 
 	// it is a packet from the remote Inter-Cluster gateway
 	case udpPacketCopy.SrcPort == genevePort && udpPacketCopy.DstPort == firepowerPort:
-		localDividerIP, dividerSrc, dividerHrdAddr := getDivider(ipPacketCopy.DstIP, dividerMap)
+		localDividerIP, dividerSrc, dividerHrdAddr := getDivider(internalDstIP, dividerMap)
 		ethernetFrameCopy.SrcMAC = ethernetFrame.DstMAC
 		ethernetFrameCopy.DstMAC = dividerHrdAddr
 
