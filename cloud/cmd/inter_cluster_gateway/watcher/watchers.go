@@ -188,7 +188,7 @@ func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *
 	if vpcclientset, err := vpcclientset.NewForConfig(kubeConfig); err == nil {
 		if vpcList, err := vpcclientset.MizarV1().Vpcs("default").List(context.TODO(), metav1.ListOptions{}); err == nil {
 			for _, vpc := range vpcList.Items {
-				vpcMap[vpc.Spec.Vni] = &vpc
+				vpcMap[vpc.Name] = &vpc
 			}
 		}
 	} else {
@@ -395,7 +395,7 @@ func (watcher *KubeWatcher) Run() {
 		AddFunc: func(obj interface{}) {
 			if vpc, ok := obj.(*vpcv1.Vpc); ok {
 				klog.V(3).Infof("a new vpc %s is created", vpc.Name)
-				watcher.vpcMap[vpc.Spec.Vni] = vpc
+				watcher.vpcMap[vpc.Name] = vpc
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 					klog.V(3).Infof("a new vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
 					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
@@ -416,7 +416,7 @@ func (watcher *KubeWatcher) Run() {
 		DeleteFunc: func(obj interface{}) {
 			if vpc, ok := obj.(*vpcv1.Vpc); ok {
 				klog.V(3).Infof("a existing vpc %s is deletedc", vpc.Name)
-				delete(watcher.vpcMap, vpc.Spec.Vni)
+				delete(watcher.vpcMap, vpc.Name)
 				for gatewayName, gatewayHostIP := range watcher.gatewayMap {
 					klog.V(3).Infof("a deleted vpc %s is trying to sync to %s with the ip %s", vpc.Name, gatewayName, gatewayHostIP)
 					conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
@@ -510,8 +510,8 @@ func compareAndDiffVpcGateways(str1, str2 string) (int, string) {
 }
 
 func getDividerMapEntryvpcMap(vpcMap map[string]*vpcv1.Vpc, divider *dividerv1.Divider, pw *PacketWatcher) (*net.IPNet, NextHopAddr, error) {
-	if _, existed := vpcMap[divider.Spec.Vni]; existed {
-		vpc := vpcMap[divider.Spec.Vni]
+	if _, existed := vpcMap[divider.Spec.Vpc]; existed {
+		vpc := vpcMap[divider.Spec.Vpc]
 		if _, cidr, err := net.ParseCIDR(fmt.Sprintf("%s/%s", vpc.Spec.IP, vpc.Spec.Prefix)); err == nil {
 			localDividerIP := net.ParseIP(divider.Spec.IP)
 			if localDividerIP == nil {
