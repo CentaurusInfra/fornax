@@ -1301,8 +1301,8 @@ func (uc *UpstreamController) updateClusterGatewayNeighbors() {
 				return
 			}
 
-			neighborName := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapClusterName]
-			neighborHostIP := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapClusterHostIP]
+			neighborName := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapGatewayName]
+			neighborHostIP := subClusterGatewayConfigMap.Data[common.ClusterGatewayConfigMapGatewayHostIP]
 			klog.V(3).Infof("upstream gateway neighborName %v, neighborHostIP %v", neighborName, neighborHostIP)
 			configMap, err := uc.kubeClient.CoreV1().ConfigMaps(namespace).Get(context.Background(), common.ClusterGatewayConfigMap, metaV1.GetOptions{})
 			if err != nil {

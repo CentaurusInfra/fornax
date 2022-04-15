@@ -9,15 +9,11 @@ import (
 )
 
 type GatewayAgentConfiguration struct {
-	RemoteGateways []RemoteGateway
-	LocalDividerIP string
-	GenevePort     int
-	LogLevel       string
-}
-
-type RemoteGateway struct {
-	RemoteGatewayIP   string
-	RemoteGatewayPort int
+	GatewayPort int
+	GenevePort  int
+	LogLevel    string
+	GrpcPort    int
+	GrpcTimeout int
 }
 
 func NewGatewayConfiguration(fileName string) (GatewayAgentConfiguration, error) {

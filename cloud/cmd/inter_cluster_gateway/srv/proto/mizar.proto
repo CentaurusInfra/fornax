@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package proto;
+
+message CreateVpcGatewayRequest {
+    string Name = 1;
+    string Namespace = 2;
+    string GatewayName = 3;
+    string GatewayHostIP = 4;
+}
+
+message CreateSubnetRequest {
+    string Name = 1;
+    string Namespace = 2;
+    bool Virtual = 3;
+    string IP = 4;
+    string Prefix = 5;
+    string Vpc = 6;
+    string Vni = 7;
+    string Status = 8;
+    string RemoteGateway = 9;
+    int32 Bouncers = 10;
+}
+
+message DeleteVpcGatewayRequest {
+    string Name = 1;
+    string Namespace = 2;
+    string GatewayName = 3;
+    string GatewayHostIP = 4;
+}
+
+message DeleteSubnetRequest {
+    string Name = 1;
+    string Namespace = 2;
+}
+
+message Response {
+    enum CodeType{
+        Error = 0;
+        OK = 1;
+    }    
+    CodeType  ReturnCode = 1;
+    string Message = 2;           
+}
+
+service MizarService { 
+    rpc CreateVpcGateway(CreateVpcGatewayRequest) returns (Response);
+    rpc DeleteVpcGateway(DeleteVpcGatewayRequest) returns (Response);
+    rpc CreateSubnet(CreateSubnetRequest) returns (Response);
+    rpc DeleteSubnet(DeleteSubnetRequest) returns (Response);
+}
