@@ -163,7 +163,8 @@ type KubeWatcher struct {
 	dividerMap               map[*net.IPNet]NextHopAddr
 	vpcMap                   map[string]*vpcv1.Vpc
 	vpcGatewayMap            map[string]GatewayConfig
-	gatewayMap               map[string]string
+	gatewayMap               map[string]string   //for neighbors
+	remoteVpcIPMap           map[string][]string //for subnets
 	subnetGatewayMap         map[*net.IPNet]NextHopAddr
 	subnetInterface          subnetinterface.SubnetInterface
 	gatewayName              string
@@ -215,16 +216,30 @@ func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *
 		return nil, err
 	}
 	gatewayMap := make(map[string]string)
+	remoteVpcIPMap := make(map[string][]string)
 	var subGatewayMap map[*net.IPNet]NextHopAddr
 	var gatewayInfo *v1.ConfigMap
 	if gatewayInfo, err = gatewayconfigmapclientset.CoreV1().ConfigMaps("default").Get(context.TODO(), constants.ClusterGatewayConfigMap, metav1.GetOptions{}); err == nil {
-		if gateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapVpcGateways]; gateways != "" {
+		if gateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapGatewayNeighbors]; gateways != "" {
 			gatewayArr := strings.Split(gateways, ",")
 			for _, gatewayPair := range gatewayArr {
 				gateway := strings.Split(gatewayPair, "=")
 				gatewayMap[gateway[0]] = gateway[1]
 			}
 		}
+		if remoteVpcIPs := gatewayInfo.Data[constants.ClusterGatewayConfigMapVpcGateways]; remoteVpcIPs != "" {
+			remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
+			for _, vpcIPPair := range remoteVpcIPArr {
+				vpcIP := strings.Split(vpcIPPair, "=")
+				if IPList, ok := remoteVpcIPMap[vpcIP[0]]; ok {
+					IPList = append(IPList, vpcIP[1])
+					remoteVpcIPMap[vpcIP[0]] = IPList
+				} else {
+					remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
+				}
+			}
+		}
+		klog.V(3).Infof("The current remoteVpcIPMap is %v", remoteVpcIPMap)
 		if subGateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapSubGateways]; subGateways != "" {
 			subGatewayMap = getSubnetGatewayMap(subGateways, subMap, packetWatcher)
 		}
@@ -271,6 +286,7 @@ func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *
 		vpcGatewayMap:            make(map[string]GatewayConfig),
 		subnetGatewayMap:         subGatewayMap,
 		gatewayMap:               gatewayMap,
+		remoteVpcIPMap:           remoteVpcIPMap,
 		subnetInterface:          subnetclientset.MizarV1().Subnets("default"),
 		client:                   client,
 		packetWatcher:            packetWatcher,
@@ -290,7 +306,19 @@ func (watcher *KubeWatcher) Run() {
 					gateway := strings.Split(gatewayPair, "=")
 					watcher.gatewayMap[gateway[0]] = gateway[1]
 				}
-				klog.V(3).Infof("the gateway map is set to %v", watcher.gatewayMap)
+				if remoteVpcIPs := cm.Data[constants.ClusterGatewayConfigMapVpcGateways]; remoteVpcIPs != "" {
+					remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
+					for _, vpcIPPair := range remoteVpcIPArr {
+						vpcIP := strings.Split(vpcIPPair, "=")
+						if IPList, ok := watcher.remoteVpcIPMap[vpcIP[0]]; ok {
+							IPList = append(IPList, vpcIP[1])
+							watcher.remoteVpcIPMap[vpcIP[0]] = IPList
+						} else {
+							watcher.remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
+						}
+					}
+				}
+				klog.V(3).Infof("the remote vpc ip map is set to %v", watcher.remoteVpcIPMap)
 			}
 		},
 		UpdateFunc: func(old, new interface{}) {
@@ -304,6 +332,24 @@ func (watcher *KubeWatcher) Run() {
 					watcher.gatewayMap[gateway[0]] = gateway[1]
 				}
 				klog.V(3).Infof("the gateway map is updated to %v", watcher.gatewayMap)
+			}
+			// Updated the remote vpc gateway ips
+			if oldCm.Data[constants.ClusterGatewayConfigMapVpcGateways] != newCm.Data[constants.ClusterGatewayConfigMapVpcGateways] {
+				if remoteVpcIPs := newCm.Data[constants.ClusterGatewayConfigMapVpcGateways]; remoteVpcIPs != "" {
+					remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
+					for _, vpcIPPair := range remoteVpcIPArr {
+						vpcIP := strings.Split(vpcIPPair, "=")
+						if IPList, ok := watcher.remoteVpcIPMap[vpcIP[0]]; ok {
+							IPList = append(IPList, vpcIP[1])
+							watcher.remoteVpcIPMap[vpcIP[0]] = IPList
+						} else {
+							watcher.remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
+						}
+					}
+				} else {
+					watcher.remoteVpcIPMap = make(map[string][]string)
+				}
+				klog.V(3).Infof("the remote vpc ip map is updated to to %v", watcher.remoteVpcIPMap)
 			}
 			// Updated the vpc gateway info
 			klog.V(3).Infof("a new vpc is created/deleted in a neighbor and the vpc gateway pair is updated from %s to %s",
@@ -345,22 +391,24 @@ func (watcher *KubeWatcher) Run() {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
 				klog.V(3).Infof("a new subnet %s is created", subnet.Name)
 				if !subnet.Spec.Virtual {
-					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
-						klog.V(3).Infof("a new subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
-						conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
-						if err != nil {
-							klog.Errorf("failed to sync a new subnet to %s with the error %v", gatewayHostIP, err)
-						}
-						defer conn.Close()
-						defer cancel()
-						request := &proto.CreateSubnetRequest{
-							Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: subnet.Spec.Status,
-							Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni, RemoteGateway: watcher.gatewayHostIP,
-							Bouncers: int32(subnet.Spec.Bouncers)}
-						returnMessage, err := client.CreateSubnet(ctx, request)
-						klog.V(3).Infof("the returnMessage is %v", returnMessage)
-						if err != nil {
-							klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+					if remoteVpcIPList, ok := watcher.remoteVpcIPMap[subnet.Spec.Vpc]; ok {
+						for _, remoteVpcIP := range remoteVpcIPList {
+							klog.V(3).Infof("a new subnet %s is trying to sync to a remote vpc %s with the ip %s", subnet.Name, subnet.Spec.Vpc, remoteVpcIP)
+							conn, client, ctx, cancel, err := watcher.client.Connect(remoteVpcIP)
+							if err != nil {
+								klog.Errorf("failed to sync a new subnet to %s with the error %v", remoteVpcIP, err)
+							}
+							defer conn.Close()
+							defer cancel()
+							request := &proto.CreateSubnetRequest{
+								Name: subnet.Name, Namespace: subnet.Namespace, IP: subnet.Spec.IP, Status: subnet.Spec.Status,
+								Prefix: subnet.Spec.Prefix, Vpc: subnet.Spec.Vpc, Vni: subnet.Spec.Vni, RemoteGateway: watcher.gatewayHostIP,
+								Bouncers: int32(subnet.Spec.Bouncers)}
+							returnMessage, err := client.CreateSubnet(ctx, request)
+							klog.V(3).Infof("the returnMessage is %v", returnMessage)
+							if err != nil {
+								klog.Errorf("return from %s with the message %v with the error %v", remoteVpcIP, returnMessage, err)
+							}
 						}
 					}
 				}
@@ -370,20 +418,22 @@ func (watcher *KubeWatcher) Run() {
 			if subnet, ok := obj.(*subnetv1.Subnet); ok {
 				klog.V(3).Infof("a new subnet %s is deleted", subnet.Name)
 				if !subnet.Spec.Virtual {
-					for gatewayName, gatewayHostIP := range watcher.gatewayMap {
-						klog.V(3).Infof("a deleted subnet %s is trying to sync to %s with the ip %s", subnet.Name, gatewayName, gatewayHostIP)
-						conn, client, ctx, cancel, err := watcher.client.Connect(gatewayHostIP)
-						if err != nil {
-							klog.Errorf("failed to sync a deleted subnet to %s with the error %v", gatewayHostIP, err)
-						}
-						defer conn.Close()
-						defer cancel()
-						request := &proto.DeleteSubnetRequest{
-							Name: subnet.Name, Namespace: subnet.Namespace}
-						returnMessage, err := client.DeleteSubnet(ctx, request)
-						klog.V(3).Infof("The returnMessage is %v", returnMessage)
-						if err != nil {
-							klog.Errorf("return from %s with the message %v with the error %v", gatewayHostIP, returnMessage, err)
+					if remoteVpcIPList, ok := watcher.remoteVpcIPMap[subnet.Spec.Vpc]; ok {
+						for _, remoteVpcIP := range remoteVpcIPList {
+							klog.V(3).Infof("a deleted subnet %s is trying to sync to a remote vpc %s with the ip %s", subnet.Name, subnet.Spec.Vpc, remoteVpcIP)
+							conn, client, ctx, cancel, err := watcher.client.Connect(remoteVpcIP)
+							if err != nil {
+								klog.Errorf("failed to sync a new subnet to %s with the error %v", remoteVpcIP, err)
+							}
+							defer conn.Close()
+							defer cancel()
+							request := &proto.DeleteSubnetRequest{
+								Name: subnet.Name, Namespace: subnet.Namespace}
+							returnMessage, err := client.DeleteSubnet(ctx, request)
+							klog.V(3).Infof("the returnMessage is %v", returnMessage)
+							if err != nil {
+								klog.Errorf("return from %s with the message %v with the error %v", remoteVpcIP, returnMessage, err)
+							}
 						}
 					}
 				}
