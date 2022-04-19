@@ -228,16 +228,7 @@ func NewKubeWatcher(kubeConfig *rest.Config, client *srv.Client, packetWatcher *
 			}
 		}
 		if remoteVpcIPs := gatewayInfo.Data[constants.ClusterGatewayConfigMapVpcGateways]; remoteVpcIPs != "" {
-			remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
-			for _, vpcIPPair := range remoteVpcIPArr {
-				vpcIP := strings.Split(vpcIPPair, "=")
-				if IPList, ok := remoteVpcIPMap[vpcIP[0]]; ok {
-					IPList = append(IPList, vpcIP[1])
-					remoteVpcIPMap[vpcIP[0]] = IPList
-				} else {
-					remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
-				}
-			}
+			remoteVpcIPMap = addRemoteVpcIPList(remoteVpcIPs)
 		}
 		klog.V(3).Infof("The current remoteVpcIPMap is %v", remoteVpcIPMap)
 		if subGateways := gatewayInfo.Data[constants.ClusterGatewayConfigMapSubGateways]; subGateways != "" {
@@ -307,16 +298,7 @@ func (watcher *KubeWatcher) Run() {
 					watcher.gatewayMap[gateway[0]] = gateway[1]
 				}
 				if remoteVpcIPs := cm.Data[constants.ClusterGatewayConfigMapVpcGateways]; remoteVpcIPs != "" {
-					remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
-					for _, vpcIPPair := range remoteVpcIPArr {
-						vpcIP := strings.Split(vpcIPPair, "=")
-						if IPList, ok := watcher.remoteVpcIPMap[vpcIP[0]]; ok {
-							IPList = append(IPList, vpcIP[1])
-							watcher.remoteVpcIPMap[vpcIP[0]] = IPList
-						} else {
-							watcher.remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
-						}
-					}
+					watcher.remoteVpcIPMap = addRemoteVpcIPList(remoteVpcIPs)
 				}
 				klog.V(3).Infof("the remote vpc ip map is set to %v", watcher.remoteVpcIPMap)
 			}
@@ -336,16 +318,7 @@ func (watcher *KubeWatcher) Run() {
 			// Updated the remote vpc gateway ips
 			if oldCm.Data[constants.ClusterGatewayConfigMapVpcGateways] != newCm.Data[constants.ClusterGatewayConfigMapVpcGateways] {
 				if remoteVpcIPs := newCm.Data[constants.ClusterGatewayConfigMapVpcGateways]; remoteVpcIPs != "" {
-					remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
-					for _, vpcIPPair := range remoteVpcIPArr {
-						vpcIP := strings.Split(vpcIPPair, "=")
-						if IPList, ok := watcher.remoteVpcIPMap[vpcIP[0]]; ok {
-							IPList = append(IPList, vpcIP[1])
-							watcher.remoteVpcIPMap[vpcIP[0]] = IPList
-						} else {
-							watcher.remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
-						}
-					}
+					watcher.remoteVpcIPMap = addRemoteVpcIPList(remoteVpcIPs)
 				} else {
 					watcher.remoteVpcIPMap = make(map[string][]string)
 				}
@@ -605,4 +578,30 @@ func getSubnetGatewayMap(subGateways string, subnetMap map[string]subnetv1.Subne
 		}
 	}
 	return subnetGatewayMap
+}
+
+func addRemoteVpcIPList(remoteVpcIPs string) map[string][]string {
+	remoteVpcIPMap := make(map[string][]string)
+	remoteVpcIPArr := strings.Split(remoteVpcIPs, ",")
+	for _, vpcIPPair := range remoteVpcIPArr {
+		vpcIP := strings.Split(vpcIPPair, "=")
+		if IPList, ok := remoteVpcIPMap[vpcIP[0]]; ok {
+			if !contains(IPList, vpcIP[1]) {
+				IPList = append(IPList, vpcIP[1])
+			}
+			remoteVpcIPMap[vpcIP[0]] = IPList
+		} else {
+			remoteVpcIPMap[vpcIP[0]] = []string{vpcIP[1]}
+		}
+	}
+	return remoteVpcIPMap
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
