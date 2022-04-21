@@ -7,6 +7,7 @@ import (
 	api "k8s.io/api/core/v1"
 
 	"github.com/kubeedge/beehive/pkg/core/model"
+	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager"
@@ -43,7 +44,7 @@ func (c *configMaps) Create(cm *api.ConfigMap) (*api.ConfigMap, error) {
 }
 
 func (c *configMaps) Update(cm *api.ConfigMap) error {
-	resource := fmt.Sprintf("%s/%s/%s", c.namespace, model.ResourceTypeConfigmap, cm.ClusterName)
+	resource := fmt.Sprintf("%s/%s/%s", c.namespace, model.ResourceTypeConfigmap, constants.ClusterGatewayConfigMap)
 	configMapsMsg := message.BuildMsg(modules.MetaGroup, "", modules.ClusterdModuleName, resource, model.UpdateOperation, cm)
 	_, err := c.send.SendSync(configMapsMsg)
 	if err != nil {

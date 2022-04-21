@@ -124,10 +124,13 @@ func (dc *DownstreamController) syncConfigMap() {
 			switch e.Type {
 			case watch.Added:
 				operation = model.InsertOperation
+				dc.configmapManager.AddOrUpdateConfigMap(configMap)
 			case watch.Modified:
 				operation = model.UpdateOperation
+				dc.configmapManager.AddOrUpdateConfigMap(configMap)
 			case watch.Deleted:
 				operation = model.DeleteOperation
+				dc.configmapManager.DeleteConfigMap(configMap.Name)
 			default:
 				// unsupported operation, no need to send to any node
 				klog.Warningf("config map event type: %s unsupported", e.Type)
@@ -452,6 +455,20 @@ func (dc *DownstreamController) syncEdgeClusters() {
 				msg.Content = missionList
 
 				dc.SendMessage(msg)
+
+				// Added gateway neighbor to the new registered edge cluster
+				if configMap := dc.configmapManager.GetConfigMap(commonconstants.ClusterGatewayConfigMap); configMap != nil {
+					gatewayMsg := model.NewMessage("")
+					gatewayMsg.SetResourceVersion(configMap.ResourceVersion)
+					gatewayRes, err := messagelayer.BuildResource(edgeCluster.ClusterName, configMap.Namespace, model.ResourceTypeClusterGateway, edgeCluster.ClusterName)
+					if err != nil {
+						klog.Warningf("Built message resource failed with error: %v", err)
+					}
+					gatewayMsg.BuildRouter(modules.EdgeControllerModuleName, constants.GroupResource, gatewayRes, model.InsertOperation)
+
+					gatewayMsg.Content = configMap
+					dc.SendMessage(gatewayMsg)
+				}
 
 			case watch.Deleted:
 				dc.lc.DeleteEdgeCluster(edgeCluster.ObjectMeta.Name)
