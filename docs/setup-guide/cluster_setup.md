@@ -1,10 +1,10 @@
 #	Edge Cluster Multi-Layer Setup and Configuration
 
 ## Abstract
-The purpose of this document is how to setup and configuration hierarchical edge cluster, and describe the each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
-1. Virtual machine setup (create cloud core  and edge core virutal machine, and setup port),
-2. Fornax installation and configuration (install all the kubernetes compnents: kubectl, kubadm, bubelet),
-3. GoLang installlation and configuration (install all GoLang component and load the Fornax source code), 
+The purpose of this document is how to set up and configuration hierarchical edge cluster, and describe each step to create virtual machine, setup the port number, install kubernets, GoLang, and so on. Running Cloud core and Edge core and deployed mission and task to Edge node. Improve the Edge computing. This Cloud and Edge design is derived from cloud end to edge end for Edge System Functional Description and the Setup Requirements Specification. The intended user of this program is the edge computing user. 
+1. Virtual machine setup (create cloud core  and edge core virtual machine, and setup port),
+2. Fornax installation and configuration (install all the kubernetes components: kubectl, kubeadm, kubelet),
+3. GoLang installation and configuration (install all GoLang component and load the Fornax source code), 
 4. Generate machine security certification, and deployed to virtual machine, 
 5. Install CRD file in cloud core. 
 6. Run cloud-core and edge-core and deployed mission and verify the mission.
@@ -13,7 +13,7 @@ The purpose of this document is how to setup and configuration hierarchical edge
 ## 1.1 Virtual Machine Setup and Configuration (We use AWS for example)
 -	Ubuntu 18.04, Create virtual machine A to run an cloud-core, Create virtual machine B and C to run edge-core.
 -	Open the port of 10000 and 10002 in the security group of the cloud-core machine and edge-core machine
-- 	Go to doc and follow up instruction to setup: [Virtual Machine Setup and Configuration](vm_setup.md).
+- 	Go to doc and follow-up instruction to set up: [Virtual Machine Setup and Configuration](vm_setup.md).
 - 	After done, you can continue to 1.2.
 
 ## 1.2	Install Kubernetes Tools
@@ -61,7 +61,7 @@ You will install these packages on all of your machines:
 
 -	**kubeadm:** the command to bootstrap the cluster.
 
--	**kubelet:** the component that runs on all of the machines in your cluster and does things like starting pods and containers.
+-	**kubelet:** the component that runs on all the machines in your cluster and does things like starting pods and containers.
 
 -	**kubectl:** the command line util to talk to your cluster.
 
@@ -109,7 +109,7 @@ kubectl get nodes
 ## 1.3	Install GoLang Tools
 You should be a root user
 ###  1.3.1	Install GoLang
-- You should in root folder (**copy command line  should by line by line to run**).
+- You should in root folder (**copy command line  should line by line to run**).
 	```
 	GOLANG_VERSION=${GOLANG_VERSION:-"1.14.15"}
 	
@@ -132,7 +132,7 @@ You should be a root user
 sudo apt-get install vim
 ```
 ###  1.3.2	Configuration GoLang Path.
-- Open "~/.bashrc" file and add two line to to file end, then save and exit
+- Open "~/.bashrc" file and add two line to file end, then save and exit
 ```
 vi ~/.bashrc
 
@@ -144,7 +144,7 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 ```
 source ~/.bashrc
 ```
-- run following line and verify Go verison.
+- run following line and verify Go version.
 ```
 go version
 ```
@@ -267,12 +267,18 @@ _output/local/bin/cloudcore --minconfig > /etc/kubeedge/config/cloudcore.yaml
 
 
 3. config edgecore
+ 
+* Copy kubeconfig files of all the clusters in directory `/etc/fornax/configs/` in format cluster_hostname.kubeconfig   
+
 ```
-cp [Cluster_B_kubeconfig_file] /root/edgecluster.kubeconfig
+mkdir /etc/fornax/configs/ -p
+cp [Cluster_B_kubeconfig_file] /etc/fornax/configs/[Cluster_Hostname.kubeconfig]
 _output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
 tests/edgecluster/hack/update_edgecore_config.sh [cluster_A_kubeconfig_file]
 
 ```
+
+* Notes: `Cluster_Hostname` is hostname of machine. 
 
 ###  1.4.4	In machine C, do following
 
@@ -284,12 +290,16 @@ make WHAT=edgecore
 ```
 
 2. config edgecore
+* Copy kubeconfig files of all the clusters in directory `/etc/fornax/configs/` in format cluster_hostname.kubeconfig
+
 - notes: following command line only run at first time.
 ```
 mkdir /etc/kubeedge/config -p
 ```
+
 ```
-cp [Cluster_C_kubeconfig_file] /root/edgecluster.kubeconfig
+mkdir /etc/fornax/configs/ -p
+cp [Cluster_C_kubeconfig_file] /etc/fornax/configs/[cluster_hostname.kubeconfig]
 _output/local/bin/edgecore --edgeclusterconfig > /etc/kubeedge/config/edgecore.yaml
 tests/edgecluster/hack/update_edgecore_config.sh [cluster_B_kubeconfig_file]
 ```
