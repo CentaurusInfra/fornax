@@ -287,8 +287,8 @@ func NewEdgeClusterEdgeCoreConfig() *EdgeCoreConfig {
 	}
 }
 
-//SetKubeconfigArray returns an array of kubeconfig files
-func SetKubeconfigArray() []string {
+//SetKubeConfigArray returns an array of kubeconfig files
+func SetKubeConfigArray() []string {
 	dir, err := ioutil.ReadDir("/etc/fornax/configs/")
 	if err != nil {
 		log.Fatal(err)
@@ -304,9 +304,9 @@ func SetKubeconfigArray() []string {
 	return configFiles
 }
 
-//ToGivenCluster returns true if kubeconfig file exists in the current edgecluster.
-func ToGivenCluster(input string) bool {
-	files := SetKubeconfigArray()
+//ConfigFileExist returns true if kubeconfig file exists in the current edgecluster.
+func ConfigFileExist(input string) bool {
+	files := SetKubeConfigArray()
 	for _, matchingCluster := range files {
 		if strings.Split(matchingCluster, ".")[0] == input {
 			return true

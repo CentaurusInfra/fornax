@@ -278,7 +278,7 @@ tests/edgecluster/hack/update_edgecore_config.sh [cluster_A_kubeconfig_file]
 
 ```
 
-* Notes: `Cluster_Hostname` is hostname of machine. 
+* Notes: `Cluster_Hostname` is the hostname of machine. 
 
 ###  1.4.4	In machine C, do following
 
