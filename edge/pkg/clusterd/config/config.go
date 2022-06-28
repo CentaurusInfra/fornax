@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -35,11 +36,12 @@ type Configure struct {
 }
 
 func InitConfigure(c *v1alpha1.Clusterd) {
+	c.Kubeconfig = v1alpha1.NewEdgeClusterEdgeCoreConfig().Modules.Clusterd.Kubeconfig
 	once.Do(func() {
 		Config = Configure{
 			Clusterd: *c,
 		}
-
+		log.Println("verifying c.kubeconfig : ", c.Kubeconfig)
 		if !util.FileExists(c.Kubeconfig) {
 			klog.Fatalf("Could not open kubeconfig file (%s)", c.Kubeconfig)
 		}

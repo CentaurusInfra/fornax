@@ -17,11 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"io/ioutil"
+	"log"
 	"net"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -257,7 +260,7 @@ func NewEdgeClusterEdgeCoreConfig() *EdgeCoreConfig {
 		Modules: &Modules{
 			Clusterd: &Clusterd{
 				Enable:     true,
-				Kubeconfig: "/root/edgecluster.kubeconfig",
+				Kubeconfig: "/etc/fornax/configs/" + hostnameOverride + ".kubeconfig",
 				KubeDistro: "k8s",
 				NodeIP:     localIP,
 			},
@@ -282,4 +285,32 @@ func NewEdgeClusterEdgeCoreConfig() *EdgeCoreConfig {
 			},
 		},
 	}
+}
+
+//SetKubeConfigArray returns an array of kubeconfig files
+func SetKubeConfigArray() []string {
+	dir, err := ioutil.ReadDir("/etc/fornax/configs/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var configFiles []string
+	for _, file := range dir {
+		if strings.ContainsAny(file.Name(), ".") {
+			if strings.Split(file.Name(), ".")[1] == "kubeconfig" {
+				configFiles = append(configFiles, file.Name())
+			}
+		}
+	}
+	return configFiles
+}
+
+//ConfigFileExist returns true if kubeconfig file exists in the current edgecluster.
+func ConfigFileExist(input string) bool {
+	files := SetKubeConfigArray()
+	for _, matchingCluster := range files {
+		if strings.Split(matchingCluster, ".")[0] == input {
+			return true
+		}
+	}
+	return false
 }

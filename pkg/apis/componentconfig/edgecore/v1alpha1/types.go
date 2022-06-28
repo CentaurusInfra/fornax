@@ -488,4 +488,7 @@ type Clusterd struct {
 	// clusterGatewayUpdateInterval indicates cluster gateway name and ip update frequency (second)
 	// default 10
 	ClusterGatewayUpdateInterval int32 `json:"clusterGatewayUpdateInterval,omitempty"`
+
+	// Configs array stores kubeconfig files of multiple clusters
+	Configs []string `json:"configs,omitempty"`
 }

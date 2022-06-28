@@ -17,6 +17,7 @@ package clusterd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/kubeedge/kubeedge/pkg/apis/componentconfig/edgecore/v1alpha1"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -106,7 +107,45 @@ func getDeleteContentCmd(mission *edgeclustersv1.Mission) (string, error) {
 	return resolveCommand(mission.Spec.MissionCommand.ReverseCommand), nil
 }
 
+//ApplyMission deploys missions based on given specifications
 func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
+	configs := v1alpha1.Clusterd{Configs: v1alpha1.SetKubeConfigArray()}
+	// deployment-to-all
+	if len(mission.Spec.Placement.Clusters) == 0 && len(mission.Spec.Placement.MatchLabels) == 0 {
+		for i := 0; i < len(configs.Configs); i++ {
+			config.Config.Kubeconfig = "/etc/fornax/configs/" + configs.Configs[i]
+			err := m.ApplyMissionCmd(mission)
+			if err != nil {
+				return err
+			}
+			if i == len(configs.Configs)-1 {
+				return nil
+			}
+		}
+		return nil
+	}
+
+	// deployment-to-given-clusters
+	if len(mission.Spec.Placement.Clusters) != 0 {
+		for _, matchingCluster := range mission.Spec.Placement.Clusters {
+			if v1alpha1.ConfigFileExist(matchingCluster.Name) {
+				config.Config.Kubeconfig = "/etc/fornax/configs/" + matchingCluster.Name + ".kubeconfig"
+				err := m.ApplyMissionCmd(mission)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	err := m.ApplyMissionCmd(mission)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MissionDeployer) ApplyMissionCmd(mission *edgeclustersv1.Mission) error {
 	cacheLock.Lock()
 	m.MissionMatch[mission.Name] = m.isMatchingMission(mission)
 	cacheLock.Unlock()
@@ -122,7 +161,7 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 			klog.Errorf("Failed to apply mission %v: %v", mission.Name, err)
 		} else {
 			if strings.Contains(output, "created") {
-				klog.Infof("Mission %v is created ", mission.Name)
+				klog.Infof("Mission %s created successfully", mission.Name)
 			} else {
 				klog.V(3).Infof("Mission %v is configured.", mission.Name)
 			}
@@ -140,7 +179,43 @@ func (m *MissionDeployer) ApplyMission(mission *edgeclustersv1.Mission) error {
 	return nil
 }
 
+//DeleteMission deletes missions based on given specifications
 func (m *MissionDeployer) DeleteMission(mission *edgeclustersv1.Mission) error {
+	configs := v1alpha1.Clusterd{Configs: v1alpha1.SetKubeConfigArray()}
+	if len(mission.Spec.Placement.Clusters) == 0 && len(mission.Spec.Placement.MatchLabels) == 0 {
+		for i := 0; i < len(configs.Configs); i++ {
+			config.Config.Kubeconfig = "/etc/fornax/configs/" + configs.Configs[i]
+			err := m.DeleteMissionCmd(mission)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if len(mission.Spec.Placement.Clusters) != 0 {
+		for _, matchingCluster := range mission.Spec.Placement.Clusters {
+			if v1alpha1.ConfigFileExist(matchingCluster.Name) {
+				config.Config.Kubeconfig = "/etc/fornax/configs/" + matchingCluster.Name + ".kubeconfig"
+				err := m.DeleteMissionCmd(mission)
+				if err != nil {
+					return err
+				}
+				config.Config.Name, err = os.Hostname()
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	err := m.DeleteMissionCmd(mission)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MissionDeployer) DeleteMissionCmd(mission *edgeclustersv1.Mission) error {
 	cacheLock.Lock()
 	delete(m.MissionMatch, mission.Name)
 	cacheLock.Unlock()
@@ -186,7 +261,7 @@ func (m *MissionDeployer) isMatchingMission(mission *edgeclustersv1.Mission) boo
 	}
 
 	for _, matchingCluster := range mission.Spec.Placement.Clusters {
-		if config.Config.Name == matchingCluster.Name {
+		if v1alpha1.ConfigFileExist(matchingCluster.Name) {
 			return true
 		}
 	}
